@@ -17,6 +17,7 @@
       { id: 'cap', name: '낚시 캡', price: 0, color: '#2E5F86', sun: 1 },
       { id: 'bucket', name: '버킷햇', price: 30, color: '#C9B48A', sun: 2 },
       { id: 'beanie', name: '방한 비니', price: 30, color: '#8B2E3B', warm: 1 },
+      { id: 'crown', name: '축제 왕관', price: 0, color: '#FFD34D', sun: 1, event: true },   // 계절 이벤트 600점 보상(구입 불가)
     ],
     top: [
       { id: 'tee', name: '반팔 티', price: 0, color: '#E6EAEE' },
@@ -142,7 +143,8 @@
     if (o.hat === 'cap') s += `<path d="M43 30 Q60 12 77 30 Z" fill="${hat.color}"/><rect x="40" y="28" width="30" height="5" rx="2" fill="${hat.color}"/>`;
     if (o.hat === 'bucket') s += `<path d="M46 28 Q60 12 74 28 Z" fill="${hat.color}"/><ellipse cx="60" cy="29" rx="23" ry="5" fill="${hat.color}"/>`;
     if (o.hat === 'beanie') s += `<path d="M43 33 Q60 6 77 33 Z" fill="${hat.color}"/><rect x="43" y="29" width="34" height="6" rx="3" fill="#6E2430"/><circle cx="60" cy="12" r="4" fill="#6E2430"/>`;
-    if (acc.has('lamp')) s += `<rect x="42" y="27" width="36" height="3" fill="#222"/><circle cx="60" cy="27" r="4" fill="#FFF3A0" stroke="#222"/>`;
+    if (o.hat === 'crown') s += `<path d="M44 30 L46 14 L53 23 L60 10 L67 23 L74 14 L76 30 Z" fill="${hat.color}" stroke="#B8860B" stroke-width="1.2"/><circle cx="60" cy="20" r="2.4" fill="#E2572B"/><circle cx="51" cy="25" r="1.8" fill="#3C7FC0"/><circle cx="69" cy="25" r="1.8" fill="#1D8A5B"/>`;
+    if (acc.has('lamp')) s +=`<rect x="42" y="27" width="36" height="3" fill="#222"/><circle cx="60" cy="27" r="4" fill="#FFF3A0" stroke="#222"/>`;
     return s + '</svg>';
   }
 
@@ -183,7 +185,7 @@
         return `<button type="button" data-item="${it.id}" style="text-align:left;border:2px solid ${on ? '#E2572B' : 'var(--line,#3E4852)'};border-radius:10px;padding:8px;background:var(--surface,#1E242B);color:inherit;font:13px inherit;cursor:pointer;min-height:58px">
           <b>${esc(it.name)}</b>${it.color ? ` <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${it.color};vertical-align:-1px"></span>` : ''}<br>
           <span style="font-size:11.5px;opacity:.75">${stats || '&nbsp;'}</span><br>
-          <span style="font-size:12px;font-weight:700">${own ? (on ? '착용 중' : '보유') : '🪙 ' + it.price}</span></button>`;
+          <span style="font-size:12px;font-weight:700">${own ? (on ? '착용 중' : '보유') : it.event ? '🎉 이벤트 보상' : '🪙 ' + it.price}</span></button>`;
       }).join('');
       container.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { sel = b.dataset.slot; draw(); });
       container.querySelectorAll('[data-item]').forEach(b => b.onclick = () => pick(b.dataset.item));
@@ -191,6 +193,7 @@
     function pick(id) {
       const it = item(sel, id), key = sel + ':' + id;
       if (!st.owned.includes(key)) {
+        if (it.event) { flash(`${it.name}은(는) 계절 이벤트 600점 보상으로만 얻을 수 있습니다`); return; }
         if (st.coins < it.price) { flash(`코인이 ${it.price - st.coins}개 모자랍니다 — 「한 수 더!」나 「채비 맞추기」로 모아 보세요`); return; }
         st.coins -= it.price; st.owned.push(key); flash(`${it.name} 구입! 🪙 −${it.price}`);
       }
@@ -268,6 +271,8 @@
     return { destroy() { clearInterval(timer); container.innerHTML = ''; } };
   }
 
-  window.AnglerDress = { mount: mountDress, avatar, mission, evaluate, ITEMS, DEFAULT };
+  /** 이벤트 보상 등으로 아이템 하나를 옷장에 넣은 새 owned 목록(처음이면 기본 아이템 포함) */
+  const unlock = (owned, key) => { const o = owned && owned.length ? owned.slice() : FREE.slice(); if (!o.includes(key)) o.push(key); return o; };
+  window.AnglerDress = { mount: mountDress, avatar, mission, evaluate, ITEMS, DEFAULT, FREE, unlock };
   window.RigMatch = { mount: mountRig, QUESTIONS: RIG };
 })();

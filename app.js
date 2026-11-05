@@ -176,7 +176,8 @@ function initGames() {
     { id: 'rig', ic: '🧩', name: '채비 맞추기', desc: '60초 어종별 채비 퀴즈', mount: el => RigMatch.mount(el, { onEnd: r => { addCoins(r.coins); hub.record({ game: 'rig', score: r.score }); } }) },
     ...GameHub.extra(r => { addCoins(r.coins); hub.record(r); }, () => ({ outfit: wallet.get().outfit })),
   ];
-  hub = GameHub.mount($('hubBox'), { entries, store, start: 'story', onBonus: n => addCoins(n) });
+  hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
+    onUnlock: key => { const w = wallet.get(); return wallet.set({ owned: AnglerDress.unlock(w.owned, key) }); } });
 }
 
 // ── 더보기 ──

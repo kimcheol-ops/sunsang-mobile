@@ -27,6 +27,12 @@
     farm:     { name: '해초 양식장', ic: '🌿', cost: [30, 10, 50], health: 12, pop: 6, desc: '탄소를 품는 바다 숲' },
     lighthouse: { name: '태양광 등대', ic: '🗼', cost: [20, 20, 80], health: 5, pop: 6, desc: '밤바다를 지키는 깨끗한 불빛' },
     festival: { name: '새벽항 축제 광장', ic: '🏮', cost: [80, 40, 60], health: 5, pop: 15, desc: '사람들이 돌아옵니다' },
+    // 2년차(2046~)
+    seawall:  { name: '태풍 방파제', ic: '🧱', cost: [20, 20, 120], health: 3, pop: 6, desc: '거센 파도에서 마을을 지킵니다', y2: true },
+    hatchery: { name: '어린 물고기 방류장', ic: '🐣', cost: [80, 20, 60], health: 15, pop: 6, desc: '치어를 길러 바다에 돌려보냅니다', y2: true },
+    buoy:     { name: '해양 관측 부표', ic: '🛟', cost: [30, 40, 80], health: 8, pop: 4, desc: '수온·염분을 실시간으로 잽니다', y2: true },
+    school:   { name: '바다 학교', ic: '🏫', cost: [60, 60, 80], health: 5, pop: 12, desc: '아이들이 바다를 배웁니다', y2: true },
+    museum:   { name: '바다 박물관', ic: '🏛️', cost: [100, 80, 120], health: 5, pop: 18, desc: '새벽항의 이야기를 남깁니다', y2: true },
   };
   const g = (st, k) => (st.bests || {})[k] || 0;
   const dexN = st => Object.keys(st.dex || {}).length;
@@ -82,6 +88,61 @@
                { t: '새벽항 축제 광장 열기', build: 'festival', ok: st => built(st, 'festival') }],
       reward: 100 },
   ];
+  // 2년차(2046): 더 넓은 바다로 — 출석·계절 이벤트·업적·낚시 달력과 이어짐
+  const st2 = st => st.story || {};
+  const CHAPTERS2 = [
+    { title: '1장 · 태풍이 지나간 뒤', season: '늦여름, 태풍 철',
+      talk: [['박선장', '어젯밤 태풍에 선착장 말뚝이 셋이나 부러졌어. 이번엔 방파제를 쌓아야 해.'],
+             ['등대', '태풍 경로 분석 중… 매일 바다를 살피는 습관이 가장 좋은 대비입니다.'],
+             ['바다', '선장님, 저 매일 아침 바다 보러 올게요!']],
+      quests: [{ t: '출석 3일 연속', ok: st => ((st.att || {}).streak || 0) >= 3 },
+               { t: '「항해 피하기」 400점 이상', game: 'dodge', ok: st => g(st, 'dodge') >= 400 },
+               { t: '태풍 방파제 쌓기', build: 'seawall', ok: st => built(st, 'seawall') }],
+      reward: 60 },
+    { title: '2장 · 어린 물고기 방류', season: '가을',
+      talk: [['하린', '작년에 놓아준 치어가 자라서 돌아왔어요! 표지를 단 참돔이 잡혔대요.'],
+             ['순자', '바다는 받은 만큼 돌려주는 법이지.'],
+             ['등대', '방생 누적 15마리 이상이면 어군 회복 속도 1.4배 예상.']],
+      quests: [{ t: '방생 누적 15마리', game: 'fish', ok: st => (st2(st).released || 0) >= 15 },
+               { t: '「어종 짝맞추기」 150점 이상', game: 'memory', ok: st => g(st, 'memory') >= 150 },
+               { t: '어린 물고기 방류장 짓기', build: 'hatchery', ok: st => built(st, 'hatchery') }],
+      reward: 70 },
+    { title: '3장 · 심해에서 온 신호', season: '초겨울',
+      talk: [['등대', '수심 40m 아래에서 큰 어군 신호. 정체를 알 수 없습니다.'],
+             ['박선장', '어탐을 제대로 볼 줄 알아야 해. 숫자를 읽어.'],
+             ['하린', '관측 부표를 띄우면 바닷속이 훨씬 잘 보일 거예요.']],
+      quests: [{ t: '「어탐 찾기」 160점 이상', game: 'sonar', ok: st => g(st, 'sonar') >= 160 },
+               { t: '「바다 3D 탐험」 400점 이상', game: 'sea3d', ok: st => g(st, 'sea3d') >= 400 },
+               { t: '해양 관측 부표 띄우기', build: 'buoy', ok: st => built(st, 'buoy') }],
+      reward: 80 },
+    { title: '4장 · 바다 학교', season: '겨울방학',
+      talk: [['바다', '친구들이 낚시를 배우고 싶대요! 선장님이 선생님 해 주세요!'],
+             ['순자', '가르치려면 먼저 많이 해 봐야지. 업적이 곧 경험이란다.'],
+             ['나', '채비부터 차근차근 알려 줄게.']],
+      quests: [{ t: '업적 10개 달성', ok: st => (st.ach || []).length >= 10 },
+               { t: '「채비 맞추기」 120점 이상', game: 'rig', ok: st => g(st, 'rig') >= 120 },
+               { t: '바다 학교 열기', build: 'school', ok: st => built(st, 'school') }],
+      reward: 80 },
+    { title: '5장 · 계절 축제 준비', season: '봄',
+      talk: [['하린', '이번 계절 축제엔 이웃 마을 사람들도 온대요.'],
+             ['박선장', '철 따라 고기를 아는 게 진짜 꾼이지. 달력을 채워 봐.'],
+             ['등대', '도감 완성률 100% 도달 시 축제 특별 전시 가능.']],
+      quests: [{ t: '계절 이벤트 300점', ok: st => ((st.event || {}).pts || 0) >= 300 },
+               { t: '올해 낚시 달력 2개월 달성', ok: st => MONTHS.filter(mo => monthDone(st, new Date().getFullYear(), mo)).length >= 2 },
+               { t: '어종 도감 9종 완성', game: 'sea3d', ok: st => dexN(st) >= 9 }],
+      reward: 100 },
+    { title: '6장 · 바다의 약속', season: '여름, 두 번째 축제',
+      talk: [['순자', '네 할머니가 봤으면 얼마나 좋아했을까. 새벽항이 다시 살아났구나.'],
+             ['바다', '저도 커서 선장 될래요. 바다 박물관에 제 이름도 남길 거예요!'],
+             ['등대', '2년간의 기록을 박물관에 보관합니다. 다음 세대에게.']],
+      quests: [{ t: '레벨 10 달성', ok: st => window.GameHub && GameHub.levelOf(st.xp || 0).lv >= 10 },
+               { t: '오늘의 도전 3일 연속 완료', ok: st => (st.chStreak || 0) >= 3 },
+               { t: '바다 박물관 짓기', build: 'museum', ok: st => built(st, 'museum') }],
+      reward: 150 },
+  ];
+  /** 해마다 번갈아: 2045·2047… 1부, 2046·2048… 2부 */
+  const chaptersFor = year => ((year || 2045) - 2045) % 2 === 0 ? CHAPTERS : CHAPTERS2;
+
   // 연간 낚시 달력: 실제 제철에 맞춘 달별 성취(그 달에 게임에서 잡은 마릿수·점수)
   const MONTHS = [
     { m: 1, ic: '🧰', t: '채비 정비의 달', need: { '@rig': 90 }, d: '채비 맞추기 90점' },
@@ -132,6 +193,13 @@
     if (b.has('cleaner')) svg += `<g><path d="M40 170 L92 170 L84 182 L48 182Z" fill="#E6F2F4"/><rect x="58" y="160" width="16" height="10" fill="#1D8A5B"/><text x="66" y="194" font-size="8" text-anchor="middle" fill="#fff">정화선</text>
       <animateTransform attributeName="transform" type="translate" values="0 0;24 2;0 0" dur="8s" repeatCount="indefinite"/></g>`;
     if (b.has('festival')) svg += `<g>${[0, 1, 2, 3, 4, 5, 6].map(i => `<circle cx="${30 + i * 22}" cy="${88 + (i % 2) * 4}" r="5" fill="#FF7A1A"><animate attributeName="opacity" values=".5;1;.5" dur="${1.5 + i * .2}s" repeatCount="indefinite"/></circle>`).join('')}<path d="M24 86 Q100 98 176 86" fill="none" stroke="#5A3A1A"/></g>`;
+    // 2년차 건물
+    if (b.has('seawall')) svg += `<path d="M0 142 L120 142 L120 148 L0 148Z" fill="#9AA5A8"/><path d="M200 142 L400 142 L400 148 L200 148Z" fill="#9AA5A8"/>${[10, 40, 70, 100, 220, 260, 300, 340].map(x => `<rect x="${x}" y="138" width="14" height="6" fill="#B9C2C4"/>`).join('')}`;
+    if (b.has('hatchery')) svg += `<g>${[0, 1, 2].map(i => `<rect x="${250 + i * 18}" y="118" width="14" height="10" rx="3" fill="#5FC4D6" stroke="#2E7F8E"/>`).join('')}<text x="275" y="114" font-size="8" text-anchor="middle" fill="#234">방류장</text></g>`;
+    if (b.has('buoy')) svg += `<g><circle cx="320" cy="176" r="6" fill="#FFCF3A" stroke="#C99A10"/><line x1="320" y1="170" x2="320" y2="156" stroke="#333"/><circle cx="320" cy="155" r="2" fill="#E2572B"><animate attributeName="opacity" values="1;.2;1" dur="1.4s" repeatCount="indefinite"/></circle>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 3;0 0" dur="3s" repeatCount="indefinite"/></g>`;
+    if (b.has('school')) svg += `<g><rect x="150" y="98" width="38" height="26" fill="#FFF4D6" stroke="#8C7A62"/><path d="M146 98 L169 86 L192 98Z" fill="#3C7FC0"/><line x1="188" y1="86" x2="188" y2="72" stroke="#5A3A1A"/><path d="M188 72 L200 76 L188 80Z" fill="#E2572B"/><text x="169" y="115" font-size="8" text-anchor="middle" fill="#234">학교</text></g>`;
+    if (b.has('museum')) svg += `<g><rect x="300" y="110" width="40" height="18" fill="#EDE6D6" stroke="#8C7A62"/><path d="M298 110 Q320 88 342 110Z" fill="#C9B48A" stroke="#8C7A62"/>${[304, 314, 324, 334].map(x => `<rect x="${x}" y="112" width="3" height="16" fill="#C9B48A"/>`).join('')}</g>`;
     for (let i = 0; i < trash; i++) { const x = 30 + (i * 53) % 340, y = 168 + (i * 17) % 40; svg += `<g opacity=".8"><rect x="${x}" y="${y}" width="8" height="4" fill="#C9C9C9" transform="rotate(${i * 23} ${x} ${y})"/><circle cx="${x + 12}" cy="${y + 3}" r="2" fill="#E2B04A"/></g>`; }
     if (health >= 70) svg += [0, 1, 2].map(i => `<path d="M${60 + i * 110} 200 q6 -5 12 0 q-6 5 -12 0Z" fill="#FFCF3A"><animateTransform attributeName="transform" type="translate" values="0 0;30 -4;60 0" dur="${7 + i}s" repeatCount="indefinite"/></path>`).join('');
     return svg + '</svg>';
@@ -150,9 +218,9 @@
     const save = st => store.set(st);
     function bar(label, v, max, color) { return `<div style="display:grid;grid-template-columns:62px 1fr 42px;gap:6px;align-items:center;font-size:12.5px"><b>${label}</b><div style="height:8px;border-radius:4px;background:#0001"><i style="display:block;height:100%;width:${Math.min(100, v / max * 100)}%;background:${color};border-radius:4px"></i></div><span style="text-align:right;font-variant-numeric:tabular-nums">${v}</span></div>`; }
     function draw() {
-      const st = S(), s = st.story, v = village(st), ch = CHAPTERS[Math.min(s.chapter, CHAPTERS.length - 1)];
+      const st = S(), s = st.story, v = village(st), CH = chaptersFor(s.year), ch = CH[Math.min(s.chapter, CH.length - 1)];
       q('[data-hud]').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
-          <b style="font-size:17px">🏝 새벽항 · ${s.year}년</b><span style="font-size:12.5px">${s.chapter >= CHAPTERS.length ? '🎉 엔딩 — 다음 해로' : esc(ch.title) + ' · ' + esc(ch.season)}</span></div>
+          <b style="font-size:17px">🏝 새벽항 · ${s.year}년</b><span style="font-size:12.5px">${s.chapter >= CH.length ? '🎉 엔딩 — 다음 해로' : `${CH === CHAPTERS2 ? '2부 · ' : ''}${esc(ch.title)} · ${esc(ch.season)}`}</span></div>
         ${bar('🐟 식', s.res.food, 200, '#E2572B')}${bar('🧵 의', s.res.cloth, 150, '#6C5FD0')}${bar('🪵 주', s.res.mat, 250, '#8C5A2B')}
         ${bar('🌊 바다', v.health, 100, v.health >= 70 ? '#1D8A5B' : v.health >= 50 ? '#E3A21A' : '#9AA5B1')}<div style="font-size:12.5px">👥 마을 사람 ${v.pop}명 · 방생 ${s.released || 0}마리</div>`;
       q('[data-scene]').innerHTML = scene(st);
@@ -171,8 +239,8 @@
     let typeT = 0;
     function typewrite(el, text) { clearInterval(typeT); let i = 0; el.textContent = ''; typeT = setInterval(() => { el.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(typeT); }, 22); }
     function panelStory(st) {
-      const s = st.story, p = q('[data-panel]');
-      if (s.chapter >= CHAPTERS.length) {
+      const s = st.story, p = q('[data-panel]'), CH = chaptersFor(s.year);
+      if (s.chapter >= CH.length) {
         const v = village(st);
         p.innerHTML = dialog('등대', `${s.year}년 새벽항 복원 완료. 바다 건강도 ${v.health}, 마을 사람 ${v.pop}명. 새해가 밝으면 바다는 다시 새로운 이야기를 들려줄 겁니다.`, true) +
           `<button type="button" data-ny style="${pill};width:100%;margin-top:8px;background:#E2572B;color:#fff">🌅 ${s.year + 1}년으로 (2회차: 건물·자원 유지, 이야기 다시)</button>`;
@@ -181,7 +249,7 @@
         p.querySelector('[data-ny]').onclick = async () => { const st2 = S(); st2.story.year++; st2.story.chapter = 0; st2.story.talked = false; await save(st2); ui.talkI = 0; draw(); };
         return;
       }
-      const ch = CHAPTERS[s.chapter];
+      const ch = CH[s.chapter];
       if (!s.talked) {
         const [who, text] = ch.talk[ui.talkI];
         p.innerHTML = `<div style="font:800 15px inherit;margin:2px 0 8px">${esc(ch.title)}</div>` + dialog(who, text, ui.talkI === ch.talk.length - 1);
@@ -214,7 +282,7 @@
     function panelVillage(st) {
       const s = st.story, p = q('[data-panel]'), r = s.res;
       p.innerHTML = `<div style="font-size:12.5px;opacity:.8;margin-bottom:6px">🐟 식은 잡은 고기(한 수 더!·3D), 🧵 의는 채비·코디·순서 게임, 🪵 주는 나머지 게임 점수로 모입니다.</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">${Object.entries(BUILD).map(([k, b]) => {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">${Object.entries(BUILD).filter(([k, b]) => !b.y2 || s.year >= 2046 || s.built.includes(k)).map(([k, b]) => {
           const has = s.built.includes(k), can = !has && r.food >= b.cost[0] && r.cloth >= b.cost[1] && r.mat >= b.cost[2];
           return `<div style="padding:10px;border-radius:14px;background:${has ? '#1D8A5B22' : 'var(--surface,#1E242B)'};border:1px solid ${has ? '#1D8A5B' : 'var(--line,#3E4852)'};display:grid;gap:4px">
             <div style="font-size:26px">${b.ic}</div><b>${esc(b.name)}</b><span style="font-size:12px;opacity:.8">${esc(b.desc)}</span>
@@ -250,5 +318,5 @@
     return { refresh: draw, destroy() { clearInterval(typeT); } };
   }
 
-  window.Story = { mount, CHAPTERS, BUILD, MONTHS, village, monthDone };
+  window.Story = { mount, CHAPTERS, CHAPTERS2, chaptersFor, BUILD, MONTHS, village, monthDone };
 })();

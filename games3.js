@@ -113,9 +113,86 @@
         events.push(`🔥 오늘의 도전 모두 완료! 연속 ${st.chStreak}일 · 🪙+${40 + Math.min(6, st.chStreak - 1) * 10}`);
       }
     }
+    // 계절 이벤트 점수(이번 이벤트 대상 어종·게임이면 추가)
+    const ev = seasonEvent(now);
+    if (st.event?.id !== ev.id) st.event = { id: ev.id, pts: 0, claimed: [] };
+    const evPts = (r.catches || []).reduce((a, c) => a + (ev.species.includes(c.sp) ? (c.n || 1) * 10 : 0), 0) + (ev.games.includes(r.game) ? Math.round((r.score || 0) / 5) : 0);
+    if (evPts) { st.event.pts += evPts; events.push(`${ev.ic} ${ev.name} +${evPts}점 (누적 ${st.event.pts})`); }
     const after = levelOf(st.xp);
     if (after.lv > before) { bonus += after.lv * 5; events.push(`⬆ 레벨 ${after.lv} 「${after.title}」 달성! 🪙+${after.lv * 5}`); }
+    // 업적
+    st.ach = st.ach || [];
+    ACH.forEach(a => { if (!st.ach.includes(a.id) && a.ok(st)) { st.ach.push(a.id); bonus += a.coins; events.push(`🏆 업적 달성: ${a.name} 🪙+${a.coins}`); } });
     return { st, events, bonus, levelUp: after.lv > before };
+  }
+
+  // ═════════ 계절 이벤트(실제 달력에 맞춰 바뀜) ═════════
+  const EVENTS = [
+    { id: 'autumn', months: [9, 10, 11], ic: '🍂', name: '가을 쭈꾸미·갑오징어 축제', species: ['쭈꾸미', '갑오징어'], games: ['rig'], desc: '쭈꾸미·갑오징어를 잡거나 채비 맞추기로 축제 점수' },
+    { id: 'winter', months: [12, 1, 2], ic: '❄️', name: '겨울 채비 정비 주간', species: ['우럭'], games: ['rig', 'order', 'dress'], desc: '채비·순서·코디 게임과 겨울 우럭으로 점수' },
+    { id: 'spring', months: [3, 4, 5], ic: '🌸', name: '봄 바다 대청소', species: ['갑오징어', '참돔'], games: ['sonar', 'dodge'], desc: '어탐·항해로 바다를 살피고 봄 어종으로 점수' },
+    { id: 'summer', months: [6, 7, 8], ic: '🌙', name: '여름밤 갈치·한치 축제', species: ['갈치', '한치'], games: ['sea3d', 'reaction'], desc: '야간 어종과 3D 탐험·반응속도로 점수' },
+  ];
+  const EV_TIERS = [{ pts: 100, coins: 30 }, { pts: 300, coins: 60 }, { pts: 600, coins: 100, item: 'hat:crown' }];
+  function seasonEvent(d = new Date()) { const m = d.getMonth() + 1, e = EVENTS.find(x => x.months.includes(m)); return Object.assign({}, e, { id: `${e.id}-${m >= 12 ? d.getFullYear() + 1 : d.getFullYear()}` }); }
+
+  // ═════════ 업적 30종 ═════════
+  const B = (st, k) => (st.bests || {})[k] || 0, P = (st, k) => (st.plays || {})[k] || 0;
+  const totalPlays = st => Object.values(st.plays || {}).reduce((a, b) => a + b, 0);
+  const caughtAll = st => Object.values(st.dex || {}).reduce((a, e) => a + e.n, 0);
+  const ACH = [
+    { id: 'first-play', ic: '🎮', name: '첫 출항', desc: '아무 게임이나 한 판', coins: 10, ok: st => totalPlays(st) >= 1 },
+    { id: 'plays-50', ic: '⛵', name: '단골 선객', desc: '게임 50판', coins: 50, ok: st => totalPlays(st) >= 50 },
+    { id: 'plays-200', ic: '🚢', name: '바다 사나이', desc: '게임 200판', coins: 150, ok: st => totalPlays(st) >= 200 },
+    { id: 'all-games', ic: '🧭', name: '만능 꾼', desc: '10종 게임을 모두 한 번씩', coins: 60, ok: st => Object.keys(GOAL).every(k => P(st, k) > 0) },
+    { id: 'fish-200', ic: '🎣', name: '한 수의 달인', desc: '한 수 더! 200점', coins: 30, ok: st => B(st, 'fish') >= 200 },
+    { id: 'fish-400', ic: '🐟', name: '쿨러 가득', desc: '한 수 더! 400점', coins: 80, ok: st => B(st, 'fish') >= 400 },
+    { id: 'sea3d-300', ic: '🌊', name: '3D 선장', desc: '바다 3D 탐험 300점', coins: 50, ok: st => B(st, 'sea3d') >= 300 },
+    { id: 'sea3d-600', ic: '✨', name: '대물 사냥꾼', desc: '바다 3D 탐험 600점', coins: 120, ok: st => B(st, 'sea3d') >= 600 },
+    { id: 'dress-100', ic: '👕', name: '완벽한 출조 복장', desc: '코디 미션 100점', coins: 40, ok: st => B(st, 'dress') >= 100 },
+    { id: 'rig-150', ic: '🧩', name: '채비 박사', desc: '채비 맞추기 150점', coins: 40, ok: st => B(st, 'rig') >= 150 },
+    { id: 'cast-300', ic: '🎯', name: '명사수', desc: '캐스팅 과녁 300점', coins: 40, ok: st => B(st, 'cast') >= 300 },
+    { id: 'memory-170', ic: '🃏', name: '기억력 왕', desc: '짝맞추기 170점', coins: 40, ok: st => B(st, 'memory') >= 170 },
+    { id: 'reaction-400', ic: '⚡', name: '번개 챔질', desc: '입질 반응속도 400점', coins: 40, ok: st => B(st, 'reaction') >= 400 },
+    { id: 'dodge-600', ic: '⛵', name: '노련한 항해사', desc: '항해 피하기 600점', coins: 40, ok: st => B(st, 'dodge') >= 600 },
+    { id: 'order-150', ic: '📋', name: '정석대로', desc: '낚시 순서 150점', coins: 40, ok: st => B(st, 'order') >= 150 },
+    { id: 'sonar-170', ic: '📡', name: '어탐의 신', desc: '어탐 찾기 170점', coins: 40, ok: st => B(st, 'sonar') >= 170 },
+    { id: 'dex-5', ic: '📖', name: '도감 수집가', desc: '도감 5종', coins: 40, ok: st => Object.keys(st.dex || {}).length >= 5 },
+    { id: 'dex-9', ic: '📚', name: '바다 백과사전', desc: '도감 9종 완성', coins: 150, ok: st => Object.keys(st.dex || {}).length >= 9 },
+    { id: 'catch-100', ic: '🧊', name: '백 마리', desc: '모든 게임에서 100마리', coins: 60, ok: st => caughtAll(st) >= 100 },
+    { id: 'big-octo', ic: '🐙', name: '왕문어', desc: '도감 문어 2kg 이상', coins: 50, ok: st => ((st.dex || {})['문어'] || {}).max >= 2000 },
+    { id: 'big-bream', ic: '🐡', name: '70 참돔', desc: '도감 참돔 70cm 이상', coins: 50, ok: st => ((st.dex || {})['참돔'] || {}).max >= 70 },
+    { id: 'release-10', ic: '🤲', name: '바다 지킴이', desc: '금어기·금지체장 10마리 방생', coins: 60, ok: st => ((st.story || {}).released || 0) >= 10 },
+    { id: 'level-5', ic: '⬆', name: '손맛 장인', desc: '레벨 6', coins: 50, ok: st => levelOf(st.xp || 0).lv >= 6 },
+    { id: 'level-10', ic: '🏅', name: '바다 사냥꾼', desc: '레벨 10', coins: 120, ok: st => levelOf(st.xp || 0).lv >= 10 },
+    { id: 'challenge-3', ic: '🎯', name: '도전자', desc: '오늘의 도전 3개를 하루에', coins: 30, ok: st => (st.chStreak || 0) >= 1 },
+    { id: 'challenge-7', ic: '🔥', name: '불꽃 연속', desc: '오늘의 도전 7일 연속', coins: 150, ok: st => (st.chStreak || 0) >= 7 },
+    { id: 'attend-7', ic: '📅', name: '개근상', desc: '출석 7일 연속', coins: 70, ok: st => ((st.att || {}).streak || 0) >= 7 },
+    { id: 'story-3', ic: '🏝', name: '마을의 희망', desc: '스토리 3장 완료', coins: 60, ok: st => ((st.story || {}).chapter || 0) >= 3 || ((st.story || {}).year || 2045) > 2045 },
+    { id: 'story-end', ic: '🌅', name: '새벽항의 전설', desc: '스토리 엔딩', coins: 200, ok: st => ((st.story || {}).chapter || 0) >= 6 || ((st.story || {}).year || 2045) > 2045 },
+    { id: 'event-600', ic: '👑', name: '축제왕', desc: '계절 이벤트 600점', coins: 100, ok: st => ((st.event || {}).pts || 0) >= 600 },
+  ];
+
+  // ═════════ 출석 보상(7일 주기, 하루 빠지면 처음부터) ═════════
+  const ATT = [10, 15, 20, 25, 30, 40, 80];
+  function attendance(st, now = new Date()) {
+    const a = st.att || {}, today = ymd(now), y = new Date(now); y.setDate(y.getDate() - 1);
+    if (a.last === today) return { claimed: true, day: ((a.streak - 1) % 7) + 1, streak: a.streak };
+    const streak = a.last === ymd(y) ? (a.streak || 0) + 1 : 1;
+    return { claimed: false, day: ((streak - 1) % 7) + 1, streak, coins: ATT[(streak - 1) % 7] };
+  }
+
+  // ═════════ 기기 간 이어하기: 진행 코드(기록 + 코인·옷장) ═════════
+  function exportCode(progress, wallet) {
+    const json = JSON.stringify({ v: 1, at: new Date().toISOString(), p: progress || {}, w: wallet || {} });
+    return 'SSH1-' + btoa(unescape(encodeURIComponent(json)));
+  }
+  function importCode(code) {
+    const s = String(code || '').trim();
+    if (!s.startsWith('SSH1-')) throw new Error('출조관제 진행 코드가 아닙니다 (SSH1-로 시작해야 합니다)');
+    const o = JSON.parse(decodeURIComponent(escape(atob(s.slice(5)))));
+    if (!o || o.v !== 1 || typeof o.p !== 'object') throw new Error('코드가 손상되었습니다');
+    return o;
   }
 
   // ═════════ 1. 캐스팅 과녁: 방향 → 힘 두 번 눌러 채비를 표적 원에 ═════════
@@ -579,32 +656,94 @@
       <div data-stage style="display:grid;gap:8px"></div></div>`;
     const q = s => container.querySelector(s);
     const menu = q('[data-menu]'), stage = q('[data-stage]'), head = q('[data-head]'), toast = q('[data-toast]'), dexEl = q('[data-dex]');
-    let cur = null, inst = null, toastT = 0;
+    let cur = null, inst = null, toastT = 0, panel = null;   // panel: dex · ach · sync
+    const small = `${SOFT};min-height:34px;padding:0 10px;font-size:13px`;
     function drawHead() {
       const st = store.get() || {}, L = levelOf(st.xp || 0), today = ymd(new Date());
       const done = st.chDay === today ? (st.chDone || []) : [], dexN = Object.keys(st.dex || {}).length;
+      const att = attendance(st), ev = seasonEvent(), evSt = st.event && st.event.id === ev.id ? st.event : { pts: 0, claimed: [] };
       head.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <b style="font-size:16px">Lv.${L.lv} ${esc(L.title)}</b>
           <span style="font-size:12.5px;opacity:.8">${L.xp} XP${L.next ? ` / 다음 ${L.next}` : ' · 최고 레벨'}</span>
-          <span style="margin-left:auto;display:flex;gap:6px">
-            <button type="button" data-dexbtn style="${SOFT};min-height:34px;padding:0 10px;font-size:13px">📖 도감 ${dexN}/9</button>
-            <button type="button" data-mute style="${SOFT};min-height:34px;padding:0 10px;font-size:13px" aria-label="효과음 켜기/끄기">${muted ? '🔇' : '🔊'}</button></span></div>
+          <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" data-p="dex" style="${small}">📖 도감 ${dexN}/9</button>
+            <button type="button" data-p="ach" style="${small}">🏆 업적 ${(st.ach || []).length}/${ACH.length}</button>
+            <button type="button" data-p="sync" style="${small}" aria-label="진행 관리">⚙</button>
+            <button type="button" data-mute style="${small}" aria-label="효과음 켜기/끄기">${muted ? '🔇' : '🔊'}</button></span></div>
         <div style="height:8px;border-radius:4px;background:#0003;overflow:hidden"><i style="display:block;height:100%;width:${L.pct}%;background:#E2572B"></i></div>
+        ${att.claimed ? `<div style="font-size:12.5px;opacity:.85">📅 출석 ${att.streak}일째 · 오늘 보상 받음 (7일째 🪙80)</div>`
+          : `<button type="button" data-att style="border:0;border-radius:12px;padding:10px;font:800 14px inherit;cursor:pointer;background:#FFD34D;color:#3A2A00">📅 출석 체크 — ${att.day}일째 보상 🪙${att.coins} 받기 ${'●'.repeat(att.day)}${'○'.repeat(7 - att.day)}</button>`}
+        <div style="display:grid;gap:4px;padding:8px 10px;border-radius:10px;background:#0002">
+          <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13.5px">${ev.ic} ${esc(ev.name)}</b><span style="font-size:11.5px;opacity:.8">${esc(ev.desc)}</span><b style="margin-left:auto;font-size:13px">${evSt.pts}점</b></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${EV_TIERS.map((t, i) => { const got = (evSt.claimed || []).includes(i), can = !got && evSt.pts >= t.pts;
+            return `<button type="button" data-tier="${i}" ${can ? '' : 'disabled'} style="border:0;border-radius:999px;padding:4px 10px;font:600 12px inherit;cursor:${can ? 'pointer' : 'default'};background:${got ? '#4BD08A' : can ? '#E2572B' : '#0003'};color:${got ? '#06222A' : can ? '#fff' : 'inherit'}">${got ? '✓ ' : ''}${t.pts}점 🪙${t.coins}${t.item ? ' + 👑 축제 왕관' : ''}</button>`; }).join('')}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><b style="font-size:13px">🎯 오늘의 도전</b>${st.chStreak && st.chLast ? `<span style="font-size:12px;opacity:.8">🔥 연속 ${st.chStreak}일</span>` : ''}
           ${challenges().map(c => `<button type="button" data-ch="${c.id}" style="border:0;border-radius:999px;padding:5px 10px;cursor:pointer;font:600 12.5px inherit;background:${done.includes(c.id) ? '#4BD08A' : '#0003'};color:${done.includes(c.id) ? '#06222A' : 'inherit'}">${done.includes(c.id) ? '✓ ' : ''}${esc(c.name)} ${c.goal}점</button>`).join('')}
           <span style="font-size:11.5px;opacity:.75">3개 모두 🪙+40 이상</span></div>`;
       q('[data-mute]').onclick = () => { muted = !muted; try { localStorage.setItem('sfx.muted', muted ? '1' : '0'); } catch (e) {} if (!muted) sfx('hit'); drawHead(); };
-      q('[data-dexbtn]').onclick = () => { dexEl.style.display = dexEl.style.display === 'none' ? 'block' : 'none'; drawDex(); };
+      head.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { panel = panel === b.dataset.p ? null : b.dataset.p; drawDex(); });
       head.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => open(b.dataset.ch));
+      const ab = q('[data-att]');
+      if (ab) ab.onclick = async () => {
+        const s2 = store.get() || {}, a = attendance(s2); if (a.claimed) return;
+        s2.att = { last: today, streak: a.streak }; s2.ach = s2.ach || [];
+        const newA = ACH.filter(x => !s2.ach.includes(x.id) && x.ok(s2));   // 출석 업적 등
+        newA.forEach(x => s2.ach.push(x.id));
+        await store.set(s2);
+        if (cfg.onBonus) await cfg.onBonus(a.coins + newA.reduce((t, x) => t + x.coins, 0));
+        sfx('win'); showToast([`📅 출석 ${a.streak}일째 — 🪙+${a.coins}`, ...newA.map(x => `🏆 업적 달성: ${x.name} 🪙+${x.coins}`)]); drawHead();
+      };
+      head.querySelectorAll('[data-tier]').forEach(b => b.onclick = async () => {
+        const s2 = store.get() || {}, i = +b.dataset.tier, t = EV_TIERS[i];
+        if (!s2.event || s2.event.id !== ev.id || s2.event.pts < t.pts || s2.event.claimed.includes(i)) return;
+        s2.event.claimed.push(i); await store.set(s2);
+        if (cfg.onBonus) await cfg.onBonus(t.coins);
+        if (t.item && cfg.onUnlock) await cfg.onUnlock(t.item);
+        sfx('level'); showToast([`${ev.ic} 이벤트 보상 🪙+${t.coins}${t.item ? ' · 👑 축제 왕관 획득! (낚시꾼 코디 → 모자)' : ''}`]); drawHead();
+      });
     }
     function drawDex() {
-      if (dexEl.style.display === 'none') return;
+      dexEl.style.display = panel ? 'block' : 'none';
+      if (panel === 'ach') return drawAch();
+      if (panel === 'sync') return drawSync();
+      if (panel !== 'dex') return;
       const dex = (store.get() || {}).dex || {};
       dexEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px">${Object.keys(SP).map(n => {
         const e = dex[n];
         return `<div style="border-radius:10px;padding:8px;text-align:center;background:${e ? SP[n][0] + '33' : '#0002'};border:1px solid ${e ? SP[n][0] : 'var(--line,#3E4852)'}">
           <div style="font-size:26px;${e ? '' : 'filter:grayscale(1) brightness(.4)'}">${SP[n][1]}</div><b style="font-size:12.5px">${e ? esc(n) : '???'}</b>
           <div style="font-size:11px;opacity:.8">${e ? `${e.n}마리${e.max ? ` · 최대 ${e.max}${n === '문어' ? 'g' : 'cm'}` : ''}` : '「한 수 더!」·3D 탐험에서 잡기'}</div></div>`; }).join('')}</div>`;
+    }
+    function drawAch() {
+      const got = (store.get() || {}).ach || [];
+      dexEl.innerHTML = `<div style="font-size:12.5px;opacity:.8;margin-bottom:6px">업적 ${got.length}/${ACH.length} · 달성하면 코인이 바로 들어옵니다</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px">${ACH.map(a => { const ok = got.includes(a.id);
+          return `<div style="display:grid;grid-template-columns:34px 1fr;gap:6px;align-items:center;padding:8px;border-radius:10px;background:${ok ? '#FFD34D22' : '#0002'};border:1px solid ${ok ? '#FFD34D' : 'var(--line,#3E4852)'}">
+            <span style="font-size:22px;${ok ? '' : 'filter:grayscale(1);opacity:.5'}">${a.ic}</span><span><b style="font-size:12.5px">${esc(a.name)}</b><br><span style="font-size:11px;opacity:.8">${esc(a.desc)} · 🪙${a.coins}</span></span></div>`; }).join('')}</div>`;
+    }
+    function drawSync() {
+      dexEl.innerHTML = `<div style="display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--surface,#1E242B);border:1px solid var(--line,#3E4852)">
+        <b>🔄 기기 간 이어하기</b>
+        <div style="font-size:12.5px;opacity:.85">PC·휴대폰 앱·바다 조황 수첩 사이에 레벨·도감·업적·스토리·코인·옷장을 옮깁니다. 이 기기에서 「진행 코드 만들기」 → 복사 → 다른 기기에서 붙여넣고 「불러오기」.</div>
+        <button type="button" data-exp style="${small}">📤 진행 코드 만들기</button>
+        <textarea data-code rows="3" style="width:100%;font:11px monospace;border-radius:8px;padding:6px;background:#0003;color:inherit;border:1px solid var(--line,#3E4852)" placeholder="SSH1-로 시작하는 코드를 붙여넣으세요"></textarea>
+        <label style="font-size:12.5px;display:flex;gap:6px;align-items:center"><input type="checkbox" data-agree> 이 기기의 진행을 코드 내용으로 바꿉니다</label>
+        <button type="button" data-imp style="${small};background:#E2572B;color:#fff">📥 불러오기</button>
+        <div data-msg style="font-size:12.5px"></div></div>`;
+      const box = dexEl.querySelector('[data-code]'), msg = dexEl.querySelector('[data-msg]');
+      dexEl.querySelector('[data-exp]').onclick = async () => {
+        box.value = exportCode(store.get() || {}, cfg.wallet ? cfg.wallet.get() : {}); box.select();
+        try { await navigator.clipboard.writeText(box.value); msg.textContent = '복사했습니다. 다른 기기에 붙여넣으세요.'; } catch (e) { msg.textContent = '코드를 길게 눌러 전체 선택 후 복사하세요.'; }
+      };
+      dexEl.querySelector('[data-imp]').onclick = async () => {
+        if (!dexEl.querySelector('[data-agree]').checked) { msg.textContent = '바꾸기에 동의하는 칸을 먼저 체크하세요.'; return; }
+        try {
+          const o = importCode(box.value);
+          await store.set(o.p);
+          if (cfg.wallet && o.w) await cfg.wallet.set(o.w);
+          msg.textContent = `불러왔습니다 (${(o.at || '').slice(0, 10)} 기록). Lv.${levelOf(o.p.xp || 0).lv}`; sfx('win'); drawHead(); draw();
+        } catch (e) { msg.textContent = '불러오지 못했습니다: ' + e.message; }
+      };
     }
     function showToast(lines) {
       if (!lines.length) return;
@@ -635,7 +774,8 @@
       menu.innerHTML = entries.map((e, i) => e.id === 'story'
         ? `<button type="button" data-id="story" style="grid-column:1/-1;text-align:left;border:0;border-radius:16px;padding:14px 16px;cursor:pointer;color:#4A2E16;font:13px inherit;background:linear-gradient(120deg,#FFD7A8,#FFF1DC 55%,#BFE3EA);box-shadow:0 4px 0 #E2572B55;${cur === 'story' ? 'outline:3px solid #E2572B;' : ''}">
             <span style="font-size:30px;float:right">🏝🌅</span><b style="font-size:17px">📖 스토리 모드 · 바다 마을 연대기 ${sto.year || 2045}</b><br>
-            <span style="font-size:12.5px">${esc(e.desc)}</span><br><b style="font-size:12.5px">${sto.chapter >= 6 ? '🎉 엔딩 달성 — 다음 해로' : `진행: ${Math.min(6, (sto.chapter || 0) + 1)}장 / 6장`} · 건물 ${(sto.built || []).length}/7</b></button>`
+            <span style="font-size:12.5px">${esc(e.desc)}</span><br><b style="font-size:12.5px">${(() => { const n = window.Story ? Story.chaptersFor(sto.year).length : 6, part = ((sto.year || 2045) - 2045) % 2 ? '2부' : '1부';
+              return (sto.chapter || 0) >= n ? '🎉 엔딩 달성 — 다음 해로' : `${part} · ${(sto.chapter || 0) + 1}장 / ${n}장`; })()} · 건물 ${(sto.built || []).length}/${window.Story ? Object.keys(Story.BUILD).length : 7}</b></button>`
         : `<button type="button" data-id="${e.id}" style="text-align:left;border:2px solid ${e.id === cur ? '#E2572B' : 'var(--line,#3E4852)'};border-radius:12px;padding:10px;background:var(--surface,#1E242B);color:inherit;font:13px inherit;cursor:pointer;min-height:76px">
         <span style="font-size:22px">${e.ic}</span> <b>${i + off}. ${esc(e.name)}</b>${e.id === 'sea3d' ? ' <span style="font-size:10.5px;background:#E2572B;color:#fff;border-radius:6px;padding:1px 5px">3D</span>' : ''}${chs.includes(e.id) ? ' <span style="font-size:10.5px;background:#4BD08A;color:#06222A;border-radius:6px;padding:1px 5px">도전</span>' : ''}<br><span style="font-size:11.5px;opacity:.75">${esc(e.desc)}</span>
         ${bests[e.id] ? `<br><span style="font-size:11.5px;font-weight:700">🏅 최고 ${bests[e.id]}점</span>` : ''}</button>`).join('');
@@ -647,5 +787,5 @@
     return api;
   }
 
-  window.GameHub = { mount: hub, extra, PLACES, levelOf, challenges, apply, isoWeek, GNAME, sfx };
+  window.GameHub = { mount: hub, extra, PLACES, levelOf, challenges, apply, isoWeek, GNAME, sfx, ACH, seasonEvent, attendance, exportCode, importCode };
 })();
