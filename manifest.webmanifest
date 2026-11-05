@@ -1,0 +1,23 @@
+{
+  "name": "출조관제 HMI — 선상낚시 출조 지수·물때·게임",
+  "short_name": "출조관제",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1A1F",
+  "theme_color": "#0B1A1F",
+  "lang": "ko",
+  "description": "전국 연안 선상낚시 출조 지수, 물때, 해상 지도와 스토리 낚시 게임을 한 앱에서.",
+  "categories": ["sports", "weather", "games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "출조 지수", "url": "./index.html#hmi" },
+    { "name": "게임", "url": "./index.html#game" }
+  ]
+}

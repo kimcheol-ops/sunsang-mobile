@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1A1F">
+<meta name="description" content="선상낚시 출조 지수·물때·해상 지도와 낚시 게임을 한 앱에서">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>출조관제 HMI</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { --bg:#0B1A1F; --panel:#12262D; --panel2:#173A43; --line:#24414A; --fg:#E3EEF0; --muted:#8FA6AD; --sea:#4FC0D0; --buoy:#FF7A4A; --ok:#5ED39C; --warn:#F5C46B; --bad:#FF8A8D;
+          --sea-soft:#173A43; --chart:#0E2127; --surface:#12262D; color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+  header { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-left, 0px)) 8px max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 18px; margin: 0; }
+  header small { color: var(--muted); margin-left: auto; font-size: 12px; text-align: right; }
+  main { padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 86px) max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 12px; max-width: 760px; margin: 0 auto; }
+  nav.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr); background: #0E2127F2; border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-left, 0px)) calc(env(safe-area-inset-bottom, 0px) + 6px) max(8px, env(safe-area-inset-right, 0px)); backdrop-filter: blur(8px); }
+  nav.tabbar button { border: 0; background: none; color: var(--muted); font: 600 11.5px inherit; display: grid; justify-items: center; gap: 2px; padding: 6px 0; border-radius: 12px; cursor: pointer; }
+  nav.tabbar button b { font-size: 21px; font-weight: 400; line-height: 1.1; }
+  nav.tabbar button[aria-current="page"] { color: var(--fg); background: var(--panel2); }
+  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+  h2 { font-size: 16px; margin: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  h2 small { color: var(--muted); font-weight: 400; font-size: 12.5px; }
+  .muted { color: var(--muted); } .small { font-size: 12.5px; }
+  button.btn { min-height: 44px; border: 0; border-radius: 12px; padding: 0 16px; font: 700 15px inherit; cursor: pointer; background: var(--panel2); color: var(--fg); }
+  button.btn.primary { background: var(--buoy); color: #fff; }
+  .hero { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+  .score { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; text-align: center; font: 800 34px/1 inherit; border: 6px solid currentColor; }
+  .score small { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+  .양호 { color: var(--ok); } .보통 { color: var(--warn); } .주의 { color: var(--bad); } .미확인 { color: var(--muted); }
+  .rgrid { display: grid; gap: 6px; }
+  .rrow { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--chart); cursor: pointer; border: 1px solid transparent; }
+  .rrow:active { border-color: var(--sea); }
+  .rrow b { font-size: 15px; } .rrow small { color: var(--muted); display: block; font-size: 12px; }
+  .pill { font: 800 15px inherit; min-width: 48px; text-align: center; padding: 4px 8px; border-radius: 999px; background: #0004; }
+  .bar { height: 8px; border-radius: 4px; background: var(--chart); overflow: hidden; } .bar i { display: block; height: 100%; border-radius: 4px; background: var(--sea); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); background: var(--chart); color: var(--fg); border-radius: 999px; padding: 7px 12px; font: 600 13.5px inherit; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--sea); color: #06222A; border-color: var(--sea); }
+  #map { height: 62vh; min-height: 360px; border-radius: 14px; }
+  .darkTiles { filter: invert(1) hue-rotate(180deg) brightness(.8) contrast(.9) saturate(.6); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); }
+  .detail dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; } .detail dt { color: var(--muted); }
+  .hours { display: grid; grid-auto-flow: column; grid-auto-columns: 46px; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+  .hours div { text-align: center; font-size: 11px; padding: 6px 0; border-radius: 8px; background: var(--chart); }
+  .hours div.good { background: #1D8A5B55; }
+  .install { display: none; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:22px">⚓</span><h1>출조관제 HMI</h1>
+  <small id="updated">불러오는 중…</small>
+</header>
+<main>
+  <!-- 관제 -->
+  <div data-view="hmi">
+    <section class="card" id="heroCard">
+      <div class="hero"><div class="score 미확인" id="bestScore">—<small>지수</small></div>
+        <div><div class="small muted">오늘 가장 좋은 바다</div><div style="font:800 22px inherit" id="bestName">—</div><div class="small" id="bestInfo"></div></div></div>
+      <div class="small muted" id="dayText"></div>
+    </section>
+    <section class="card">
+      <h2>감시 지역 출조 지수 <small>04~16시 · 풍속·파고·비</small></h2>
+      <div class="rgrid" id="regions"><div class="muted">예보를 받는 중…</div></div>
+      <div class="small muted">지수 = 100 − (최대 풍속−3m/s)×6 − (최대 파고−0.5m)×25 − 비 5~10. 75↑ 양호 · 50~74 보통 · 50↓ 주의. PC 출조관제 HMI와 같은 공식이며 기상특보는 반영하지 않습니다 — 출항 전 기상청 특보·해경 통제를 확인하세요.</div>
+    </section>
+    <section class="card detail" id="detail" hidden></section>
+  </div>
+  <!-- 물때 -->
+  <div data-view="tide" hidden>
+    <section class="card">
+      <h2>오늘의 물때 <small id="tideDate"></small></h2>
+      <div class="hero"><div class="score" style="color:var(--sea)" id="mulBig">-<small>물때</small></div>
+        <div><div id="lunarText"></div><div class="small muted" style="margin-top:4px">물살 세기(사리에 가까울수록 셈)</div><div class="bar"><i id="strength"></i></div><div class="small" id="strengthText"></div></div></div>
+      <div class="chips"><button class="chip" id="m7" aria-pressed="true">서해 7물때</button><button class="chip" id="m8">남해·동해 8물때</button></div>
+    </section>
+    <section class="card"><h2>이번 주 물때</h2><div id="week" class="rgrid"></div>
+      <div class="small muted">음력은 한국 음력 표(PC 프로그램과 같은 표)로 계산합니다. 고·저조 시각은 PC 출조관제의 국립해양조사원 예보에서 확인하세요.</div></section>
+    <section class="card"><h2>제철 · 금어기</h2><div class="chips" id="season"></div></section>
+  </div>
+  <!-- 지도 -->
+  <div data-view="map" hidden>
+    <section class="card"><h2>해상 지도 <small>지역 점을 누르면 상세</small></h2>
+      <div class="chips"><button class="chip" data-ov="sst">🛰 위성 수온</button><button class="chip" data-ov="seamark" aria-pressed="true">⚓ 항로표지</button><button class="chip" data-ov="depth">수심</button></div>
+      <div id="map"></div><div class="small muted" id="mapInfo">NASA GIBS · GEBCO · OpenSeaMap · OpenStreetMap</div></section>
+  </div>
+  <!-- 게임 -->
+  <div data-view="game" hidden>
+    <section class="card"><h2>게임 <small>스토리 모드 + 10종 · 🪙 <span id="coins">50</span></small></h2><div id="hubBox"></div></section>
+  </div>
+  <!-- 더보기 -->
+  <div data-view="more" hidden>
+    <section class="card install" id="installCard"><h2>📲 앱으로 설치</h2><div class="small">홈 화면에 설치하면 앱처럼 열리고, 게임·물때는 인터넷 없이도 됩니다.</div><button class="btn primary" id="installBtn">설치하기</button></section>
+    <section class="card"><h2>감시 지역 <small>관제 탭에 보일 지역</small></h2><div class="chips" id="watch"></div></section>
+    <section class="card"><h2>함께 쓰기</h2>
+      <div class="small">조황 기록·전국 조황 지도·주간 낚시왕 순위는 <b>바다 조황 수첩</b>(claude.ai)에서 함께 씁니다.</div>
+      <a class="btn" style="display:grid;place-items:center;text-decoration:none" href="https://claude.ai/artifact/NrW6xWoMdhdBcQ3Fhgo4Zz" target="_blank" rel="noopener">🎣 바다 조황 수첩 열기</a>
+      <div class="small muted">PC의 출조관제 HMI는 매일 04:00 자동 수집 브리핑(daily 폴더), 해경 주어장, 선박 수첩, CCTV, 주차장까지 다룹니다.</div></section>
+    <section class="card"><h2>정보</h2><div class="small muted" id="about"></div></section>
+  </div>
+</main>
+<nav class="tabbar" aria-label="메뉴">
+  <button data-go="hmi" aria-current="page"><b>📡</b>관제</button>
+  <button data-go="tide"><b>🌊</b>물때</button>
+  <button data-go="map"><b>🗺️</b>지도</button>
+  <button data-go="game"><b>🎮</b>게임</button>
+  <button data-go="more"><b>☰</b>더보기</button>
+</nav>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="game.js"></script>
+<script src="games2.js"></script>
+<script src="games3.js"></script>
+<script src="story.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
