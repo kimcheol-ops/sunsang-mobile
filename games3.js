@@ -144,7 +144,7 @@
     { id: 'first-play', ic: '🎮', name: '첫 출항', desc: '아무 게임이나 한 판', coins: 10, ok: st => totalPlays(st) >= 1 },
     { id: 'plays-50', ic: '⛵', name: '단골 선객', desc: '게임 50판', coins: 50, ok: st => totalPlays(st) >= 50 },
     { id: 'plays-200', ic: '🚢', name: '바다 사나이', desc: '게임 200판', coins: 150, ok: st => totalPlays(st) >= 200 },
-    { id: 'all-games', ic: '🧭', name: '만능 꾼', desc: '10종 게임을 모두 한 번씩', coins: 60, ok: st => Object.keys(GOAL).every(k => P(st, k) > 0) },
+    { id: 'all-games', ic: '🧭', name: '만능 꾼', desc: '모든 게임을 한 번씩(신작 포함)', coins: 80, ok: st => Object.keys(GOAL).every(k => P(st, k) > 0) },
     { id: 'fish-200', ic: '🎣', name: '한 수의 달인', desc: '한 수 더! 200점', coins: 30, ok: st => B(st, 'fish') >= 200 },
     { id: 'fish-400', ic: '🐟', name: '쿨러 가득', desc: '한 수 더! 400점', coins: 80, ok: st => B(st, 'fish') >= 400 },
     { id: 'sea3d-300', ic: '🌊', name: '3D 선장', desc: '바다 3D 탐험 300점', coins: 50, ok: st => B(st, 'sea3d') >= 300 },
@@ -777,7 +777,7 @@
             <span style="font-size:12.5px">${esc(e.desc)}</span><br><b style="font-size:12.5px">${(() => { const n = window.Story ? Story.chaptersFor(sto.year).length : 6, part = ((sto.year || 2045) - 2045) % 2 ? '2부' : '1부';
               return (sto.chapter || 0) >= n ? '🎉 엔딩 달성 — 다음 해로' : `${part} · ${(sto.chapter || 0) + 1}장 / ${n}장`; })()} · 건물 ${(sto.built || []).length}/${window.Story ? Object.keys(Story.BUILD).length : 7}</b></button>`
         : `<button type="button" data-id="${e.id}" style="text-align:left;border:2px solid ${e.id === cur ? '#E2572B' : 'var(--line,#3E4852)'};border-radius:12px;padding:10px;background:var(--surface,#1E242B);color:inherit;font:13px inherit;cursor:pointer;min-height:76px">
-        <span style="font-size:22px">${e.ic}</span> <b>${i + off}. ${esc(e.name)}</b>${e.id === 'sea3d' ? ' <span style="font-size:10.5px;background:#E2572B;color:#fff;border-radius:6px;padding:1px 5px">3D</span>' : ''}${chs.includes(e.id) ? ' <span style="font-size:10.5px;background:#4BD08A;color:#06222A;border-radius:6px;padding:1px 5px">도전</span>' : ''}<br><span style="font-size:11.5px;opacity:.75">${esc(e.desc)}</span>
+        <span style="font-size:22px">${e.ic}</span> <b>${i + off}. ${esc(e.name)}</b>${e.id === 'sea3d' ? ' <span style="font-size:10.5px;background:#E2572B;color:#fff;border-radius:6px;padding:1px 5px">3D</span>' : ''}${e.isNew ? ' <span style="font-size:10.5px;background:#6C5FD0;color:#fff;border-radius:6px;padding:1px 5px">NEW</span>' : ''}${chs.includes(e.id) ? ' <span style="font-size:10.5px;background:#4BD08A;color:#06222A;border-radius:6px;padding:1px 5px">도전</span>' : ''}<br><span style="font-size:11.5px;opacity:.75">${esc(e.desc)}</span>
         ${bests[e.id] ? `<br><span style="font-size:11.5px;font-weight:700">🏅 최고 ${bests[e.id]}점</span>` : ''}</button>`).join('');
       menu.querySelectorAll('[data-id]').forEach(b => b.onclick = () => open(b.dataset.id));
     }
@@ -787,5 +787,5 @@
     return api;
   }
 
-  window.GameHub = { mount: hub, extra, PLACES, levelOf, challenges, apply, isoWeek, GNAME, sfx, ACH, seasonEvent, attendance, exportCode, importCode };
+  window.GameHub = { mount: hub, extra, PLACES, levelOf, challenges, apply, isoWeek, GNAME, GOAL, sfx, ACH, seasonEvent, attendance, exportCode, importCode };
 })();

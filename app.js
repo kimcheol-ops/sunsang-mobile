@@ -175,6 +175,7 @@ function initGames() {
     { id: 'dress', ic: '👕', name: '낚시꾼 코디', desc: '오늘 조건에 맞는 출조 복장', mount: el => AnglerDress.mount(el, { today: new Date(), wallet, onScore: r => hub.record({ game: 'dress', score: r.score }) }) },
     { id: 'rig', ic: '🧩', name: '채비 맞추기', desc: '60초 어종별 채비 퀴즈', mount: el => RigMatch.mount(el, { onEnd: r => { addCoins(r.coins); hub.record({ game: 'rig', score: r.score }); } }) },
     ...GameHub.extra(r => { addCoins(r.coins); hub.record(r); }, () => ({ outfit: wallet.get().outfit })),
+    ...(window.MoreGames ? MoreGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 인기 장르 신작 5종
   ];
   hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
     onUnlock: key => { const w = wallet.get(); return wallet.set({ owned: AnglerDress.unlock(w.owned, key) }); } });

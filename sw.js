@@ -1,7 +1,7 @@
 ﻿/* 출조관제 HMI 모바일 서비스 워커: 앱 화면·게임은 오프라인에서도, 예보는 마지막 받은 값으로
  * 앱 파일을 바꿔 올릴 때는 CACHE 이름의 숫자를 올려야 휴대폰에 새 버전이 받아집니다. */
-const CACHE = 'sunsang-mobile-v2';
-const SHELL = ['./', './index.html', './app.js', './game.js', './games2.js', './games3.js', './story.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
+const CACHE = 'sunsang-mobile-v3';
+const SHELL = ['./', './index.html', './app.js', './game.js', './games2.js', './games3.js', './games5.js', './story.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
