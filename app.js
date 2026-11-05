@@ -177,6 +177,7 @@ function initGames() {
     ...GameHub.extra(r => { addCoins(r.coins); hub.record(r); }, () => ({ outfit: wallet.get().outfit })),
     ...(window.MoreGames ? MoreGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 인기 장르 신작 5종
     ...(window.Games3D ? Games3D.extra(r => { addCoins(r.coins); hub.record(r); }, { store, wallet }) : []),   // 친환경 3D 5종 + 낚시점
+    ...(window.Space ? Space.extra(r => { addCoins(r.coins); hub.record(r); }, { store }) : []),   // 은하 낚시 원정대 10편
   ];
   hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
     onUnlock: key => { const w = wallet.get(); return wallet.set({ owned: AnglerDress.unlock(w.owned, key) }); } });

@@ -151,6 +151,7 @@
     if (hold) { f.T += (.2 + f.power * .14) * dt; f.dist -= (11 - f.power * 1.5) * (1 - f.T * .4) * dt; } else f.T -= 1.0 * dt;
     if (Math.random() < dt * (.3 + f.power * .3)) { f.T += rnd(.04, .1) * f.power; f.dist += f.power * .5; }
     f.T = Math.max(0, f.T); f.slack = f.T < .05 ? f.slack + dt : 0;
+    f.idle = hold ? 0 : (f.idle || 0) + dt; if (f.idle > 3.5) return 'slip';   // 3.5초 넘게 안 감으면 놓침
     if (f.T >= 1) return Math.random() < Math.max(.35, brk * 2) ? 'break' : (f.T = .7, 'hold');
     if (f.slack > 2.4) return 'slip';
     return f.dist <= 0 ? 'land' : 'fight';
@@ -253,7 +254,7 @@
         q('[data-hud]').innerHTML = `<div>⏱ ${Math.max(0, 90 - t).toFixed(0)}초 · 🕔 ${String(Math.floor(hour)).padStart(2, '0')}:${String(Math.floor(hour % 1 * 60)).padStart(2, '0')} · 점수 ${score}</div><div>🎯 ${esc(target)} · ${Object.entries(count).map(([k, v]) => `${k} ${v}`).join(' · ') || '아직 0마리'}</div>`;
         if (msgT > 0) { msgT -= dt; if (msgT <= 0) q('[data-msg]').textContent = ''; }
         S.r.render(scene, cam);
-        if (t >= 90 && state !== 'fight') return end();
+        if ((t >= 90 && state !== 'fight') || t >= 96) return end();   // 시간이 끝나면 진행 중인 대결만 6초 더
         raf = requestAnimationFrame(frame);
       }
       raf = requestAnimationFrame(frame);
