@@ -4,6 +4,9 @@ $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $www = Join-Path $here '..\SunsangHelper\wwwroot'
 foreach ($f in 'game.js', 'games2.js', 'games3.js', 'games5.js', 'games6.js', 'games7.js', 'angler.js', 'story.js', 'today.html', 'today-data.js', 'places.html', 'places-data.js', 'places.js') { Copy-Item (Join-Path $www $f) $here -Force; "복사: $f" }
+# 공유 사진(매일 조황 수첩에서 받아 둔 정박 위치·가게 사진)
+$ph = Join-Path $www 'photos'; if (Test-Path $ph) { New-Item -ItemType Directory -Force (Join-Path $here 'photos') | Out-Null; Copy-Item (Join-Path $ph '*') (Join-Path $here 'photos') -Force; "복사: photos ($((Get-ChildItem $ph).Count)장)" }
+
 
 # 아이콘: 바다색 바탕 + 파도 + 닻 모양(글꼴 없이 도형으로)
 Add-Type -AssemblyName System.Drawing

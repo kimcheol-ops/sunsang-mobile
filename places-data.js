@@ -60,11 +60,13 @@ window.PLACES_DATA = (function () {
   boats.unshift(
     { id: 'boat-sample-1', kind: 'boat', sample: true, region: '보령', prov: '충남', sea: '서해', port: '오천항', name: '예시 · 쭈갑 전문선', addr: '오천항 3번 부잔교', lat: 36.4372, lon: 126.5183, approx: false,
       species: ['쭈꾸미', '갑오징어'], capacity: 18, depart: '05:30', fee: '1인 9만원(채비 포함)', phone: '',
-      amen: { toilet: '수세식', snack: 'yes', water: 'yes', drink: 'yes', meal: 'yes', bag: 'yes', icebox: 'no', teach: 'yes', rentRod: 'yes', rentReel: 'yes', vest: 'yes', seasick: 'yes', kids: 'yes', parking: 'yes' },
+      amen: { toilet: '수세식', snack: 'yes', water: 'yes', drink: 'yes', meal: 'yes', bag: 'yes', icebox: 'no', teach: 'yes', rentRod: 'yes', rentReel: 'yes', vest: 'yes', seasick: 'yes', kids: 'yes' },
+      moor: { lat: 36.4372, lon: 126.5183, desc: '3번 부잔교 끝, 흰 바탕에 파란 줄 배(예시)' }, parking: { has: 'free', guide: '오천항 공영주차장(무료), 새벽엔 항구 앞 도로변도 가능(예시)', lat: 36.4381, lon: 126.5199 }, moorToilet: 'yes',
       seat: '추첨', seatNote: '출항 20분 전 제비뽑기, 초보는 선미 쪽 추천', note: '라면·커피 무료, 쭈꾸미 담을 망·지퍼백 제공' },
     { id: 'boat-sample-2', kind: 'boat', sample: true, region: '여수', prov: '전남', sea: '남해', port: '국동항', name: '예시 · 갈치 야간선', addr: '국동항 어항단지 앞', lat: 34.7322, lon: 127.7238, approx: false,
       species: ['갈치', '한치'], capacity: 22, depart: '16:00', fee: '1인 13만원', phone: '',
-      amen: { toilet: '간이', snack: 'no', water: 'yes', drink: 'no', meal: 'yes', bag: 'yes', icebox: 'yes', teach: 'no', rentRod: 'yes', rentReel: 'yes', vest: 'yes', seasick: 'no', kids: 'no', parking: 'yes' },
+      amen: { toilet: '간이', snack: 'no', water: 'yes', drink: 'no', meal: 'yes', bag: 'yes', icebox: 'yes', teach: 'no', rentRod: 'yes', rentReel: 'yes', vest: 'yes', seasick: 'no', kids: 'no' },
+      moor: { desc: '어항단지 앞 물양장(예시) — 정확한 좌표 미등록' }, parking: { has: 'street', guide: '전용 주차장 없음, 어항단지 상가 주변 도로 주차(예시)' }, moorToilet: 'no',
       seat: '선착순 승선', seatNote: '먼저 배에 오른 순서대로 자리 선택', note: '저녁 도시락 제공, 음료는 지참' },
   );
   // 공유 집계: 바다 조황 수첩(places/<사용자> 문서)의 하트·조회·후기·정보 고침·등록을 매일 합쳐 넣는 칸(daily-sea-content 스킬이 갱신)
