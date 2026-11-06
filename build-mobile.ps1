@@ -3,7 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $www = Join-Path $here '..\SunsangHelper\wwwroot'
-foreach ($f in 'game.js', 'games2.js', 'games3.js', 'games5.js', 'games6.js', 'games7.js', 'angler.js', 'story.js', 'today.html', 'today-data.js', 'places.html', 'places-data.js') { Copy-Item (Join-Path $www $f) $here -Force; "복사: $f" }
+foreach ($f in 'game.js', 'games2.js', 'games3.js', 'games5.js', 'games6.js', 'games7.js', 'angler.js', 'story.js', 'today.html', 'today-data.js', 'places.html', 'places-data.js', 'places.js') { Copy-Item (Join-Path $www $f) $here -Force; "복사: $f" }
 
 # 아이콘: 바다색 바탕 + 파도 + 닻 모양(글꼴 없이 도형으로)
 Add-Type -AssemblyName System.Drawing

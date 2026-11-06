@@ -67,5 +67,8 @@ window.PLACES_DATA = (function () {
       amen: { toilet: '간이', snack: 'no', water: 'yes', drink: 'no', meal: 'yes', bag: 'yes', icebox: 'yes', teach: 'no', rentRod: 'yes', rentReel: 'yes', vest: 'yes', seasick: 'no', kids: 'no', parking: 'yes' },
       seat: '선착순 승선', seatNote: '먼저 배에 오른 순서대로 자리 선택', note: '저녁 도시락 제공, 음료는 지참' },
   );
-  return { regions: R, shops, boats, collectedAt: '2026-11-06' };
+  // 공유 집계: 바다 조황 수첩(places/<사용자> 문서)의 하트·조회·후기·정보 고침·등록을 매일 합쳐 넣는 칸(daily-sea-content 스킬이 갱신)
+  //   hearts/hits: {업체id: 개수}, reviews: {업체id: [{stars,text,ts}]}, edits: {업체id: {rent|amen:{항목:값}, seat, capacity, ts}}, added: [등록 업체]
+  const community = { updated: '', updatedIso: '', people: 0, hearts: {}, hits: {}, reviews: {}, edits: {}, added: [] };
+  return { regions: R, shops, boats, collectedAt: '2026-11-06', community };
 })();
