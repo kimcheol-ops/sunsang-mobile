@@ -118,7 +118,7 @@ function fishArt(sp, i) {
     <g transform="translate(80 ${squid ? 50 : 58}) rotate(${squid ? 0 : -8})">${body}</g></svg>`;
 }
 
-const state = { sea: '전체', tag: '전체' };
+const state = { sea: '전체', tag: '전체', home: null };
 const inSea = region => state.sea === '전체' || seaOf(region) === state.sea;
 const dshort = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
 const dow = s => '일월화수목금토'[new Date(s + 'T12:00:00').getDay()];
@@ -127,6 +127,7 @@ function render() {
   const today = D.date;
   $('date').textContent = `${today.slice(0, 4)}년 ${dshort(today)}(${dow(today)})`;
   $('src').textContent = `수집 ${D.collectedAt} · 출조 지수는 ${dshort(D.scoreDay)}(${dow(D.scoreDay)}) 예보`;
+  if (state.home) $('src').textContent = `📍 기준 지역 ${state.home.name} · ` + $('src').textContent;
   $('seaChips').innerHTML = ['전체', '서해', '남해', '동해', '제주'].map(s => `<button class="chip" data-sea="${s}" aria-pressed="${state.sea === s}">${s}</button>`).join('');
   $('tagChips').innerHTML = ['전체', '가족', '교육', '힐링', '먹거리', '바다'].map(s => `<button class="chip" data-tag="${s}" aria-pressed="${state.tag === s}">${s === '전체' ? '모든 행사' : '#' + s}</button>`).join('');
 
@@ -155,7 +156,7 @@ function render() {
 
   // 지역 행사
   const evs = D.events.filter(e => { const n = nearest(e.lat, e.lon); return (state.sea === '전체' || seaOf(n.name) === state.sea) && (state.tag === '전체' || e.tags.includes(state.tag)); })
-    .sort((a, b) => (a.upcoming ? 1 : 0) - (b.upcoming ? 1 : 0) || a.end.localeCompare(b.end));
+    .sort((a, b) => (a.upcoming ? 1 : 0) - (b.upcoming ? 1 : 0) || (state.home ? km(state.home.lat, state.home.lon, a.lat, a.lon) - km(state.home.lat, state.home.lon, b.lat, b.lon) : a.end.localeCompare(b.end)));
   $('events').innerHTML = evs.map(e => { const n = nearest(e.lat, e.lon), s = nearestScored(e.lat, e.lon), live = e.start <= today && e.end >= today;
     const yearRound = e.start.slice(5) === '01-01' && e.end.slice(5) === '12-31';
     const when = yearRound ? '연중' : e.start === e.end ? `${dshort(e.start)}(${dow(e.start)})` : `${dshort(e.start)}~${dshort(e.end)}`;
@@ -163,14 +164,16 @@ function render() {
       <div class="img"><img src="${esc(e.img)}" alt="${esc(e.title)}" loading="lazy"><span class="when">${when}</span>${live ? '<span class="now">진행 중</span>' : e.upcoming ? '<span class="now" style="background:var(--accent);color:#0D2433">예정</span>' : ''}</div>
       <div class="body"><b>${esc(e.title)}</b><span class="muted" style="font-size:12px">${esc(e.addr)}</span>
       <div class="chips">${e.tags.map(t => `<span class="chip tag">#${t}</span>`).join('')}</div>
-      <span class="near">⚓ ${esc(n.name)}에서 ${n.km.toFixed(0)}km${s && s.km < 60 ? ` · <span class="score ${s.s[1]}">${esc(s.name)} 지수 ${s.s[0]}</span>` : ''}</span></div></a>`; }).join('') || '<div class="empty">조건에 맞는 행사가 없습니다.</div>';
+      <span class="near">${state.home ? `📍 ${esc(state.home.name)}에서 ${km(state.home.lat, state.home.lon, e.lat, e.lon).toFixed(0)}km · ` : ""}⚓ ${esc(n.name)}에서 ${n.km.toFixed(0)}km${s && s.km < 60 ? ` · <span class="score ${s.s[1]}">${esc(s.name)} 지수 ${s.s[0]}</span>` : ''}</span></div></a>`; }).join('') || '<div class="empty">조건에 맞는 행사가 없습니다.</div>';
   document.querySelectorAll('.ev').forEach(a => a.addEventListener('click', ev => { if (window.chrome && window.chrome.webview) { ev.preventDefault(); post({ type: 'open', url: a.href }); } }));
 
   $('foot').innerHTML = '행사 정보·사진: 한국관광공사 TourAPI(공공누리) · 출조 지수: Open-Meteo(풍속·파고·비, PC·모바일과 같은 공식) · 조과: 휴대폰 수첩·바다 조황 수첩·선장 등록 · 일정은 바뀔 수 있으니 방문 전 주최 측에 확인하세요.';
   document.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { state.sea = b.dataset.sea; render(); });
   document.querySelectorAll('[data-tag]').forEach(b => b.onclick = () => { state.tag = b.dataset.tag; render(); });
 }
+window.todayApi = { setRegion(name, lat, lon) { state.home = { name, lat, lon }; render(); } };   // PC 운전 개요의 기준 지역: 가까운 행사부터
 render();
+post({ type: 'ready' });
 </script>
 </body>
 </html>

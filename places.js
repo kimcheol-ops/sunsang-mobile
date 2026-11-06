@@ -582,7 +582,11 @@
       body(); say(); });
     const h = location.hash.slice(1); if (['shop', 'boat', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
     render();
-    return { open(t) { st.tab = t === 'event' ? 'add' : t; if (t === 'event') st.addKind = 'event'; render(); }, refresh() { V = store.view(); render(); } };
+    return { setRegion(name, lat, lon) {   // 기준 지역(PC 운전 개요): 같은 이름이 없으면 가까운 지역(60km 안)
+        let key = D.regions[name] ? name : null;
+        if (!key && lat) { let best = null, bd = 1e9; for (const [k, v] of Object.entries(D.regions)) { const d = km({ lat, lon }, { lat: v[2], lon: v[3] }); if (d < bd) { bd = d; best = k; } } if (bd < 60) key = best; }
+        st.region = key || "전체"; st.sea = "전체"; st.sel = null; render(); },
+      open(t) { st.tab = t === 'event' ? 'add' : t; if (t === 'event') st.addKind = 'event'; render(); }, refresh() { V = store.view(); render(); } };
   }
 
   window.PlacesApp = { mount, localStore, dbStore, aggregate, cleanDoc, cleanAi };

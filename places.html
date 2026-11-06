@@ -20,6 +20,7 @@
   // PC 탭·휴대폰 앱: 이 기기 저장 + 매일 반영되는 공유 집계(places-data.js의 community)
   const inPC = !!(window.chrome && window.chrome.webview);
   window.placesApi = PlacesApp.mount(document.getElementById('app'), { data: window.PLACES_DATA, store: PlacesApp.localStore(window.PLACES_DATA.community), map: true, inPC });
+  try { window.chrome.webview.postMessage({ type: 'ready' }); } catch (e) {}
 </script>
 </body>
 </html>
