@@ -94,13 +94,14 @@
   ];
   const OUTRO = [['누리', '리바이어던을 놓아주자, 블랙홀의 빛 고리가 잠시 바다처럼 출렁였다.', '#1E1400', '🌊'], ['검은그물', '…나도 이제 그물을 접겠다. 필요한 만큼만.', '#141020', '🕊️'],
                  ['하나', '우주 어디에도 바다가 있어. 그리고 어디서나 규칙은 같아.', '#0A1430', '🌍'], ['별이', '선장님, 다음 항해는요?', '#060A20', '🚀']];
-  const EP_RULE_TEXT = { time: '⏱ 4D 시간', tilt: '📱 5D 기울이기', rewind: '⏪ 6D 되감기', parallel: '🌗 7D 평행세계', gravity: '🧭 8D 중력', wormhole: '🌀 9D 웜홀' };
+  const EP_RULE_TEXT = { time: '⏱ 4D 시간', tide: '🌊 4D 물때', tilt: '📱 5D 기울이기', rewind: '⏪ 6D 되감기', parallel: '🌗 7D 평행세계', gravity: '🧭 8D 중력', wormhole: '🌀 9D 웜홀', heart: '💗 10D 심상(마음)' };
 
-  // ═════════ 웹툰(세로 컷) · 소설 ═════════
-  function toonHtml(ep, panels, title) {
+  // ═════════ 웹툰(세로 컷) · 소설 ═════════  opt: { series, cast } — 다른 시리즈(games8 등)도 같은 틀을 씀
+  function toonHtml(ep, panels, title, opt) {
+    const cast = (opt && opt.cast) || CAST, series = (opt && opt.series) || '은하 낚시 원정대 2145';
     return `<div style="display:grid;gap:10px;padding:10px;border-radius:16px;background:#0B0B18">
-      <div style="text-align:center;color:#E3E8FF"><div style="font-size:12px;opacity:.7">은하 낚시 원정대 2145 · ${ep.id ? ep.id + '화 · ' + ep.dim : '에필로그'}</div><b style="font-size:19px">${esc(title)}</b></div>
-      ${panels.map(([who, text, bg, art], i) => { const c = CAST[who] || CAST.누리, left = i % 2 === 0;
+      <div style="text-align:center;color:#E3E8FF"><div style="font-size:12px;opacity:.7">${esc(series)} · ${ep.id ? ep.id + '화 · ' + ep.dim : '에필로그'}</div><b style="font-size:19px">${esc(title)}</b></div>
+      ${panels.map(([who, text, bg, art], i) => { const c = cast[who] || Object.values(cast)[0], left = i % 2 === 0;
         return `<div style="position:relative;min-height:170px;border:3px solid #111;border-radius:6px;overflow:hidden;background:radial-gradient(circle at ${left ? '75%' : '25%'} 30%,#ffffff18,transparent 40%),linear-gradient(160deg,${bg},#000);box-shadow:4px 4px 0 #000">
           ${Array.from({ length: 18 }, (_, k) => `<i style="position:absolute;left:${(k * 37 + i * 13) % 100}%;top:${(k * 53 + i * 29) % 100}%;width:2px;height:2px;border-radius:50%;background:#fff;opacity:${.3 + (k % 3) * .2}"></i>`).join('')}
           <div style="position:absolute;${left ? 'right' : 'left'}:10px;bottom:6px;font-size:64px;filter:drop-shadow(0 4px 6px #0008)">${art}</div>
@@ -110,8 +111,8 @@
           ${i === 1 && ep.sfxText ? `<div style="position:absolute;${left ? 'right' : 'left'}:12px;top:${left ? 10 : 100}px;font:900 22px inherit;color:#FFE45A;-webkit-text-stroke:1px #000;transform:rotate(-8deg)">${esc(ep.sfxText)}</div>` : ''}
         </div>`; }).join('')}</div>`;
   }
-  function novelHtml(ep) {
-    const lines = ep.toon.map(([who, text]) => `<p style="margin:0 0 8px">${who === '누리' ? '' : esc(who) + '이(가) 말했다. '}“${esc(text)}”</p>`).join('');
+  function novelHtml(ep, hero) {
+    const lines = ep.toon.map(([who, text]) => `<p style="margin:0 0 8px">${who === (hero || '누리') ? '' : esc(who) + '이(가) 말했다. '}“${esc(text)}”</p>`).join('');
     return `<div style="padding:14px;border-radius:14px;background:#14142A;color:#E3E8FF;font:15px/1.8 'Noto Serif KR','Batang',serif"><b style="font-size:17px">${ep.id}화. ${esc(ep.title)}</b><p style="margin:8px 0">${esc(ep.intro)}</p>${lines}
       <p style="margin:0;opacity:.8">— 무대: ${esc(ep.world)} · 열린 차원: ${ep.dim}${ep.rules.length ? ' (' + ep.rules.map(r => EP_RULE_TEXT[r]).join(', ') + ')' : ''}</p></div>`;
   }
@@ -125,13 +126,21 @@
         <div data-msg style="position:absolute;left:0;right:0;top:44%;text-align:center;color:#fff;font:800 19px sans-serif;text-shadow:0 2px 6px #000;pointer-events:none"></div>
         <div data-bar style="position:absolute;left:10%;right:10%;bottom:12px;height:14px;border-radius:7px;background:#0009;display:none;overflow:hidden"><i style="display:block;height:100%;width:0"></i></div></div>
       <div data-ctl style="display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px;margin-top:8px"></div>
-      <div style="font-size:12px;opacity:.75;margin-top:4px">화면을 끌어 루어(빛나는 구슬)를 물고기 곁에 두고 가만히 기다리면 입질 → 「🎣 챔질·감기」를 누르고 있어 끌어올리기(빨간 장력이면 손 떼기). 🛰 쓰레기에 루어를 대면 수거, 🛡 보호종은 놓아주면 보너스.</div>`;
+      <div style="font-size:12px;opacity:.75;margin-top:4px">화면을 끌어 루어(빛나는 구슬)를 물고기 곁에 두고 가만히 기다리면 입질 → 「🎣 챔질·감기」를 누르고 있어 끌어올리기(빨간 장력이면 손 떼기). ${ep.surface ? '🧹 회색 쓰레기' : '🛰 쓰레기'}에 루어를 대면 수거, 🛡 보호종은 놓아주면 보너스${ep.series ? ' · 📏 금지체장 미만은 자동 방생 · 📳 센서를 켰다면 휴대폰을 흔들어 챔질' : ''}${R.has('heart') ? ' · 💗 루어를 가만히 두고 천천히 — 마음 게이지 55 이상일 때만 기억이 다가와요' : ''}.</div>`;
     const q = s => sh.body.querySelector(s), holder = q('[data-gl]');
-    const r = new THREE.WebGLRenderer({ antialias: true }); r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); holder.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%;touch-action:none';
+    const r = new THREE.WebGLRenderer({ antialias: true, alpha: !!ep.ar }); r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); holder.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%;touch-action:none';
     const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(55, .8, .1, 1000);
     const resize = () => { const w = holder.clientWidth || 300, h = w / .8; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
     const ro = new ResizeObserver(resize); ro.observe(holder); resize();
     scene.background = new THREE.Color(ep.sky); cam.position.set(0, 4, 24); cam.lookAt(0, -1, 0);
+    // 휴대폰 기능(PhoneKit): 2D 측면 시점 · 📷 AR 카메라 배경 · 🌐 파노라마 하늘 · 📳 흔들어 챔질 · 🔊 배경 소리
+    const PK = window.PhoneKit, setBg = c => { if (scene.background && scene.background.isColor) scene.background.set(c); };
+    if (ep.flat) { cam.fov = 24; cam.position.set(0, 1, 62); cam.updateProjectionMatrix(); cam.lookAt(0, -1, 0); }
+    if (ep.ar && PK && PK.camera.on()) { scene.background = null; const v = PK.camera.video; v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover'; holder.style.position = 'relative'; holder.insertBefore(v, holder.firstChild); r.domElement.style.position = 'relative'; }
+    if (ep.pano && PK && PK.pano.canvas) { const tex = new THREE.CanvasTexture(PK.pano.canvas); const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 48, 24), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })); scene.add(sky); scene.background = null; }
+    let unShake = null; if (PK && ep.shake) unShake = PK.onShake(() => { if (state === 'bite') hookNow('📳 흔들어 챔질!'); else if (state === 'fight' && f) { f.dist -= 1.2; f.T += .08; say('📳 힘껏 당겼다!', .8); } });
+    if (PK) PK.sound.start(ep.ambient || (ep.surface ? 'sea' : 'space'));
+    let lastHold = false;
     scene.add(new THREE.HemisphereLight('#cfd8ff', '#101020', .8)); const key = new THREE.DirectionalLight('#ffffff', .7); key.position.set(10, 20, 15); scene.add(key);
     // 별
     const sn = 1400, sp = new Float32Array(sn * 3); for (let i = 0; i < sn; i++) { const v = new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize().multiplyScalar(rnd(200, 400)); sp.set([v.x, v.y, v.z], i * 3); }
@@ -146,13 +155,34 @@
       const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(tp, 3)); tail = new THREE.Points(tg, new THREE.PointsMaterial({ color: '#9FE7FF', size: 1.4, transparent: true, opacity: .6 })); scene.add(tail); }
     // 낚시터(액체면 또는 열린 공간)
     let fluid = null; if (ep.fluid) { fluid = new THREE.Mesh(new THREE.BoxGeometry(34, 18, 14), new THREE.MeshLambertMaterial({ color: ep.fluid, transparent: true, opacity: .35 })); fluid.position.set(0, -2, 0); scene.add(fluid); }
-    const geyser = R.has('time') && ep.id === 3 ? new THREE.Mesh(new THREE.CylinderGeometry(.6, 2.4, 22, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#E6FBFF', transparent: true, opacity: 0, side: THREE.DoubleSide })) : null;
+    // 지구 바다(games8 지역편): 수면·해·달 + 지역 풍경(등대·다리·섬·불꽃·빛 축제·오로라)
+    const decoAnim = [];
+    if (ep.surface) { const s = new THREE.Mesh(new THREE.PlaneGeometry(400, 200), new THREE.MeshLambertMaterial({ color: ep.surface, transparent: true, opacity: .85, side: THREE.DoubleSide })); s.rotation.x = -Math.PI / 2; s.position.set(0, 7.2, -60); scene.add(s); decoAnim.push(t => { s.position.y = 7.2 + Math.sin(t * .8) * .08; }); }
+    (ep.deco || []).forEach(d => {
+      const g = new THREE.Group(), M = c => new THREE.MeshLambertMaterial({ color: c }), add = (geo, c, x, y, z) => { const m = new THREE.Mesh(geo, M(c)); m.position.set(x, y, z); g.add(m); return m; };
+      if (d === 'lighthouse') { add(new THREE.CylinderGeometry(1, 1.4, 9, 16), '#F4F4F4', 0, 4.5, 0); add(new THREE.CylinderGeometry(1.05, 1.05, 1.4, 16), '#E5484D', 0, 6, 0); const lamp = add(new THREE.SphereGeometry(.8, 12, 10), '#FFE45A', 0, 9.6, 0); lamp.material.emissive = new THREE.Color('#FFB020');
+        const beam = new THREE.Mesh(new THREE.ConeGeometry(2.4, 28, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#FFF3B0', transparent: true, opacity: .12, side: THREE.DoubleSide })); beam.rotation.z = Math.PI / 2; beam.position.set(14, 9.6, 0); const piv = new THREE.Group(); piv.position.set(0, 0, 0); piv.add(beam); g.add(piv); decoAnim.push(t => { piv.rotation.y = t * .8; }); g.position.set(-26, 7, -34); }
+      if (d === 'bridge') { add(new THREE.BoxGeometry(90, .8, 2.4), '#B8C2CC', 0, 8, 0); [-24, 24].forEach(x => add(new THREE.BoxGeometry(1.4, 16, 1.4), '#DDE3EA', x, 8, 0)); for (let i = -9; i <= 9; i++) add(new THREE.BoxGeometry(.12, Math.abs(i) * .7 + .5, .12), '#EEF2F6', i * 5, 8.8 + Math.abs(i) * .35, 0); g.position.set(0, 2, -60); }
+      if (d === 'island') { [[-30, -40, 9, '#2E6B3A'], [26, -46, 12, '#3E7B4A'], [6, -70, 7, '#2E5B3A']].forEach(([x, z, h, c]) => add(new THREE.ConeGeometry(h * .9, h, 7), c, x, 7 + h / 2 - .5, z)); }
+      if (d === 'fireworks') { for (let k = 0; k < 4; k++) { const n = 140, pos = new Float32Array(n * 3), vel = []; for (let i = 0; i < n; i++) { const v = new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize().multiplyScalar(rnd(4, 7)); vel.push(v); }
+          const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: ['#FF6B6B', '#FFD24A', '#7AD7FF', '#B07AFF'][k], size: .9, transparent: true, opacity: 0 })); scene.add(pts);
+          const cx = -30 + k * 20, cy = 34 + (k % 2) * 6, cz = -70, period = 3.2 + k * .7;
+          decoAnim.push(t => { const ph = ((t + k * 1.1) % period) / period, r = ph * 2.2; for (let i = 0; i < n; i++) pos.set([cx + vel[i].x * r * 3, cy + vel[i].y * r * 3 - ph * ph * 6, cz + vel[i].z * r], i * 3); geo.attributes.position.needsUpdate = true; pts.material.opacity = ph < .1 ? ph * 10 : Math.max(0, 1 - ph); }); } }
+      if (d === 'lanterns') { for (let i = 0; i < 14; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(3, 2), new THREE.MeshBasicMaterial({ color: ['#FF7AD9', '#4AE0FF', '#FFD24A', '#7A5CFF'][i % 4], transparent: true, opacity: .55, side: THREE.DoubleSide })); m.position.set(-40 + i * 6, 12 + (i % 3) * 3, -50); scene.add(m); decoAnim.push(t => { m.material.opacity = .35 + .3 * Math.sin(t * 2 + i); m.rotation.y = Math.sin(t + i) * .4; }); } }
+      if (d === 'aurora') { for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(160, 26), new THREE.MeshBasicMaterial({ color: ['#7AF0C8', '#B07AFF', '#FFB3D9', '#7AD7FF', '#FFE6A8'][i], transparent: true, opacity: .1, depthWrite: false, side: THREE.DoubleSide })); m.position.set(0, 30 + i * 4, -120 - i * 6); scene.add(m); decoAnim.push(t => { m.material.opacity = .06 + .06 * Math.sin(t * .6 + i); m.rotation.z = Math.sin(t * .2 + i) * .08; }); } }
+      if (d === 'boats') { for (let i = 0; i < 4; i++) { const b = new THREE.Group(); const h = new THREE.Mesh(new THREE.BoxGeometry(5, 1.2, 1.8), M(['#F4F4F4', '#4AA8FF', '#FFB547', '#E5484D'][i])); b.add(h); const c = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.4, 1.4), M('#FFFFFF')); c.position.set(-.8, 1.2, 0); b.add(c); b.position.set(-34 + i * 16, 7.8, -30 - i * 6); scene.add(b); decoAnim.push(t => { b.rotation.z = Math.sin(t * 1.2 + i) * .05; b.position.y = 7.8 + Math.sin(t + i) * .1; }); } }
+      if (g.children.length) scene.add(g);
+    });
+    const geyser = R.has('time') && ep.id === 3 && !ep.series ? new THREE.Mesh(new THREE.CylinderGeometry(.6, 2.4, 22, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#E6FBFF', transparent: true, opacity: 0, side: THREE.DoubleSide })) : null;
     if (geyser) { geyser.position.set(4, 2, 0); scene.add(geyser); }
     // 웜홀 2개
     const portals = []; if (ep.wormhole) [[-11, 3, 0, '#B07AFF'], [11, -6, 0, '#4AE0FF']].forEach(([x, y, z, c]) => { const m = new THREE.Mesh(new THREE.TorusGeometry(1.8, .25, 12, 40), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); scene.add(m); portals.push(m); });
     // 우주선·줄·루어
     const ship = new THREE.Group(); const hull = new THREE.Mesh(new THREE.ConeGeometry(1.4, 4, 6), new THREE.MeshLambertMaterial({ color: '#E3E8FF' })); hull.rotation.z = Math.PI / 2; ship.add(hull);
     const fin = new THREE.Mesh(new THREE.BoxGeometry(1, 2, .2), new THREE.MeshLambertMaterial({ color: '#7A5CFF' })); fin.position.x = 1.4; ship.add(fin); ship.position.set(0, 12, 0); scene.add(ship);
+    const shipY = ep.surface ? 8.2 : 12;
+    if (ep.surface) { hull.geometry = new THREE.BoxGeometry(7, 1.4, 2.6); hull.rotation.z = 0; hull.material.color.set(ep.boatColor || "#F4F4F4"); fin.geometry = new THREE.BoxGeometry(2.2, 1.8, 2); fin.position.set(-1.2, 1.5, 0); fin.material.color.set("#FFFFFF");
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(7.05, .3, 2.65), new THREE.MeshLambertMaterial({ color: "#2E6BD9" })); stripe.position.y = .2; ship.add(stripe); }
     const lure = new THREE.Mesh(new THREE.SphereGeometry(.45, 16, 12), new THREE.MeshBasicMaterial({ color: '#FFE45A' })); scene.add(lure);
     const glow = new THREE.Mesh(new THREE.SphereGeometry(.9, 16, 12), new THREE.MeshBasicMaterial({ color: '#FFE45A', transparent: true, opacity: .25 })); lure.add(glow);
     const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]); scene.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: '#cfd8ff' })));
@@ -175,7 +205,9 @@
     const junk = []; function spawnJunk() { const m = new THREE.Mesh(new THREE.BoxGeometry(rnd(.6, 1.4), rnd(.3, .8), rnd(.4, 1)), new THREE.MeshLambertMaterial({ color: '#8A8F9A' })); m.position.set(rnd(-B.x, B.x), rnd(-B.y, B.y * .6), rnd(-2, 2)); scene.add(m); junk.push(m); }
     for (let i = 0; i < 4; i++) spawnJunk();
     // 상태
-    const st = { t: 0, score: 0, caught: {}, released: 0, junk: 0, breaks: 0, world: 'A', grav: new THREE.Vector3(0, -1, 0), rewinds: R.has('rewind') ? 3 : 0, energy: 100 };
+    const st = { t: 0, score: 0, caught: {}, released: 0, junk: 0, breaks: 0, world: 'A', grav: new THREE.Vector3(0, -1, 0), rewinds: R.has('rewind') ? 3 : 0, energy: 100, calm: 40, best: null, memories: [] };
+    // 4D 물때: 30초가 한 물(밀물→썰물). 물살이 셀 때(들물·날물 한가운데) 무는 어종과 정조(물 멈춤)에 무는 어종이 다름
+    const tideNow = () => { const c = Math.cos(st.t / 30 * Math.PI * 2), lv = Math.sin(st.t / 30 * Math.PI * 2); return { strong: Math.abs(c) > .45, name: Math.abs(c) <= .45 ? (lv > 0 ? '만조 정조' : '간조 정조') : c > 0 ? '들물' : '날물' }; };
     let state = 'roam', still = 0, fish = null, f = null, hold = false, biteT = 0, last = 0, raf = 0, alive = true, msgT = 0, portalCd = 0;
     const target = new THREE.Vector3(0, 0, 0), lpos = new THREE.Vector3(0, 0, 0); lure.position.copy(lpos);
     const say = (m, s) => { q('[data-msg]').textContent = m; msgT = s || 1.4; };
@@ -194,7 +226,8 @@
       (R.has('gravity') ? btn('⬇', SOFT, 'g-d') + btn('⬅', SOFT, 'g-l') + btn('⬆', SOFT, 'g-u') + btn('➡', SOFT, 'g-r') : '') + (R.has('tilt') && !tiltOn ? btn('📱 기울이기 켜기', SOFT, 'tilt') : '');
     const B_ = id => ctl.querySelector(`[data-b="${id}"]`);
     const reelBtn = B_('reel');
-    reelBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'bite') { state = 'fight'; f = { T: .2, dist: lure.position.distanceTo(ship.position), power: fish.power, slack: 0 }; q('[data-bar]').style.display = 'block'; vib(80); say(`걸었다! ${fish.name}`, 1); } hold = true; });
+    function hookNow(msg) { state = 'fight'; f = { T: .2, dist: lure.position.distanceTo(ship.position), power: fish.power, slack: 0 }; q('[data-bar]').style.display = 'block'; vib(80); if (PK) PK.buzz('hook'); say(msg || `걸었다! ${fish.name}`, 1); }
+    reelBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'bite') hookNow(); hold = true; });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => reelBtn.addEventListener(t, () => hold = false));
     if (B_('rewind')) B_('rewind').onclick = () => rewind();
     if (B_('world')) B_('world').onclick = () => { if (st.energy < 15) { say('에너지 부족 — 잠시 기다리세요', 1); return; } st.energy -= 15; st.world = st.world === 'A' ? 'B' : 'A'; sfx('level'); vib(40); say(`🌗 ${st.world} 세계`, 1); };
@@ -209,6 +242,9 @@
       sfx('level'); vib([30, 30, 30]); say('⏪ 3초 전으로!', 1.2);
     }
     function phaseOk(fd) {
+      if (R.has('heart') && st.calm < 55) return false;   // 10D 심상: 마음이 고요해야 다가옴
+      if (R.has('tide') && fd.act === 'flow') return tideNow().strong;
+      if (R.has('tide') && fd.act === 'slack') return !tideNow().strong;
       if (!R.has('time') || fd.act === 'any') return true;
       if (fd.act === 'night') return Math.sin(st.t / 15 * Math.PI) < 0;
       if (fd.act === 'plume') return true;
@@ -217,29 +253,41 @@
     const visible = fd => !R.has('parallel') || fd.layer === '*' || fd.layer === st.world;
     function land() {
       const fd = fish; q('[data-bar]').style.display = 'none';
+      const ex = fd.def[7] || {};   // 실물 정보(games8): { size:[최소,최대], unit, min: 금지체장, msg: 10D 기억 문장 }
+      const len = ex.size ? Math.round(rnd(ex.size[0], ex.size[1]) * (ex.unit === 'g' ? 1 : 10)) / (ex.unit === 'g' ? 1 : 10) : null, unit = ex.unit || 'cm';
       if (fd.prot) { st.released++; st.score += 30; say(`🛡 ${fd.name} — 보호종 방생 +30`, 1.8); sfx('level'); }
-      else { st.caught[fd.name] = (st.caught[fd.name] || 0) + 1; st.score += fd.pts; say(`${fd.name} +${fd.pts}`, 1.4); sfx('catch'); vib([40, 30, 120]); }
+      else if (ex.min && len != null && len < ex.min) { st.released++; st.score += 10; say(`📏 ${fd.name} ${len}${unit} — 금지체장 ${ex.min}${unit} 미만, 방생 +10`, 2.2); sfx('level'); }
+      else {
+        st.caught[fd.name] = (st.caught[fd.name] || 0) + 1; st.score += fd.pts;
+        if (len != null && (!st.best || len / (ex.size[1] || 1) > st.best.r)) st.best = { name: fd.name, len, unit, r: len / (ex.size[1] || 1) };
+        if (ex.msg) { st.memories.push(ex.msg); say(`💗 ${ex.msg}`, 3.4); } else say(`${fd.name}${len != null ? ` ${len}${unit}` : ''} +${fd.pts}`, 1.6);
+        sfx('catch'); vib([40, 30, 120]);
+      }
+      if (PK) { PK.sound.splash(); PK.buzz('catch'); }
       scene.remove(fd.m); fishes.splice(fishes.indexOf(fd), 1);
       if (fd.act !== 'plume' && fd.life > 1e8) spawnFish(fd.def);
       state = 'roam'; fish = null; f = null;
     }
     function end() {
+      if (unShake) unShake(); if (PK) PK.sound.stop();
       alive = false; cancelAnimationFrame(raf); ro.disconnect(); r.dispose(); r.domElement.remove();
-      onDone({ score: Math.round(st.score), caught: st.caught, released: st.released, junk: st.junk, breaks: st.breaks });
+      onDone({ score: Math.round(st.score), caught: st.caught, released: st.released, junk: st.junk, breaks: st.breaks, best: st.best, memories: st.memories });
     }
     function frame(ts) {
       if (!alive) return;
       const dt = Math.min(.05, (ts - (last || ts)) / 1000); last = ts; st.t += dt;
       // 4D 시간: 공전 주기(밤낮)·간헐천
       const night = R.has('time') && Math.sin(st.t / 15 * Math.PI) < 0;
-      if (R.has('time')) scene.background.set(night ? '#000006' : ep.sky);
+      if (R.has('time')) setBg(night ? '#000006' : ep.sky);
       planet.rotation.y += dt * .05; if (planet.userData.disk) planet.userData.disk.rotation.z += dt * .4;
       if (tail) tail.rotation.y = Math.sin(st.t * .2) * .05;
       if (geyser) { const cyc = st.t % 12, on = cyc > 9; geyser.material.opacity = on ? .45 : Math.max(0, geyser.material.opacity - dt);
         if (on && cyc - dt <= 9) { ep.fish.filter(d => d[5] === 'plume').forEach(d => { for (let i = 0; i < (d[4] ? 1 : 4); i++) spawnFish(d, geyser.position); }); say('⛲ 간헐천 분출! 날치가 솟아올라요', 1.5); vib([100, 50, 100]); sfx('bite'); } }
-      if (R.has('parallel')) { st.energy = Math.min(100, st.energy + dt * 6); scene.background.set(st.world === 'A' ? ep.sky : '#020812'); }
+      if (R.has('parallel')) { st.energy = Math.min(100, st.energy + dt * 6); setBg(st.world === 'A' ? ep.sky : '#020812'); }
       // 루어 이동: 손가락 목표 + 5D 기울이기 + 8D 중력 + 9D 웜홀
       if (R.has('tilt') && fxOpt.fx5 && tilt.ok && !dragging) target.add(new THREE.Vector3(tilt.x * 12 * dt, -tilt.y * 10 * dt, 0)).clamp(new THREE.Vector3(-B.x, -B.y, 0), new THREE.Vector3(B.x, B.y, 0));
+      if (R.has('gravity') && ep.realGravity && PK && PK.gravity.ok) st.grav.set(PK.gravity.x, PK.gravity.y, 0);   // 8D: 실제 휴대폰 중력 방향
+      if (ep.lightWorld && PK && PK.camera.on() && Math.floor(st.t) !== Math.floor(st.t - dt)) { const lk = PK.camera.look(); if (lk) { const w = lk.light > .42 ? 'A' : 'B'; if (w !== st.world) { st.world = w; sfx('level'); say(w === 'A' ? '☀ 밝은 곳을 비춤 — 현재의 바다' : '🌑 어두운 곳을 비춤 — 과거의 바다', 1.4); } } }   // 7D: 카메라 밝기로 세계 전환
       if (R.has('gravity') && state !== 'fight' && !dragging) target.addScaledVector(st.grav, 2.2 * dt).clamp(new THREE.Vector3(-B.x, -B.y, 0), new THREE.Vector3(B.x, B.y, 0));
       const before = lpos.clone();
       if (state !== 'fight') lpos.lerp(target, Math.min(1, dt * (ep.id === 1 ? 2 : 4)));
@@ -247,6 +295,10 @@
       if (portals.length === 2 && portalCd <= 0) portals.forEach((p, i) => { if (lpos.distanceTo(p.position) < 1.6) { const o = portals[1 - i].position; lpos.set(o.x + (o.x < 0 ? 2.5 : -2.5), o.y, 0); target.copy(lpos); portalCd = 1.2; sfx('level'); vib(60); say('🌀 웜홀 통과!', 1); } });
       portals.forEach((p, i) => { p.rotation.z += dt * (i ? -1.5 : 1.5); p.rotation.y = Math.sin(st.t) * .3; });
       const moving = lpos.distanceTo(before) > .02; still = moving ? 0 : still + dt;
+      decoAnim.forEach(fn => fn(st.t));
+      if (PK && state !== 'fight' && lastHold) { PK.sound.reel(false); lastHold = false; }
+      // 10D 심상: 루어를 가만히 두고 숨을 고르면 마음이 차분해지고(💗↑), 마구 휘저으면 흐트러짐(💗↓)
+      if (R.has('heart')) { st.calm = clamp(st.calm + (moving ? -lpos.distanceTo(before) * 22 : (state === 'fight' ? 3 : 9)) * dt * (moving ? 10 : 1), 0, 100); if (fluid) fluid.material.color.set(st.calm >= 55 ? ep.fluid : '#3A3550'); }
       lure.position.copy(lpos); glow.material.opacity = .2 + Math.sin(st.t * 4) * .08;
       // 물고기: 떠돌기 + 루어 근처로 모이기(중력 방향 '바닥'에 모임)
       for (let i = fishes.length - 1; i >= 0; i--) {
@@ -267,7 +319,7 @@
       }
       if (state === 'bite') { biteT -= dt; lure.position.y += Math.sin(st.t * 40) * .05; if (biteT <= 0) { state = 'roam'; fish = null; reelBtn.textContent = '🎣 챔질·감기'; say('놓쳤다…'); } }
       else if (state === 'fight') {
-        reelBtn.textContent = '🎣 감기(누르고 있기)';
+        reelBtn.textContent = '🎣 감기(누르고 있기)'; if (PK && hold !== lastHold) { PK.sound.reel(hold); lastHold = hold; }
         if (hold) { f.T += (.2 + f.power * .14) * dt; f.dist -= (11 - f.power * 1.5) * (1 - f.T * .4) * dt; } else f.T -= dt;
         if (Math.random() < dt * (.3 + f.power * .3)) { f.T += rnd(.04, .1) * f.power; f.dist += f.power * .5; }
         f.T = Math.max(0, f.T); f.slack = f.T < .05 ? f.slack + dt : 0;
@@ -280,15 +332,15 @@
         else if (f.dist <= .5) { land(); reelBtn.textContent = '🎣 챔질·감기'; }
       }
       // 쓰레기 수거
-      for (let i = junk.length - 1; i >= 0; i--) { const j = junk[i]; j.rotation.x += dt; j.rotation.y += dt * .7; if (j.position.distanceTo(lpos) < 1.4 && state !== 'fight') { scene.remove(j); junk.splice(i, 1); st.junk++; st.score += 10; sfx('hit'); say('🛰 우주 쓰레기 수거 +10', 1); setTimeout(() => alive && spawnJunk(), 5000); } }
+      for (let i = junk.length - 1; i >= 0; i--) { const j = junk[i]; j.rotation.x += dt; j.rotation.y += dt * .7; if (j.position.distanceTo(lpos) < 1.4 && state !== 'fight') { scene.remove(j); junk.splice(i, 1); st.junk++; st.score += 10; sfx('hit'); say(R.has('heart') ? '💭 걱정 한 조각을 내려놓았다 +10' : ep.surface ? '🧹 바다 쓰레기 수거 +10' : '🛰 우주 쓰레기 수거 +10', 1.2); setTimeout(() => alive && spawnJunk(), 5000); } }
       // 6D 스냅샷
       if (R.has('rewind') && Math.floor(st.t * 2) !== Math.floor((st.t - dt) * 2)) { snaps.push({ l: lpos.clone(), fish: fishes.map(x => x.m.position.clone()), fight: f ? Object.assign({}, f) : null, fishIdx: fish ? fishes.indexOf(fish) : -1 }); if (snaps.length > 12) snaps.shift(); }
       lineGeo.setFromPoints([ship.position.clone().add(new THREE.Vector3(-1.6, -.3, 0)), lure.position]);
-      ship.position.y = 12 + Math.sin(st.t) * .3;
+      ship.position.y = shipY + Math.sin(st.t) * (ep.surface ? .12 : .3); if (ep.surface) ship.rotation.z = Math.sin(st.t * 1.1) * .03;
       cam.position.x = Math.sin(st.t * .15) * 2; cam.lookAt(0, -1, 0);
       const caughtN = Object.values(st.caught).reduce((a, b) => a + b, 0);
-      q('[data-hud]').innerHTML = `<div>⏱ ${Math.max(0, 90 - st.t).toFixed(0)}초 · 점수 ${Math.round(st.score)} / 목표 ${ep.goal}${R.has('time') ? (ep.id === 3 ? ` · ⛲ ${Math.max(0, 9 - st.t % 12).toFixed(0)}초 뒤 분출` : night ? ' · 🌙 밤' : ' · ☀ 낮') : ''}</div>
-        <div>🎣 ${caughtN}마리 · 🛡 방생 ${st.released} · 🛰 ${st.junk}${R.has('parallel') ? ` · 🌗 ${st.world} 세계 ⚡${Math.round(st.energy)}` : ''}${R.has('rewind') ? ` · ⏪ ${st.rewinds}` : ''}</div>`;
+      q('[data-hud]').innerHTML = `<div>⏱ ${Math.max(0, 90 - st.t).toFixed(0)}초 · 점수 ${Math.round(st.score)} / 목표 ${ep.goal}${R.has('time') ? (geyser ? ` · ⛲ ${Math.max(0, 9 - st.t % 12).toFixed(0)}초 뒤 분출` : night ? ' · 🌙 밤' : ' · ☀ 낮') : ''}${R.has('tide') ? ` · 🌊 ${tideNow().name}${tideNow().strong ? '(물살 셈)' : '(물 멈춤)'}` : ''}${R.has('heart') ? ` · 💗 마음 ${Math.round(st.calm)}${st.calm < 55 ? ' — 천천히, 가만히' : ''}` : ''}</div>
+        <div>🎣 ${caughtN}마리 · 🛡 방생 ${st.released} · ${R.has("heart") ? "💭" : ep.surface ? "🧹" : "🛰"} ${st.junk}${R.has('parallel') ? ` · 🌗 ${st.world} 세계 ⚡${Math.round(st.energy)}` : ''}${R.has('rewind') ? ` · ⏪ ${st.rewinds}` : ''}</div>`;
       if (msgT > 0) { msgT -= dt; if (msgT <= 0) q('[data-msg]').textContent = ''; }
       r.render(scene, cam);
       if ((st.t >= 90 && state !== 'fight') || st.t >= 96) return end();   // 시간이 끝나면 진행 중인 대결만 6초 더
@@ -296,7 +348,7 @@
     }
     raf = requestAnimationFrame(frame);
     if (window.__SPACE_TEST__) window.__SPACE_TEST__ = { st, fishes, target, get state() { return state; } };   // 자동 시험용(평소에는 꺼져 있음)
-    return { destroy() { if (alive) { alive = false; cancelAnimationFrame(raf); ro.disconnect(); r.dispose(); r.domElement.remove(); } } };
+    return { destroy() { if (unShake) unShake(); if (PK) PK.sound.stop(); if (alive) { alive = false; cancelAnimationFrame(raf); ro.disconnect(); r.dispose(); r.domElement.remove(); } } };
   }
 
   // ═════════ 원정대: 은하 지도(순차 해금) → 웹툰/소설 → 출항 → 결과 ═════════
@@ -354,5 +406,5 @@
   }
 
   EP.forEach(e => { if (window.GameHub && GameHub.GNAME) GameHub.GNAME['space' + e.id] = `우주 ${e.id}화 ${e.title}`; });
-  window.Space = { EP, extra: (onReward, ctx) => [{ id: 'space', ic: '🚀', name: '은하 낚시 원정대 2145', desc: '[3D→9D 10편] 달·유로파·타이탄·토성 고리·혜성·블랙홀 미래 낚시 · 웹툰/소설 스토리', isNew: true, is3d: true, mount: el => campaign(el, onReward, ctx) }] };
+  window.Space = { EP, play, toonHtml, novelHtml, RULE_TEXT: EP_RULE_TEXT, style: { PRIMARY, SOFT, HOT }, extra: (onReward, ctx) => [{ id: 'space', ic: '🚀', name: '은하 낚시 원정대 2145', desc: '[3D→9D 10편] 달·유로파·타이탄·토성 고리·혜성·블랙홀 미래 낚시 · 웹툰/소설 스토리', isNew: true, is3d: true, mount: el => campaign(el, onReward, ctx) }] };
 })();
