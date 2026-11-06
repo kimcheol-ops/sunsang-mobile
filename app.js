@@ -126,9 +126,9 @@ function renderTide() {
   $('m7').setAttribute('aria-pressed', method === 7); $('m8').setAttribute('aria-pressed', method === 8);
   $('week').innerHTML = Array.from({ length: 7 }, (_, k) => { const x = new Date(); x.setDate(x.getDate() + k); const l = lunarDay(x);
     return `<div class="rrow" style="cursor:default"><div><b>${x.getMonth() + 1}/${x.getDate()} (${'일월화수목금토'[x.getDay()]})</b><small>음력 ${l ?? '-'}일</small></div><span class="small">${l ? strength(l) + '%' : ''}</span><span class="pill">${l ? mul(l, method) : '-'}</span></div>`; }).join('');
-  const m = d.getMonth() + 1, SEASON = { '쭈꾸미': [9,10,11], '갑오징어': [4,5,9,10,11], '우럭': [3,4,5,6,9,10,11,12], '광어': [4,5,9,10,11], '참돔': [5,6,9,10,11], '갈치': [7,8,9,10,11], '문어': [7,8,9,10,11], '무늬오징어': [9,10,11,12], '한치': [6,7,8] };
-  const CLOSED = { '쭈꾸미': [511, 831], '문어': [516, 630] }, md = m * 100 + d.getDate();
-  $('season').innerHTML = Object.keys(SEASON).map(s => CLOSED[s] && md >= CLOSED[s][0] && md <= CLOSED[s][1] ? `<span class="chip" style="color:var(--bad)">🚫 ${s} 금어기</span>` : SEASON[s].includes(m) ? `<span class="chip">🔥 ${s} 제철</span>` : '').join('');
+  // 제철(월)·금어기(기간) — AnglerKit.seasons: 금어기 중 → 곧 금어기(30일 안) → 제철 순
+  const SS = window.AnglerKit ? AnglerKit.seasons(d) : [];
+  $('season').innerHTML = SS.map(o => `<span class="chip" style="cursor:default;${o.cls === 'bad' ? 'color:var(--bad);border-color:var(--bad)' : o.cls === 'warn' ? 'color:var(--warn);border-color:var(--warn)' : ''}" title="${esc(o.note || '')}">${esc(o.text)}</span>`).join('') || '<span class="small muted">이번 달 제철 정보가 없습니다</span>';
 }
 $('m7').onclick = () => { method = 7; ls.set('m.mul', 7); renderTide(); };
 $('m8').onclick = () => { method = 8; ls.set('m.mul', 8); renderTide(); };

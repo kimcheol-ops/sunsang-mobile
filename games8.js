@@ -19,6 +19,12 @@
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const km = (a, b, c, d) => { const r = Math.PI / 180, h = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
 
+  // 기간: 11/6(금) ~ 11/8(일) · 3일간 · 진행 중 2일 남음 / D-5 / 오늘 마감 / 연중
+  const dnum = s => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5);
+  const mdw = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}(${'일월화수목금토'[new Date(s + 'T12:00:00').getDay()]})`;
+  function periodText(a, b) { b = b || a; if (a.slice(5) === '01-01' && b.slice(5) === '12-31') return '연중 상시';
+    const t = dnum(today()), n = dnum(b) - dnum(a) + 1, left = dnum(b) - t, until = dnum(a) - t;
+    return `${a === b ? mdw(a) + ' 하루' : `${mdw(a)} ~ ${mdw(b)} · ${n}일간`} · ${until > 0 ? 'D-' + until : left === 0 ? '오늘 마감' : `진행 중 ${left}일 남음`}`; }
   const SERIES = '아라의 바다 고향 10경 · 2046';
   const CAST = {
     아라: { ic: '👧', color: '#FF7A59', role: '열 살 낚시 꿈나무' },
@@ -127,7 +133,7 @@
     return `<div style="padding:12px;border-radius:14px;background:linear-gradient(160deg,#10324A,#0A1A2A);color:#E3F2FF;display:grid;gap:6px;font-size:13px">
       <b style="font-size:15px">📍 ${esc(ep.region)} · ${esc(ep.port)} 여행 카드</b>
       <div>🍽 <b>먹거리</b> ${esc(ep.promo.food)}</div><div>📸 <b>볼거리</b> ${esc(ep.promo.sight)}</div><div>👨‍👩‍👧 <b>가족·교육</b> ${esc(ep.promo.family)}</div>
-      ${evs.length ? `<div>🎪 <b>지금 열리는 행사</b> ${evs.map(e => `${esc(e.title)}(${+e.start.slice(5, 7)}/${+e.start.slice(8, 10)}~${+e.end.slice(5, 7)}/${+e.end.slice(8, 10)})`).join(' · ')}</div>` : ''}
+      ${evs.length ? `<div>🎪 <b>지금·곧 열리는 행사</b>${evs.map(e => `<br>· ${esc(e.title)} — 🗓 ${periodText(e.start, e.end)}`).join('')}</div>` : ''}
       ${shops || boats ? `<div>🏪 <b>실제 출조 준비</b> 낚시점 ${shops}곳 · 낚싯배 업체 ${boats}곳 — 「낚시점·선상」 메뉴에서 승선 위치·주차·화장실 확인</div>` : ''}
       ${sc ? `<div>🌊 <b>출조 지수</b> ${sc[0]}점 ${esc(sc[1])} (${esc(T.scoreDay || '')})</div>` : ''}</div>`;
   }

@@ -134,7 +134,12 @@
     { id: 'summer', months: [6, 7, 8], ic: '🌙', name: '여름밤 갈치·한치 축제', species: ['갈치', '한치'], games: ['sea3d', 'reaction'], desc: '야간 어종과 3D 탐험·반응속도로 점수' },
   ];
   const EV_TIERS = [{ pts: 100, coins: 30 }, { pts: 300, coins: 60 }, { pts: 600, coins: 100, item: 'hat:crown' }];
-  function seasonEvent(d = new Date()) { const m = d.getMonth() + 1, e = EVENTS.find(x => x.months.includes(m)); return Object.assign({}, e, { id: `${e.id}-${m >= 12 ? d.getFullYear() + 1 : d.getFullYear()}` }); }
+  // 계절 이벤트 + 기간(시작일·마지막 날·남은 날): 12~2월처럼 해를 넘기는 철도 처리
+  function seasonEvent(d = new Date()) { const m = d.getMonth() + 1, e = EVENTS.find(x => x.months.includes(m)), y = d.getFullYear();
+    const first = e.months[0], last = e.months[e.months.length - 1], sy = first > m ? y - 1 : y, ey = last < first && m >= first ? y + 1 : y;
+    const start = new Date(sy, first - 1, 1), end = new Date(ey, last, 0), left = Math.round((new Date(end.getFullYear(), end.getMonth(), end.getDate()) - new Date(y, d.getMonth(), d.getDate())) / 864e5);
+    const md = x => `${x.getMonth() + 1}/${x.getDate()}`;
+    return Object.assign({}, e, { id: `${e.id}-${m >= 12 ? y + 1 : y}`, start, end, left, periodText: `${md(start)} ~ ${md(end)} · ${left === 0 ? "오늘 마감" : left + "일 남음"}` }); }
 
   // ═════════ 업적 30종 ═════════
   const B = (st, k) => (st.bests || {})[k] || 0, P = (st, k) => (st.plays || {})[k] || 0;
@@ -674,7 +679,7 @@
         ${att.claimed ? `<div style="font-size:12.5px;opacity:.85">📅 출석 ${att.streak}일째 · 오늘 보상 받음 (7일째 🪙80)</div>`
           : `<button type="button" data-att style="border:0;border-radius:12px;padding:10px;font:800 14px inherit;cursor:pointer;background:#FFD34D;color:#3A2A00">📅 출석 체크 — ${att.day}일째 보상 🪙${att.coins} 받기 ${'●'.repeat(att.day)}${'○'.repeat(7 - att.day)}</button>`}
         <div style="display:grid;gap:4px;padding:8px 10px;border-radius:10px;background:#0002">
-          <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13.5px">${ev.ic} ${esc(ev.name)}</b><span style="font-size:11.5px;opacity:.8">${esc(ev.desc)}</span><b style="margin-left:auto;font-size:13px">${evSt.pts}점</b></div>
+          <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13.5px">${ev.ic} ${esc(ev.name)}</b><span style="font-size:11.5px;opacity:.9">🗓 ${esc(ev.periodText)}</span><span style="font-size:11.5px;opacity:.8">${esc(ev.desc)}</span><b style="margin-left:auto;font-size:13px">${evSt.pts}점</b></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">${EV_TIERS.map((t, i) => { const got = (evSt.claimed || []).includes(i), can = !got && evSt.pts >= t.pts;
             return `<button type="button" data-tier="${i}" ${can ? '' : 'disabled'} style="border:0;border-radius:999px;padding:4px 10px;font:600 12px inherit;cursor:${can ? 'pointer' : 'default'};background:${got ? '#4BD08A' : can ? '#E2572B' : '#0003'};color:${got ? '#06222A' : can ? '#fff' : 'inherit'}">${got ? '✓ ' : ''}${t.pts}점 🪙${t.coins}${t.item ? ' + 👑 축제 왕관' : ''}</button>`; }).join('')}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><b style="font-size:13px">🎯 오늘의 도전</b>${st.chStreak && st.chLast ? `<span style="font-size:12px;opacity:.8">🔥 연속 ${st.chStreak}일</span>` : ''}

@@ -126,6 +126,32 @@
     return { known: true, ok: !closed && !small, closed, small, min: r.min, unit, msg: msg + (r.note ? ` (${r.note})` : ''), rule: r };
   }
 
+  // 제철(월)·금어기(기간) — 화면마다 같은 문구로: "🔥 쭈꾸미 제철(9~11월) · 11월 말까지", "🚫 문어 금어기 5/16~6/30 · 12일 남음", "⏳ 감성돔 금어기 D-9(5/1~5/31)"
+  const SEASON = { 쭈꾸미: [9, 10, 11], 갑오징어: [4, 5, 9, 10, 11], 우럭: [3, 4, 5, 6, 9, 10, 11, 12], 광어: [4, 5, 9, 10, 11], 참돔: [5, 6, 9, 10, 11], 갈치: [7, 8, 9, 10, 11],
+    문어: [7, 8, 9, 10, 11], 무늬오징어: [9, 10, 11, 12], 한치: [6, 7, 8], 감성돔: [3, 4, 10, 11, 12], 방어: [11, 12, 1, 2], 도루묵: [11, 12], 볼락: [12, 1, 2, 3], 농어: [6, 7, 8, 9] };
+  // 월 묶음: [3,4,5,6,9,10,11,12] → [[3,6],[9,12]] (12→1 넘어가는 철도 하나로)
+  function monthRuns(ms) { const s = [...new Set(ms)].sort((a, b) => a - b); if (!s.length) return []; const runs = []; let a = s[0], p = s[0];
+    for (const m of s.slice(1)) { if (m === p + 1) p = m; else { runs.push([a, p]); a = p = m; } } runs.push([a, p]);
+    if (runs.length > 1 && runs[0][0] === 1 && runs[runs.length - 1][1] === 12) { const first = runs.shift(); runs[runs.length - 1][1] = first[1]; } return runs; }
+  const runText = r => r[0] === r[1] ? `${r[0]}월` : `${r[0]}~${r[1]}월`;
+  const inRun = (r, m) => r[0] <= r[1] ? m >= r[0] && m <= r[1] : m >= r[0] || m <= r[1];
+  const dayNum = (y, mmdd) => Math.round(Date.UTC(y, Math.floor(mmdd / 100) - 1, mmdd % 100) / 864e5);
+  function seasons(date = new Date(), soonDays = 30) {
+    const m = date.getMonth() + 1, y = date.getFullYear(), t = Math.round(Date.UTC(y, date.getMonth(), date.getDate()) / 864e5), out = [];
+    const species = [...new Set(Object.keys(SEASON).concat(LEGAL.filter(r => r.closed).map(r => r.sp)))];
+    for (const sp of species) {
+      const r = LEGAL.find(x => x.sp === sp), runs = monthRuns(SEASON[sp] || []);
+      if (r && r.closed) { const [a, b] = r.closed; let s = dayNum(y, a), e = dayNum(a > b ? y + 1 : y, b);
+        if (a > b && t <= dayNum(y, b)) { s = dayNum(y - 1, a); e = dayNum(y, b); }   // 해를 넘기는 금어기(예: 12/1~2/28)
+        if (t >= s && t <= e) { out.push({ sp, kind: 'closed', cls: 'bad', text: `🚫 ${sp} 금어기 ${fmtMD(a)}~${fmtMD(b)} · ${e - t === 0 ? '오늘까지' : (e - t) + '일 남음'}`, note: r.note || '' }); continue; }
+        let until = s - t; if (until < 0) until += 365;
+        if (until > 0 && until <= soonDays) out.push({ sp, kind: 'soon', cls: 'warn', text: `⏳ ${sp} 금어기 D-${until} (${fmtMD(a)}~${fmtMD(b)})`, note: r.note || '' }); }
+      const cur = runs.find(x => inRun(x, m));
+      if (cur) out.push({ sp, kind: 'peak', cls: 'ok', text: `🔥 ${sp} 제철(${runs.map(runText).join('·')}) · ${cur[1]}월 말까지` });
+    }
+    const order = { closed: 0, soon: 1, peak: 2 }; return out.sort((a, b) => order[a.kind] - order[b.kind]);
+  }
+
   // 조과 일지 통계
   function logStats(entries) {
     const by = (key, f = x => x[key]) => { const m = {}; entries.forEach(x => { const k = f(x); if (!k) return; const o = m[k] = m[k] || { k, n: 0, max: 0 };
@@ -150,5 +176,5 @@
   const hm = t => t ? `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}` : '—';
   const dirName = deg => deg == null ? '' : ['북', '북북동', '북동', '동북동', '동', '동남동', '남동', '남남동', '남', '남남서', '남서', '서남서', '서', '서북서', '북서', '북북서'][Math.round(deg / 22.5) % 16];
 
-  root.AnglerKit = { solunar, moonPhase, altitude, biteTimeline, hazards, hazardLevel, HZ, legalCheck, LEGAL, logStats, distance, hm, dirName, HABIT };
+  root.AnglerKit = { seasons, SEASON, monthRuns, solunar, moonPhase, altitude, biteTimeline, hazards, hazardLevel, HZ, legalCheck, LEGAL, logStats, distance, hm, dirName, HABIT };
 })(typeof window !== 'undefined' ? window : globalThis);
