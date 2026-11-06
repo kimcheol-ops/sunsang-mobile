@@ -62,6 +62,7 @@
   .form label { display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); }
   .form input, .form select, select.sel { min-height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--chart); color: var(--fg); font: 15px inherit; padding: 0 10px; min-width: 0; width: 100%; }
   .form .wide { grid-column: 1 / -1; }
+  iframe.subpage { width: 100%; height: calc(100vh - 190px); min-height: 480px; border: 1px solid var(--line); border-radius: 14px; background: #15191E; margin-top: 8px; }
   [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -72,8 +73,18 @@
   <small id="updated">불러오는 중…</small>
 </header>
 <main>
+  <!-- 오늘의 바다 소식 · 낚시점·선상 (PC와 같은 화면) -->
+  <div data-view="news" hidden>
+    <div class="chips"><button class="chip" data-goto="hmi">← 관제</button><button class="chip" data-goto="places">🏪 낚시점·선상</button></div>
+    <iframe id="newsFrame" title="오늘의 바다 소식" class="subpage"></iframe>
+  </div>
+  <div data-view="places" hidden>
+    <div class="chips"><button class="chip" data-goto="hmi">← 관제</button><button class="chip" data-goto="news">🌅 오늘의 바다 소식</button></div>
+    <iframe id="placesFrame" title="낚시점 · 선상 정보" class="subpage"></iframe>
+  </div>
   <!-- 관제 -->
   <div data-view="hmi">
+    <div class="chips" style="margin-bottom:12px"><button class="chip" data-goto="news" style="flex:1">🌅 오늘의 바다 소식</button><button class="chip" data-goto="places" style="flex:1">🏪 낚시점 · 🚤 선상 정보</button></div>
     <section class="card" id="heroCard">
       <div class="hero"><div class="score 미확인" id="bestScore">—<small>지수</small></div>
         <div><div class="small muted">오늘 가장 좋은 바다</div><div style="font:800 22px inherit" id="bestName">—</div><div class="small" id="bestInfo"></div></div></div>

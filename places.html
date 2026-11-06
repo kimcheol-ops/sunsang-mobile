@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>낚시점 · 선상 정보</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  /* 위: 탭·검색·필터 / 아래: 왼쪽 목록 · 오른쪽 상세(좁으면 목록 아래) — PC·휴대폰 같은 파일 */
+  :root { --bg:#15191E; --panel:#1E242B; --panel2:#242B33; --well:#11151A; --line:#343C45; --fg:#E6EAEE; --muted:#9AA5B1; --dim:#6E7A86;
+          --accent:#8CC8F2; --ok:#6FD3A4; --warn:#F5C46B; --bad:#FF8A8D; --heart:#FF6B8A; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 13.5px/1.5 'Malgun Gothic', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; }
+  .wrap { padding: 10px max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 8px; padding: 7px 14px; font: 700 13.5px inherit; cursor: pointer; }
+  .tab[aria-selected="true"] { background: #2E5F86; border-color: #3A6F96; color: var(--fg); }
+  .bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  input, select, textarea { background: var(--well); color: var(--fg); border: 1px solid #3E4852; border-radius: 6px; padding: 6px 9px; font: inherit; min-height: 34px; min-width: 0; }
+  input[type=search] { flex: 1 1 200px; }
+  .chip { border: 1px solid var(--line); background: #2A3139; color: var(--fg); border-radius: 999px; padding: 3px 11px; font: 600 12px inherit; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: #2E5F86; border-color: #3A6F96; }
+  .chip.s { cursor: default; background: var(--well); padding: 1px 8px; font-size: 11.5px; }
+  .btn { min-height: 32px; border-radius: 6px; border: 1px solid #3E4852; background: #2A3139; color: var(--fg); font: 600 13px inherit; padding: 0 12px; cursor: pointer; }
+  .btn.primary { background: #2E5F86; border-color: #3A6F96; } .btn.heart[aria-pressed="true"] { background: #4A1F2B; border-color: var(--heart); color: var(--heart); }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 10px; align-items: start; }
+  .list { display: grid; gap: 6px; }
+  .item { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 12px; border-radius: 8px; background: var(--panel); border: 1px solid #2C343D; cursor: pointer; text-align: left; color: inherit; font: inherit; width: 100%; }
+  .item:hover, .item:focus-visible { border-color: #3A6F96; outline: none; } .item.sel { border-color: var(--accent); }
+  .item b { font-size: 14.5px; } .muted { color: var(--muted); } .dim { color: var(--dim); } .small { font-size: 12px; }
+  .score { font: 800 13px Consolas, monospace; padding: 2px 7px; border-radius: 6px; background: #2A3139; text-align: center; min-width: 46px; }
+  .score.hi { color: var(--ok); background: #6FD3A41A; } .score.mid { color: var(--warn); background: #F5C46B1A; }
+  .icons { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .cap { font: 800 20px Consolas, monospace; color: var(--accent); }
+  .panel { background: var(--panel); border: 1px solid #2C343D; border-radius: 8px; padding: 12px; display: grid; gap: 10px; position: sticky; top: 8px; min-width: 0; }
+  .panel h2 { margin: 0; font-size: 17px; } .panel h3 { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; } .kv dt { color: var(--muted); } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 5px; }
+  .ck { background: var(--well); border-radius: 6px; padding: 5px 8px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 12.5px; }
+  .ck.yes { color: var(--ok); } .ck.no { color: var(--bad); } .ck.unk { color: var(--dim); }
+  .ck select { margin-left: auto; min-height: 26px; padding: 0 4px; font-size: 12px; }
+  #map, .minimap { height: 220px; border-radius: 8px; background: var(--well); }
+  .sample { background: var(--warn); color: #2A2412; border-radius: 4px; padding: 0 6px; font: 700 11px inherit; }
+  .notice { background: #1E2A35; border: 1px solid #2E4A60; border-radius: 6px; padding: 7px 10px; font-size: 12px; color: #C9DDEB; }
+  .rank { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 6px; background: var(--well); }
+  .rank .n { font: 800 15px Consolas, monospace; color: var(--warn); text-align: center; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid #2C343D; border-radius: 8px; padding: 12px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .card h2 { margin: 0; font-size: 14px; }
+  .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; color: var(--muted); }
+  .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; } .form label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); } .form .wide { grid-column: 1 / -1; }
+  .stars button { background: none; border: 0; font-size: 20px; color: var(--dim); cursor: pointer; padding: 0 1px; } .stars button.on { color: var(--warn); }
+  .rev { background: var(--well); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); }
+  .darkTiles { filter: invert(1) hue-rotate(180deg) brightness(.8) contrast(.9) saturate(.6); }
+  @media (max-width: 860px) { .main { grid-template-columns: 1fr; } .panel { position: static; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button>
+    <button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button>
+    <button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button>
+    <button class="tab" role="tab" data-tab="add">＋ 등록 · 정보 고치기</button>
+  </div>
+  <div id="filters" class="bar"></div>
+  <div id="view"></div>
+  <div class="dim small" id="foot"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="places-data.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const inPC = !!(window.chrome && window.chrome.webview);
+const post = m => { try { window.chrome.webview.postMessage(m); } catch (e) {} };
+const openUrl = u => { if (inPC) post({ type: 'open', url: u }); else window.open(u, '_blank', 'noopener'); };
+const D = window.PLACES_DATA;
+
+// ── 이 기기 저장(하트·조회·후기·정보 고침·직접 등록) ──
+const KEY = 'places.v1';
+const load = () => { try { return Object.assign({ hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], mine: {} }, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { return { hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], mine: {} }; } };
+let S = load();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+// 낚시점 대여·서비스 / 선상 편의 항목
+const RENT = [['rod', '🎣 낚싯대 대여'], ['reel', '🌀 릴 대여'], ['vest', '🦺 구명조끼 대여'], ['icebox', '🧊 아이스박스 대여'], ['rig', '🪝 채비 판매·묶음'], ['bait', '🦐 생미끼 판매'],
+  ['ice', '❄ 얼음 판매'], ['repair', '🔧 릴·낚싯대 수리'], ['line', '🧵 원줄 감기'], ['parking', '🅿 주차'], ['toilet', '🚻 화장실'], ['lounge', '🛋 대기실·휴게'], ['booking', '📅 배 예약 대행'], ['open24', '🌙 새벽·24시 영업']];
+const AMEN = [
+  ['편의', [['toilet', '🚻 화장실', ['수세식', '간이', '없음']], ['parking', '🅿 주차'], ['kids', '👧 어린이 승선']]],
+  ['먹거리 (그냥 주는지)', [['water', '💧 물'], ['drink', '🥤 음료·커피'], ['snack', '🍪 간식·라면'], ['meal', '🍱 식사·도시락']]],
+  ['조과 보관', [['bag', '🛍 고기 봉지·망'], ['icebox', '🧊 아이스박스'], ['ice', '❄ 얼음']]],
+  ['낚시 도움', [['teach', '👨‍🏫 낚시 방법 설명'], ['rentRod', '🎣 낚싯대 대여'], ['rentReel', '🌀 릴 대여'], ['vest', '🦺 구명조끼'], ['seasick', '💊 멀미약']]],
+];
+const SEATS = ['추첨', '선착순 승선', '예약 순', '선장 배정', '자유'];
+const SEAT_HELP = { 추첨: '출항 전 제비뽑기로 자리를 정합니다', '선착순 승선': '먼저 배에 오른 사람이 자리를 고릅니다', '예약 순': '먼저 예약한 순서대로 자리를 고릅니다', '선장 배정': '선장님이 경험·채비를 보고 자리를 정합니다', 자유: '정해진 자리 없이 돌아가며 낚시합니다' };
+const SPECIES = ['쭈꾸미', '갑오징어', '우럭', '광어', '참돔', '갈치', '문어', '한치', '무늬오징어', '방어', '감성돔', '농어', '볼락', '삼치', '대구'];
+
+const all = kind => D[kind === 'shop' ? 'shops' : 'boats'].concat(S.added.filter(x => x.kind === kind)).map(x => Object.assign({}, x, S.edits[x.id] || {}, S.edits[x.id] ? { edited: true } : {}));
+const val = (x, k) => { const v = (x.kind === 'shop' ? x.rent : x.amen) || {}; return v[k] || 'unk'; };
+const isYes = v => v === 'yes' || v === '수세식' || v === '간이';
+const mark = v => isYes(v) ? '✅' : v === 'no' || v === '없음' ? '❌' : '❔';
+const cls = v => isYes(v) ? 'yes' : v === 'no' || v === '없음' ? 'no' : 'unk';
+
+// 우수 점수(0~100) = 정보 충실도 40 + 후기 별점 40 + 하트 20
+function score(x) {
+  const keys = x.kind === 'shop' ? RENT.map(r => r[0]) : AMEN.flatMap(g => g[1].map(a => a[0]));
+  const filled = keys.filter(k => val(x, k) !== 'unk').length + (x.species && x.species.length ? 1 : 0) + (x.phone ? 1 : 0) + (x.kind === 'boat' ? (x.capacity ? 1 : 0) + (x.seat ? 1 : 0) : 0);
+  const info = Math.round(40 * filled / (keys.length + (x.kind === 'boat' ? 4 : 2)));
+  const rv = S.reviews[x.id] || [], avg = rv.length ? rv.reduce((a, r) => a + r.stars, 0) / rv.length : 0;
+  const hearts = (S.hearts[x.id] || []).length;
+  return { total: info + Math.round(avg * 8) + Math.min(20, hearts * 4), info, avg, n: rv.length, hearts, hits: (S.hits[x.id] || []).length };
+}
+const scoreCls = s => s >= 60 ? 'hi' : s >= 30 ? 'mid' : '';
+
+// ── 상태 ──
+const st = { tab: 'shop', q: '', region: '전체', sea: '전체', sp: '전체', channel: '전체', sel: null, period: 'week' };
+try { Object.assign(st, JSON.parse(localStorage.getItem('places.ui') || '{}'), { sel: null }); } catch (e) {}
+const saveUi = () => { try { localStorage.setItem('places.ui', JSON.stringify({ tab: st.tab, region: st.region, sea: st.sea, period: st.period })); } catch (e) {} };
+
+function filters() {
+  if (st.tab === 'rank' || st.tab === 'add') { $('filters').innerHTML = st.tab === 'rank' ? ['day', 'week', 'month', 'year'].map(p => `<button class="chip" data-period="${p}" aria-pressed="${st.period === p}">${{ day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[p]}</button>`).join('') : ''; return; }
+  const regions = ['전체', ...Object.keys(D.regions)];
+  $('filters').innerHTML = `<input type="search" id="q" placeholder="${st.tab === 'shop' ? '낚시점 이름·주소·대여 품목' : '배 이름·항구·어종'} 검색" value="${esc(st.q)}" aria-label="검색">
+    <select id="region" aria-label="지역">${regions.map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select>
+    ${['전체', '서해', '남해', '동해', '제주'].map(s => `<button class="chip" data-sea="${s}" aria-pressed="${st.sea === s}">${s}</button>`).join('')}
+    <select id="sp" aria-label="종목">${['전체', ...SPECIES].map(s => `<option ${s === st.sp ? 'selected' : ''}>${s === '전체' ? '모든 종목' : s}</option>`).join('')}</select>
+    ${st.tab === 'shop' ? ['전체', '오프라인', '온라인'].map(c => `<button class="chip" data-ch="${c}" aria-pressed="${st.channel === c}">${c === '전체' ? '온·오프라인' : c}</button>`).join('') : ''}`;
+  $('q').oninput = e => { st.q = e.target.value; render(true); };
+  $('region').onchange = e => { st.region = e.target.value; saveUi(); render(); };
+  $('sp').onchange = e => { st.sp = e.target.value === '모든 종목' ? '전체' : e.target.value; render(); };
+}
+
+function filtered(kind) {
+  const q = st.q.trim().toLowerCase();
+  return all(kind).filter(x => (st.region === '전체' || x.region === st.region) && (st.sea === '전체' || x.sea === st.sea)
+    && (st.sp === '전체' || (x.species || []).includes(st.sp)) && (kind !== 'shop' || st.channel === '전체' || x.channel === st.channel)
+    && (!q || [x.name, x.addr, x.port, x.region, (x.species || []).join(' '), x.note, kind === 'shop' ? RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1]).join(' ') : ''].join(' ').toLowerCase().includes(q)))
+    .map(x => ({ x, s: score(x) })).sort((a, b) => (a.x.sample ? 1 : 0) - (b.x.sample ? 1 : 0) || b.s.total - a.s.total || a.x.region.localeCompare(b.x.region));
+}
+
+let map = null, pins = null;
+function listView(kind) {
+  const rows = filtered(kind);
+  const sel = rows.find(r => r.x.id === st.sel) || null;
+  $('view').innerHTML = `<div class="main"><div style="display:grid;gap:8px;min-width:0">
+      <div class="small muted">${rows.length}곳 · 점수순 ${kind === 'shop' && st.channel === '온라인' ? '' : '· 지도는 항구 기준 대략 위치'}</div>
+      ${kind === 'shop' && st.channel !== '오프라인' ? `<div class="notice">🌐 온라인 판매처는 <b>제품 검색</b>(PC 장비·용품 탭, 네이버 쇼핑 키 필요)과 연결됩니다. 자주 쓰는 온라인몰은 ＋등록에서 '온라인'으로 추가하세요. <button class="btn" id="naverShop" style="min-height:26px">네이버 쇼핑에서 낚시용품 판매처 보기</button></div>` : ''}
+      <div id="map"></div>
+      <div class="list" id="list">${rows.map(({ x, s }) => itemHtml(x, s)).join('') || '<div class="empty">조건에 맞는 곳이 없습니다. 검색어나 지역을 바꿔 보세요.</div>'}</div></div>
+    <div class="panel" id="detail">${sel ? detailHtml(sel.x, sel.s) : guideHtml(kind)}</div></div>`;
+  if ($('naverShop')) $('naverShop').onclick = () => openUrl('https://search.shopping.naver.com/search/all?query=' + encodeURIComponent('바다낚시용품'));
+  document.querySelectorAll('[data-id]').forEach(b => b.onclick = () => select(b.dataset.id));
+  bindDetail(sel && sel.x);
+  drawMap(rows);
+}
+function itemHtml(x, s) {
+  const rv = s.n ? ` · ★${s.avg.toFixed(1)}(${s.n})` : '';
+  if (x.kind === 'shop') {
+    const yes = RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1].split(' ')[0]);
+    return `<button class="item${st.sel === x.id ? ' sel' : ''}" data-id="${x.id}"><span><b>${esc(x.name)}</b> ${x.channel === '온라인' ? '<span class="chip s">온라인</span>' : ''}${x.edited ? ' <span class="chip s">정보 고침</span>' : ''}</span>
+      <span class="score ${scoreCls(s.total)}">${s.total}</span>
+      <span class="small muted">${esc(x.region)} · ${esc(x.addr)}</span><span class="small" style="color:var(--heart)">❤ ${s.hearts}</span>
+      <span class="icons">${yes.length ? '대여·서비스 ' + yes.join(' ') : '대여 품목 미확인'}${rv}</span><span class="small dim">조회 ${s.hits}</span></button>`;
+  }
+  return `<button class="item${st.sel === x.id ? ' sel' : ''}" data-id="${x.id}"><span><b>${esc(x.name)}</b> ${x.sample ? '<span class="sample">예시</span>' : ''}</span>
+    <span style="text-align:right"><span class="cap">${x.capacity ? x.capacity + '명' : '정원 ?'}</span></span>
+    <span class="small muted">${esc(x.region)} ${esc(x.port)} · ${(x.species || []).join('·') || '종목 미확인'} · 자리: ${esc(x.seat || '미확인')}</span><span class="score ${scoreCls(s.total)}">${s.total}</span>
+    <span class="icons">${['toilet', 'water', 'snack', 'bag', 'teach'].map(k => `${{ toilet: '🚻', water: '💧', snack: '🍪', bag: '🛍', teach: '👨‍🏫' }[k]}${mark(val(x, k))}`).join(' ')}${rv}</span><span class="small" style="color:var(--heart)">❤ ${s.hearts}</span></button>`;
+}
+function guideHtml(kind) {
+  return kind === 'shop'
+    ? `<h2>🏪 전국 낚시점</h2><div class="muted">왼쪽에서 낚시점을 고르면 대여 품목·서비스, 후기, 길찾기가 나옵니다.</div>
+       <div class="notice">우수 점수 = 정보 충실도 40 + 후기 별점 40 + 하트 20. 점주·이용자가 대여 품목을 채울수록 점수가 오릅니다.</div>
+       <div class="small dim">기본 자료: 카카오맵 '낚시용품' 업체 ${D.shops.length}곳(${Object.keys(D.regions).length}개 지역, ${D.collectedAt} 수집). 전화번호·영업시간은 카카오맵 링크에서 확인하세요.</div>`
+    : `<h2>🚤 선상 정보</h2><div class="muted">배를 고르면 <b>정원, 배 위치, 화장실, 간식·음료, 고기 봉지, 낚시 설명, 자리 정하는 방식</b>까지 한눈에 봅니다.</div>
+       <div class="notice">‘예시’ 배는 칸이 다 채워지면 어떻게 보이는지 보여 주는 견본입니다. 실제 배의 편의 정보는 선장님·승선객이 ＋등록·정보 고치기로 채웁니다.</div>
+       <div class="small dim">기본 자료: 카카오맵 '낚시' 업체 ${D.boats.filter(b => !b.sample).length}곳. 정원은 어선 등록 정보(해수부 API 승인 후)나 선장님 입력으로 채워집니다.</div>`;
+}
+function detailHtml(x, s) {
+  const links = `<div class="bar"><button class="btn heart" id="heart" aria-pressed="${!!S.mine[x.id]}">❤ 하트 ${s.hearts}</button>
+    ${x.kakao ? `<button class="btn" data-url="${esc(x.kakao)}">카카오맵 · 전화번호</button>` : ''}
+    <button class="btn" data-url="https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}">길찾기</button>
+    <button class="btn" data-url="https://search.naver.com/search.naver?query=${encodeURIComponent(x.name + ' ' + x.region)}">후기 검색</button></div>`;
+  const head = `<h2>${esc(x.name)} ${x.sample ? '<span class="sample">예시</span>' : ''}</h2>
+    <div class="bar"><span class="score ${scoreCls(s.total)}" title="정보 ${s.info}/40 · 별점 ${(s.avg * 8).toFixed(0)}/40 · 하트 ${Math.min(20, s.hearts * 4)}/20">우수 점수 ${s.total}</span>
+    <span class="small muted">정보 ${s.info}/40 · 별점 ${s.n ? s.avg.toFixed(1) : '—'} · 조회 ${s.hits}</span></div>`;
+  const rv = (S.reviews[x.id] || []).slice(-5).reverse();
+  const review = `<h3>후기</h3>${rv.map(r => `<div class="rev">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)} <span class="dim">${r.ts.slice(0, 10)}</span><br>${esc(r.text)}</div>`).join('') || '<div class="small dim">아직 후기가 없습니다.</div>'}
+    <div class="stars" id="stars">${[1, 2, 3, 4, 5].map(n => `<button data-star="${n}" aria-label="별 ${n}개">★</button>`).join('')}</div>
+    <div class="bar"><input id="revText" placeholder="한 줄 후기 (예: 사장님이 채비 친절히 알려 줌)" maxlength="120" style="flex:1"><button class="btn primary" id="revSave">후기 남기기</button></div>`;
+  if (x.kind === 'shop') {
+    return head + `<dl class="kv"><dt>지역</dt><dd>${esc(x.prov)} ${esc(x.region)} (${esc(x.sea)})</dd><dt>주소</dt><dd>${esc(x.addr)}</dd><dt>구분</dt><dd>${esc(x.channel)}${x.web ? ` · ${esc(x.web)}` : ''}</dd>
+      <dt>종목</dt><dd>${(x.species || []).join(', ') || '<span class="dim">미확인</span>'}</dd><dt>연락처</dt><dd>${x.phone ? esc(x.phone) : '<span class="dim">카카오맵에서 확인</span>'}</dd></dl>${links}
+      <h3>대여 · 서비스 <span class="dim small">(❔ 미확인 — 직접 확인하면 바꿔 주세요)</span></h3>
+      <div class="checks">${RENT.map(([k, label]) => `<div class="ck ${cls(val(x, k))}">${mark(val(x, k))} ${label}<select data-edit="${k}" aria-label="${label}"><option value="unk">?</option><option value="yes" ${val(x, k) === 'yes' ? 'selected' : ''}>가능</option><option value="no" ${val(x, k) === 'no' ? 'selected' : ''}>없음</option></select></div>`).join('')}</div>
+      <div id="mini" class="minimap"></div>${review}<div class="small dim">출처: ${esc(x.src || '직접 등록')} · 위치 ${x.approx ? '항구 기준 대략' : '등록 좌표'}</div>`;
+  }
+  const amen = AMEN.map(([g, items]) => `<h3>${g}</h3><div class="checks">${items.map(([k, label, opts]) => { const v = val(x, k);
+    const sel = opts ? `<select data-edit="${k}" aria-label="${label}"><option value="unk">?</option>${opts.map(o => `<option ${v === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+      : `<select data-edit="${k}" aria-label="${label}"><option value="unk">?</option><option value="yes" ${v === 'yes' ? 'selected' : ''}>있음·무료</option><option value="no" ${v === 'no' ? 'selected' : ''}>없음·지참</option></select>`;
+    return `<div class="ck ${cls(v)}">${mark(v)} ${label}${opts && isYes(v) ? ` <span class="small">(${v})</span>` : ''}${sel}</div>`; }).join('')}</div>`).join('');
+  return head + `<dl class="kv"><dt>정원</dt><dd><span class="cap">${x.capacity ? x.capacity + '명' : '?'}</span> <input id="capEdit" type="number" min="1" max="99" value="${x.capacity || ''}" placeholder="정원" style="width:80px" aria-label="정원 고치기"></dd>
+      <dt>지역·항구</dt><dd>${esc(x.prov)} ${esc(x.region)} · ${esc(x.port)}</dd><dt>주소</dt><dd>${esc(x.addr)}</dd><dt>종목</dt><dd>${(x.species || []).join(', ') || '<span class="dim">미확인</span>'}</dd>
+      <dt>출항·선비</dt><dd>${esc(x.depart || '—')} · ${esc(x.fee || '—')}</dd><dt>연락처</dt><dd>${x.phone ? esc(x.phone) : '<span class="dim">카카오맵에서 확인</span>'}</dd></dl>
+    <h3>⚓ 배 위치 (승선 장소)</h3><div id="mini" class="minimap"></div><div class="small dim">${x.approx ? '항구 기준 대략 위치입니다. 선장님이 부잔교·승선 위치를 등록하면 정확해집니다.' : `${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}`}</div>
+    ${links}
+    <h3>🪑 자리 정하는 방식</h3><div class="bar">${SEATS.map(s => `<button class="chip" data-seat="${s}" aria-pressed="${x.seat === s}">${s}</button>`).join('')}</div>
+    <div class="small">${x.seat ? `<b>${esc(x.seat)}</b> — ${SEAT_HELP[x.seat]}${x.seatNote ? `<br>${esc(x.seatNote)}` : ''}` : '<span class="dim">미확인 — 승선해 보셨다면 골라 주세요.</span>'}</div>
+    ${amen}${x.note ? `<div class="notice">${esc(x.note)}</div>` : ''}${review}`;
+}
+function bindDetail(x) {
+  if (!x) return;
+  document.querySelectorAll('[data-url]').forEach(b => b.onclick = () => openUrl(b.dataset.url));
+  $('heart').onclick = () => { const on = !S.mine[x.id]; S.mine[x.id] = on; const h = S.hearts[x.id] = S.hearts[x.id] || [];
+    if (on) h.push(new Date().toISOString()); else h.pop(); save(); render(); };
+  let stars = 0;
+  document.querySelectorAll('[data-star]').forEach(b => b.onclick = () => { stars = +b.dataset.star; document.querySelectorAll('[data-star]').forEach(c => c.classList.toggle('on', +c.dataset.star <= stars)); });
+  $('revSave').onclick = () => { if (!stars) { $('revText').placeholder = '먼저 별점을 눌러 주세요'; return; }
+    (S.reviews[x.id] = S.reviews[x.id] || []).push({ stars, text: $('revText').value.trim().slice(0, 120), ts: new Date().toISOString() }); save(); render(); };
+  const edit = (k, v) => { const e = S.edits[x.id] = S.edits[x.id] || {}; const field = x.kind === 'shop' ? 'rent' : 'amen';
+    e[field] = Object.assign({}, x[field] || {}, e[field] || {}, { [k]: v }); save(); render(); };
+  document.querySelectorAll('[data-edit]').forEach(s => s.onchange = () => edit(s.dataset.edit, s.value));
+  document.querySelectorAll('[data-seat]').forEach(b => b.onclick = () => { (S.edits[x.id] = S.edits[x.id] || {}).seat = b.dataset.seat; save(); render(); });
+  if ($('capEdit')) $('capEdit').onchange = e => { (S.edits[x.id] = S.edits[x.id] || {}).capacity = Math.max(0, Math.min(99, +e.target.value || 0)) || null; save(); render(); };
+  if (window.L && $('mini')) { const m = L.map('mini', { zoomControl: false, attributionControl: false }).setView([x.lat, x.lon], x.approx ? 14 : 16);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { className: 'darkTiles' }).addTo(m); L.marker([x.lat, x.lon]).addTo(m); }
+}
+function drawMap(rows) {
+  if (!window.L || !$('map')) return;
+  map = L.map('map', { zoomControl: true }).setView([35.9, 127.8], 6);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
+  const pts = rows.map(({ x, s }) => L.circleMarker([x.lat, x.lon], { radius: x.id === st.sel ? 9 : 6, color: '#0B1A1F', weight: 1.5, fillColor: x.kind === 'shop' ? '#8CC8F2' : '#F5C46B', fillOpacity: .95 })
+    .bindTooltip(`${x.name} · ${s.total}`).on('click', () => select(x.id)).addTo(map));
+  const sel = rows.find(r => r.x.id === st.sel);
+  if (sel) map.setView([sel.x.lat, sel.x.lon], 13);
+  else if (pts.length && st.region !== '전체') map.fitBounds(L.featureGroup(pts).getBounds().pad(.3));
+}
+function select(id) {
+  st.sel = id; const h = S.hits[id] = S.hits[id] || [], last = h[h.length - 1];
+  if (!last || Date.now() - new Date(last) > 3600000) { h.push(new Date().toISOString()); save(); }   // 같은 곳은 1시간에 한 번만 조회로 셈
+  render(); if (innerWidth < 860) $('detail').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── 랭킹·이벤트 ──
+function since(p) { const d = new Date(); d.setHours(0, 0, 0, 0); if (p === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); if (p === 'month') d.setDate(1); if (p === 'year') d.setMonth(0, 1); return d; }
+function rankView() {
+  const from = since(st.period), inP = ts => new Date(ts) >= from;
+  const pts = x => { const h = (S.hearts[x.id] || []).filter(inP).length, v = (S.hits[x.id] || []).filter(inP).length, r = (S.reviews[x.id] || []).filter(o => inP(o.ts));
+    return { h, v, r: r.length, avg: r.length ? r.reduce((a, o) => a + o.stars, 0) / r.length : 0, p: h * 5 + v + r.reduce((a, o) => a + o.stars, 0) * 2 }; };
+  const top = kind => all(kind).filter(x => !x.sample).map(x => ({ x, ...pts(x) })).filter(o => o.p > 0).sort((a, b) => b.p - a.p).slice(0, 10);
+  const pl = { day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[st.period];
+  const list = (rows, unit) => rows.length ? rows.map((o, i) => `<div class="rank"><span class="n">${i + 1}</span><span><b>${esc(o.x.name)}</b><br><span class="small muted">${esc(o.x.region)} · ❤${o.h} · 조회 ${o.v}${o.r ? ` · ★${o.avg.toFixed(1)}` : ''}</span></span><span class="score hi">${o.p}점</span></div>`).join('')
+    : `<div class="empty">${pl} 기록이 아직 없습니다. ${unit} 둘러보고 ❤하트·후기를 남기면 순위가 생깁니다.</div>`;
+  const byRegion = Object.keys(D.regions).map(r => { const rows = all('shop').concat(all('boat')).filter(x => x.region === r && !x.sample).map(x => ({ x, ...pts(x) }));
+    const hh = rows.slice().sort((a, b) => b.h - a.h)[0], hv = rows.slice().sort((a, b) => b.v - a.v)[0];
+    return `<tr><td>${r}</td><td>${hh && hh.h ? `❤ ${esc(hh.x.name)} (${hh.h})` : '<span class="dim">—</span>'}</td><td>${hv && hv.v ? `🔥 ${esc(hv.x.name)} (${hv.v})` : '<span class="dim">—</span>'}</td></tr>`; }).join('');
+  $('view').innerHTML = `<div class="grid2">
+    <div class="card"><h2>🏆 ${pl} 최고의 낚시점</h2>${list(top('shop'), '낚시점을')}</div>
+    <div class="card"><h2>🚤 ${pl} 최고의 선상</h2>${list(top('boat'), '선상 정보를')}</div>
+    <div class="card" style="grid-column:1/-1"><h2>📍 지역별 하트 · 히트 1위 <span class="small muted">(${pl})</span></h2>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="color:var(--muted);text-align:left"><th>지역</th><th>하트 1위</th><th>히트(조회) 1위</th></tr></thead><tbody>${byRegion}</tbody></table></div></div>
+    <div class="card"><h2>🎉 이달의 우수 낚시점 이벤트</h2>
+      <div class="small">매달 말일, 지역마다 <b>우수 점수</b>가 가장 높은 낚시점과 선상을 '이달의 우수점'으로 뽑아 운전 개요 「오늘의 바다 소식」과 휴대폰 앱에 홍보합니다.</div>
+      <div class="notice">점수 = 정보 충실도(대여 품목·편의 정보 채움) 40 + 후기 별점 40 + 하트 20<br>랭킹 점수 = 하트 5점 + 조회 1점 + 후기 별 하나당 2점</div>
+      <div class="small muted">후기를 남긴 이용자는 게임 코인 🪙10(하루 한 번)을 받습니다 — 휴대폰 앱 연동 예정.</div></div>
+    <div class="card"><h2>📝 점주 · 선장님께</h2><div class="small">대여 품목, 정원, 승선 위치, 화장실, 간식·음료, 자리 정하는 방식을 채우면 정보 충실도 점수(최대 40점)가 바로 오릅니다. ＋등록 · 정보 고치기 탭에서 시작하세요.</div></div>
+  </div>`;
+}
+
+// ── 등록 ──
+let addKind = 'shop';
+function addView() {
+  const regions = Object.keys(D.regions);
+  $('view').innerHTML = `<div class="card"><div class="bar">${[['shop', '🏪 낚시점'], ['boat', '🚤 선상(배)'], ['event', '🏆 대회·이벤트']].map(([k, l]) => `<button class="chip" data-kind="${k}" aria-pressed="${addKind === k}">${l}</button>`).join('')}</div>
+    <form id="addForm" class="form">
+      <label>이름<input id="fName" required maxlength="40" placeholder="${addKind === 'event' ? '예: 제1회 보령 쭈꾸미 선상대회' : addKind === 'boat' ? '예: OO호' : '예: OO낚시'}"></label>
+      <label>지역<select id="fRegion">${regions.map(r => `<option>${r}</option>`).join('')}</select></label>
+      ${addKind === 'shop' ? `<label>구분<select id="fCh"><option>오프라인</option><option>온라인</option></select></label><label>홈페이지(온라인)<input id="fWeb" placeholder="https://"></label>` : ''}
+      ${addKind === 'boat' ? `<label>정원(명)<input id="fCap" type="number" min="1" max="99"></label><label>출항 시각<input id="fDep" placeholder="05:30"></label><label>선비<input id="fFee" placeholder="1인 9만원"></label>
+        <label>자리 정하는 방식<select id="fSeat"><option value="">미확인</option>${SEATS.map(s => `<option>${s}</option>`).join('')}</select></label>` : ''}
+      ${addKind === 'event' ? `<label>날짜<input id="fWhen" type="date"></label><label>장소<input id="fWhere" placeholder="오천항"></label>` : ''}
+      <label class="wide">주소<input id="fAddr" maxlength="80"></label>
+      <label>연락처(업체 대표번호)<input id="fPhone" maxlength="20" placeholder="041-000-0000"></label>
+      <label>종목(쉼표로)<input id="fSp" placeholder="쭈꾸미, 갑오징어"></label>
+      <label class="wide">메모<input id="fNote" maxlength="120" placeholder="${addKind === 'boat' ? '예: 라면·커피 무료, 지퍼백 제공' : '예: 새벽 4시 오픈, 생미끼 많음'}"></label>
+      <div class="wide bar"><button class="btn primary" type="submit">등록</button><span class="small muted" id="addMsg">이 기기에 저장됩니다. 대여·편의 항목은 등록 뒤 상세 화면에서 하나씩 고르면 됩니다.</span></div>
+    </form></div>
+    <div class="card" style="margin-top:10px"><h2>내가 등록한 곳 (${S.added.length})</h2>${S.added.map(a => `<div class="rank"><span class="n">${{ shop: '🏪', boat: '🚤', event: '🏆' }[a.kind]}</span><span><b>${esc(a.name)}</b><br><span class="small muted">${esc(a.region)} · ${esc(a.addr || a.where || '')}</span></span><button class="btn" data-del="${a.id}">삭제</button></div>`).join('') || '<div class="small dim">아직 없습니다.</div>'}
+      <div class="small dim">대회·이벤트로 등록한 내용은 운전 개요 「오늘의 바다 소식」 대회 칸에 쓰일 수 있도록 매일 콘텐츠 작업 때 반영됩니다.</div></div>`;
+  document.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { addKind = b.dataset.kind; addView(); });
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.added = S.added.filter(a => a.id !== b.dataset.del); save(); addView(); });
+  $('addForm').onsubmit = e => { e.preventDefault(); const r = D.regions[$('fRegion').value], g = id => ($(id) ? $(id).value.trim() : '');
+    const o = { id: `${addKind}-u${Date.now()}`, kind: addKind, region: $('fRegion').value, prov: r[0], sea: r[1], port: r[4], name: g('fName'), addr: g('fAddr'), phone: g('fPhone'),
+      species: g('fSp').split(/[,·\s]+/).filter(Boolean), note: g('fNote'), lat: r[2], lon: r[3], approx: true, src: '직접 등록' };
+    if (addKind === 'shop') Object.assign(o, { channel: g('fCh') || '오프라인', web: g('fWeb'), rent: {} });
+    if (addKind === 'boat') Object.assign(o, { capacity: +g('fCap') || null, depart: g('fDep'), fee: g('fFee'), seat: g('fSeat'), amen: {} });
+    if (addKind === 'event') Object.assign(o, { when: g('fWhen'), where: g('fWhere') });
+    if (!o.name) return; S.added.push(o); save();
+    if (addKind === 'event') { addView(); $('addMsg').textContent = '등록했습니다.'; } else { st.tab = addKind; st.sel = o.id; render(); } };
+}
+
+function render(keepFocus) {
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === st.tab));
+  if (!keepFocus) filters();
+  if (st.tab === 'shop' || st.tab === 'boat') listView(st.tab); else if (st.tab === 'rank') rankView(); else addView();
+  document.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { st.sea = b.dataset.sea; saveUi(); render(); });
+  document.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { st.channel = b.dataset.ch; render(); });
+  document.querySelectorAll('[data-period]').forEach(b => b.onclick = () => { st.period = b.dataset.period; saveUi(); render(); });
+  $('foot').textContent = '업체 기본 정보: 카카오맵 · 지도: OpenStreetMap · 하트·후기·정보 고침은 이 기기에 저장 · 실제 이용 전 업체에 확인하세요.';
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { st.tab = t.dataset.tab; st.sel = null; saveUi(); render(); });
+window.placesApi = { open: t => { st.tab = t === 'event' ? 'add' : t; if (t === 'event') addKind = 'event'; render(); } };
+{ const h = location.hash.slice(1); if (['shop', 'boat', 'rank', 'add'].includes(h)) st.tab = h; }
+render();
+</script>
+</body>
+</html>
