@@ -1,4 +1,4 @@
-﻿# 출조관제 HMI 모바일(PWA) 준비: PC 프로그램의 공용 게임 파일을 복사하고 앱 아이콘을 만듭니다.
+﻿# 출조 관제 우주 프로 모바일(PWA) 준비: PC 프로그램의 공용 게임 파일을 복사하고 앱 아이콘을 만듭니다.
 # 사용: powershell -ExecutionPolicy Bypass -File mobile\build-mobile.ps1
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

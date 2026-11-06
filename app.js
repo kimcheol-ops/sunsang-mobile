@@ -1,10 +1,10 @@
-/* 출조관제 HMI 모바일 — 출조 지수(Open-Meteo, 키 불필요) · 물때(한국 음력 표) · 해상 지도 · 게임
+/* 출조 관제 우주 프로 모바일 — 출조 지수(Open-Meteo, 키 불필요) · 물때(한국 음력 표) · 해상 지도 · 게임
  * 출조 지수 공식은 PC의 SunsangHelper.Core ScoreEngine과 같습니다(기상특보 감점만 제외: 특보 API는 키가 필요).
  */
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '3.3-mobile';
+const VERSION = '3.9-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -194,7 +194,7 @@ function renderMore() {
   $('watch').innerHTML = REGIONS.map(r => `<button class="chip" data-w="${esc(r.name)}" aria-pressed="${watched.includes(r.name)}">${esc(r.name)}</button>`).join('');
   document.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { const n = b.dataset.w;
     watched = watched.includes(n) ? watched.filter(x => x !== n) : watched.concat(n); ls.set('m.watch', watched); b.setAttribute('aria-pressed', watched.includes(n)); results = null; });
-  $('about').innerHTML = `출조관제 HMI 모바일 ${VERSION}<br>예보: Open-Meteo(풍속·강수·파고·수온) · 지도: OpenStreetMap, OpenSeaMap, GEBCO, NASA GIBS<br>물때: 한국 음력 표(PC 프로그램과 같은 표) · 게임 기록은 이 기기에만 저장`;
+  $('about').innerHTML = `출조 관제 우주 프로 모바일 ${VERSION}<br>예보: Open-Meteo(풍속·강수·파고·수온) · 지도: OpenStreetMap, OpenSeaMap, GEBCO, NASA GIBS<br>물때: 한국 음력 표(PC 프로그램과 같은 표) · 게임 기록은 이 기기에만 저장`;
 }
 
 // ════ 낚시 앱 비교 분석에서 가져온 현장 도구 (AnglerKit, 키 불필요) ════
