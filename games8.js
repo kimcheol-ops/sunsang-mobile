@@ -212,61 +212,65 @@
     root.querySelector('[data-voice]').onclick = async () => { try { msg('🎤 말씀하세요…'); const t = await PK().text.listen(); ta.value = (ta.value + ' ' + t).trim(); msg('받아 적었습니다.'); } catch (e) { msg('음성 입력을 쓸 수 없습니다: ' + e.message); } };
     root.querySelector('[data-ocr]').onchange = async e => { const f = e.target.files[0]; if (!f) return; msg('📷 사진 속 글자를 읽는 중… (처음 한 번은 조금 걸립니다)');
       try { const t = await PK().text.read(f); ta.value = (ta.value + ' ' + t).trim().slice(0, 400); msg(t ? '읽은 글자를 넣었습니다. 틀린 곳은 고쳐 주세요.' : '글자를 찾지 못했습니다. 밝은 곳에서 크게 찍어 주세요.'); } catch (x) { msg('이 화면에서는 글자 읽기를 쓸 수 없습니다.'); } };
-    root.querySelector('[data-send]').onclick = async () => { const t = ta.value.trim(); if (!t) { msg('편지를 먼저 써 주세요'); return; }
-      msg('✍ 편지를 읽는 중…');
-      const rd = await readLetter(t);   // Jev(또는 기본 규칙)가 담긴 마음과 개인정보를 판단
-      const badge = window.JevKit ? window.JevKit.badge(rd.res, rd.conf) : '';
-      if (rd.priv >= .5) { root.querySelector('[data-lmsg]').innerHTML = `⚠ 편지에 전화번호·주소·계좌 같은 개인정보가 들어 있는 것 같아요. 지우고 다시 띄워 주세요. ${badge}`; return; }
-      const st = ctx.store.get() || {}, sh = st.seahome = st.seahome || { best: {} }; sh.letters = (sh.letters || []).concat({ t: t.slice(0, 400), d: today(), tone: rd.tone }).slice(-20); await ctx.store.set(st);
+    root.querySelector('[data-send]').onclick = () => { const t = ta.value.trim(); if (!t) { msg('편지를 먼저 써 주세요'); return; }
+      const rd = readLetter(t);   // 담긴 마음 + 개인정보 확인(기기 안에서 바로, 외부 서비스 없음)
+      if (rd.priv.length) { root.querySelector('[data-lmsg]').innerHTML = `⚠ 편지에 ${rd.priv.join('·')} 같은 개인정보가 들어 있는 것 같아요. 지우고 다시 띄워 주세요.`; return; }
+      const st = ctx.store.get() || {}, sh = st.seahome = st.seahome || { best: {} }; sh.letters = (sh.letters || []).concat({ t: t.slice(0, 400), d: today(), tone: rd.tone }).slice(-20); ctx.store.set(st);
       ta.value = ''; if (PK()) { PK().sound.splash(); PK().buzz('wave'); }
-      root.querySelector('[data-lmsg]').innerHTML = `${TONES[rd.tone][1]} — <b>${TONES[rd.tone][0]}</b>을 담아 바다에 띄웠어요. ${badge}<br><span style="opacity:.75">이 기기에만 저장 — 직접 전하면 더 좋아요</span>`; list(); };
+      root.querySelector('[data-lmsg]').innerHTML = `${TONES[rd.tone][1]} — <b>${TONES[rd.tone][0]}</b>${TONES[rd.tone][2]} 담아 바다에 띄웠어요.${rd.also ? ` <span style="opacity:.8">(${TONES[rd.also][0]}도 느껴져요)</span>` : ''}<br><span style="opacity:.75">이 기기에만 저장 — 직접 전하면 더 좋아요</span>`; list(); };
   }
 
-  // ── 👴 AI 코치(Jev 판단): 한 판이 끝나면 상황을 보고 가장 맞는 조언을 고르고 실력을 매김. Jev가 없으면 기본 규칙 ──
+  // ── 👴 할아버지 코치: 한 판이 끝나면 결과를 보고 가장 맞는 조언 하나와 오늘 실력을 알려 줌(기기 안 규칙, 외부 서비스 없음) ──
   const TIPS = {
-    line: ['줄이 자주 터짐 — 장력이 빨강일 때 손을 떼야 함', '줄이 자꾸 터지는구나. 장력 막대가 빨개지면 손을 떼고 숨 한 번 쉬어라. 고기가 지칠 때 감는 거다.'],
-    wait: ['입질이 적음 — 루어를 고기 옆에 두고 가만히 기다려야 함', '루어를 고기 곁에 두고 가만히 기다려 보렴. 움직이면 고기가 겁을 먹는다.'],
-    tide: ['물때 규칙에서 점수가 낮음 — 물살이 셀 때와 멈출 때 무는 어종이 다름', '물때를 봐라. 물이 흐를 땐 큰 놈이, 물이 멈출 땐 바닥 고기가 문다.'],
-    night: ['밤 규칙에서 점수가 낮음 — 밤까지 기다려야 함', '갈치는 해가 져야 올라온다. 조급해하지 말고 밤을 기다려라.'],
-    calm: ['마음(심상) 편에서 점수가 낮음 — 천천히 움직여야 함', '마음이 급하면 기억도 달아난다. 천천히, 가만히… 숨을 고르렴.'],
-    eco: ['쓰레기 수거와 보호종 방생으로 점수를 더 얻을 수 있음', '바다 쓰레기를 줍고 보호종은 놓아주면 바다도 너도 점수를 얻는단다.'],
-    great: ['목표를 넘김 — 칭찬하고 다음 편을 권함', '훌륭하다, 아라야! 이 정도면 다음 바다로 가도 되겠구나.'],
+    line: '줄이 자꾸 터지는구나. 장력 막대가 빨개지면 손을 떼고 숨 한 번 쉬어라. 고기가 지칠 때 감는 거다.',
+    wait: '루어를 고기 곁에 두고 가만히 기다려 보렴. 움직이면 고기가 겁을 먹는다.',
+    tide: '물때를 봐라. 물이 흐를 땐 큰 놈이, 물이 멈출 땐 바닥 고기가 문다.',
+    night: '갈치는 해가 져야 올라온다. 조급해하지 말고 밤을 기다려라.',
+    calm: '마음이 급하면 기억도 달아난다. 천천히, 가만히… 숨을 고르렴.',
+    eco: '바다 쓰레기를 줍고 보호종은 놓아주면 바다도 너도 점수를 얻는단다.',
+    size: '작은 고기는 놓아줘야 내년에 큰 고기로 돌아온단다. 금지체장을 꼭 지켜라.',
+    great: '훌륭하다, 아라야! 이 정도면 다음 바다로 가도 되겠구나.',
   };
   const SKILL = ['입문', '초보', '중수', '고수', '달인'];
-  function coachRules(s) {
-    const tip = s.점수 >= s.목표 ? 'great' : s.줄터짐 >= 2 ? 'line' : s.규칙.includes('heart') ? 'calm' : s.규칙.includes('tide') && s.점수 < s.목표 * .7 ? 'tide' : s.규칙.includes('time') && s.점수 < s.목표 * .7 ? 'night'
-      : s.잡은수 < 2 ? 'wait' : s.쓰레기 + s.방생 < 2 ? 'eco' : 'wait';
-    const r = Math.min(1, s.점수 / Math.max(1, s.목표)); return { tip: { type: 'choice', choice: tip, confidence: null }, skill: { type: 'score', score: Math.round(r * 4) } };
+  // 조언 고르기: 문제마다 '얼마나 시급한지' 점수를 매겨 가장 높은 것 하나
+  function coachPick(ep, res) {
+    const caught = Object.values(res.caught).reduce((a, b) => a + b, 0), ratio = res.score / Math.max(1, ep.goal), R = ep.rules;
+    if (ratio >= 1) return 'great';
+    const need = {
+      line: res.breaks * 30,
+      calm: R.includes('heart') ? (1 - ratio) * 60 + ((res.memories || []).length < 2 ? 20 : 0) : 0,
+      tide: R.includes('tide') ? (1 - ratio) * 45 : 0,
+      night: R.includes('time') ? (1 - ratio) * 40 : 0,
+      wait: caught < 2 ? 50 : caught < 4 ? 20 : 0,
+      eco: res.junk + res.released < 2 ? 18 : 0,
+      size: res.released >= 3 && caught <= res.released ? 15 : 0,
+    };
+    return Object.entries(need).sort((a, b) => b[1] - a[1])[0][1] > 0 ? Object.entries(need).sort((a, b) => b[1] - a[1])[0][0] : 'wait';
   }
-  async function coach(box, ep, res) {
-    if (!box) return; const K = window.JevKit;
-    const s = { 지역: ep.region, 차원: ep.dim, 규칙: ep.rules.join(',') || 'basic', 목표: ep.goal, 점수: res.score, 잡은수: Object.values(res.caught).reduce((a, b) => a + b, 0),
-      잡은물고기: res.caught, 방생: res.released, 쓰레기: res.junk, 줄터짐: res.breaks, 최대어: res.best ? `${res.best.name} ${res.best.len}${res.best.unit}` : '없음', 낚은기억: (res.memories || []).length };
-    box.innerHTML = '<div style="opacity:.8">👴 할아버지가 오늘 낚시를 돌아보는 중…</div>';
-    const q = { tip: { type: 'choice', instructions: '낚시 게임 한 판의 결과입니다. 지금 이 플레이어에게 가장 도움이 될 조언은 무엇인가요?', criteria: Object.fromEntries(Object.entries(TIPS).map(([k, v]) => [k, v[0]])) },
-      skill: { type: 'score', instructions: '목표 점수 대비 결과와 줄 관리·방생·쓰레기 수거를 함께 볼 때 이 플레이어의 낚시 실력은?', criteria: SKILL } };
-    const r = K ? await K.ask(s, q, coachRules) : { source: 'rules', answers: coachRules(s), ms: 0 };
-    const c = K ? K.pick(r.answers, 'tip') : { pick: r.answers.tip.choice }, sc = K ? K.score(r.answers, 'skill') : r.answers.skill.score;
-    // 실력: Jev가 준 단계별 확률이 있으면 가장 높은 단계 이름을 그대로 쓰고(점수 척도 가정 없음), 없으면 기본 규칙 0~4 단계
-    const skA = r.answers && r.answers.skill, probs = skA && skA.probabilities;
-    const top = probs ? Object.entries(probs).sort((a, b) => b[1] - a[1])[0] : null;
-    const tip = TIPS[c && c.pick] ? c.pick : coachRules(s).tip.choice, lv = top && SKILL.includes(top[0]) ? top[0] : (r.source === 'rules' && sc != null ? SKILL[Math.max(0, Math.min(4, Math.round(sc)))] : null);
-    box.innerHTML = `<div style="display:grid;gap:4px"><b>👴 할아버지 코치 ${K ? K.badge(r, c && c.p) : ''}</b><div>"${esc(TIPS[tip][1])}"</div>${lv ? `<div style="opacity:.85">오늘 실력: <b>${lv}</b></div>` : ''}</div>`;
+  // 실력: 목표 대비 점수(70%) + 줄 관리(15%) + 바다 지키기(15%)를 합쳐 5단계
+  function coachSkill(ep, res) {
+    const ratio = Math.min(1.2, res.score / Math.max(1, ep.goal)) / 1.2, line = res.breaks === 0 ? 1 : res.breaks === 1 ? .6 : .2, eco = Math.min(1, (res.junk + res.released) / 4);
+    return SKILL[Math.max(0, Math.min(4, Math.round((ratio * .7 + line * .15 + eco * .15) * 4)))];
   }
-  // ── ✍ 편지 읽기(Jev 판단): 담긴 마음 + 개인정보(전화·주소·계좌)가 들어 있는지 ──
-  const TONES = { thanks: ['고마움', '🌟 금빛 편지병'], miss: ['그리움', '🌙 은빛 편지병'], sorry: ['미안함', '💧 푸른 편지병'], promise: ['다짐·약속', '🔥 붉은 편지병'], cheer: ['응원·격려', '🌈 무지개 편지병'] };
-  function letterRules(text) {
-    const t = String(text || ''), has = re => re.test(t);
-    const tone = has(/고마|감사|덕분/) ? 'thanks' : has(/보고 ?싶|그리|생각나/) ? 'miss' : has(/미안|죄송|잘못/) ? 'sorry' : has(/꼭|약속|할게|하겠|다짐/) ? 'promise' : 'cheer';
-    const priv = /\d{2,3}[- .]?\d{3,4}[- .]?\d{4}|\d{6}[- ]?\d{7}|(시|구|동|로|길)\s?\d+(-\d+)?|계좌|은행/.test(t) ? .9 : .05;
-    return { tone: { type: 'choice', choice: tone, confidence: null }, private: { type: 'noul', noul: priv } };
+  function coach(box, ep, res) {
+    if (!box) return;
+    const tip = coachPick(ep, res), lv = coachSkill(ep, res);
+    box.innerHTML = `<div style="display:grid;gap:4px"><b>👴 할아버지 코치</b><div>"${esc(TIPS[tip])}"</div><div style="opacity:.85">오늘 실력: <b>${lv}</b></div></div>`;
   }
-  async function readLetter(text) {
-    const K = window.JevKit, q = { tone: { type: 'choice', instructions: '이 편지에 담긴 가장 큰 마음은 무엇인가요?', criteria: Object.fromEntries(Object.entries(TONES).map(([k, v]) => [k, v[0]])) },
-      private: { type: 'noul', instructions: '이 편지에 전화번호, 집 주소, 주민등록번호, 계좌번호 같은 개인정보가 들어 있나요?' } };
-    const r = K ? await K.ask(text, q, () => letterRules(text)) : { source: 'rules', answers: letterRules(text), ms: 0 };
-    const c = K ? K.pick(r.answers, 'tone') : { pick: r.answers.tone.choice }, p = K ? K.yes(r.answers, 'private') : r.answers.private.noul;
-    return { tone: TONES[c && c.pick] ? c.pick : letterRules(text).tone.choice, conf: c && c.p, priv: p ?? letterRules(text).private.noul, res: r };
+  // ── ✍ 편지 읽기: 담긴 마음(낱말 점수) + 개인정보(전화·주민번호·계좌·이메일·자세한 주소) 확인 ──
+  const TONES = { thanks: ['고마움', '🌟 금빛 편지병', '을'], miss: ['그리움', '🌙 은빛 편지병', '을'], sorry: ['미안함', '💧 푸른 편지병', '을'], promise: ['다짐·약속', '🔥 붉은 편지병', '을'], cheer: ['응원·격려', '🌈 무지개 편지병', '를'] };
+  const TONE_WORDS = {
+    thanks: [/고마/g, /감사/g, /덕분/g, /최고/g],
+    miss: [/보고 ?싶/g, /그리/g, /생각나/g, /그때/g, /추억/g],
+    sorry: [/미안/g, /죄송/g, /잘못/g, /용서/g],
+    promise: [/꼭/g, /약속/g, /할게/g, /하겠/g, /다짐/g, /다음에/g],
+    cheer: [/힘내/g, /응원/g, /화이팅|파이팅/g, /건강/g, /사랑/g],
+  };
+  const PRIVATE = [['전화번호', /0\d{1,2}[- .]?\d{3,4}[- .]?\d{4}/], ['주민등록번호', /\d{6}[- ]?[1-4]\d{6}/], ['계좌번호', /계좌|\d{3,6}-\d{2,6}-\d{3,8}/], ['이메일', /[\w.+-]+@[\w-]+\.[\w.]+/], ['자세한 주소', /(로|길)\s?\d+(-\d+)?(번길)?|\d+동\s?\d+호/]];
+  function readLetter(text) {
+    const t = String(text || ''), scores = Object.fromEntries(Object.entries(TONE_WORDS).map(([k, res]) => [k, res.reduce((a, re) => a + (t.match(re) || []).length, 0)]));
+    const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    return { tone: ranked[0][1] > 0 ? ranked[0][0] : 'cheer', also: ranked[1][1] > 0 && ranked[1][1] >= ranked[0][1] * .6 ? ranked[1][0] : null, priv: PRIVATE.filter(([, re]) => re.test(t)).map(([n]) => n) };
   }
 
   // ── 캠페인: 지도 → 웹툰/소설 + 여행 카드 + 휴대폰 준비 → 출항 → 결과 ──
@@ -296,11 +300,9 @@
             <span style="font-size:11px;background:#FF7A59;border-radius:6px;padding:1px 6px">${e.dim}</span> <b>${e.id}경 ${esc(e.title)}</b><br><span style="font-size:11.5px;opacity:.85">📍 ${esc(e.region)} ${esc(e.port)}</span><br>
             <span style="font-size:11.5px">${u ? (c ? `⭐ 도장 · 최고 ${b}점` : b ? `최고 ${b} / 목표 ${e.goal}` : `목표 ${e.goal}점`) : '🔒 앞 경을 깨면 열림'}</span></button>`; }).join('')}</div>
         ${cleanupHtml()}
-        <div data-jevpanel style="padding:12px;border-radius:14px;background:#161A33;color:#E3E8FF"></div>
         ${cleared >= 10 ? `<button type="button" data-outro style="${st7.PRIMARY};width:100%">🌏 에필로그 보기</button>` : ''}`;
       root.querySelectorAll('[data-ep]').forEach(b => b.onclick = () => story(EP[+b.dataset.ep - 1]));
       bindCleanup(root, ctx, onReward);
-      if (window.JevKit && root.querySelector('[data-jevpanel]')) window.JevKit.panel(root.querySelector('[data-jevpanel]'));
       const o = root.querySelector('[data-outro]'); if (o) o.onclick = () => { root.innerHTML = S().toonHtml({ id: 0, dim: '' }, OUTRO, '에필로그 · 내년 여름', opt) + `<button type="button" data-back style="${st7.SOFT};width:100%">◀ 도장 지도</button>`; root.querySelector('[data-back]').onclick = map; };
     }
     function story(ep) {

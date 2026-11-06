@@ -17,7 +17,7 @@
 
   // ── 진동 패턴 ──
   const PAT = { bite: [40, 40, 40], hook: [120], catch: [40, 30, 40, 30, 200], break: [300, 60, 300], wave: [15], tick: [8], level: [60, 40, 60, 40, 160] };
-  function buzz(k) { if (!opt.vib || !navigator.vibrate) return; try { navigator.vibrate(Array.isArray(k) ? k : PAT[k] || [30]); } catch (e) {} }
+  function buzz(k) { if (!opt.vib || !navigator.vibrate) return; if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;   // 첫 터치 전에는 브라우저가 막으므로 건너뜀 try { navigator.vibrate(Array.isArray(k) ? k : PAT[k] || [30]); } catch (e) {} }
 
   // ── 소리: 파도(걸러 낸 잡음) · 갈매기/밤 벌레 · 우주 웅웅 · 심장 박동 · 릴 딸깍 ──
   let ac = null, master = null, amb = [], reelT = null;
