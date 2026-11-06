@@ -131,7 +131,7 @@
       .map(a => ({ id: a.id, kind: a.kind, region: str(a.region, 20), name: str(a.name, 40), addr: str(a.addr, 80), phone: str(a.phone, 20),
         species: Array.isArray(a.species) ? a.species.map(s => str(s, 10)).slice(0, 8) : [], note: str(a.note, 120), channel: a.channel === '온라인' ? '온라인' : '오프라인', web: /^https:\/\//.test(a.web || '') ? str(a.web, 120) : '',
         capacity: +a.capacity > 0 && +a.capacity < 100 ? Math.round(+a.capacity) : null, depart: str(a.depart, 10), fee: str(a.fee, 30), seat: SEATS.includes(a.seat) ? a.seat : '',
-        when: str(a.when, 10), where: str(a.where, 40), ts: str(a.ts, 30) }));
+        when: str(a.when, 10), until: str(a.until, 10), applyFrom: str(a.applyFrom, 10), applyTo: str(a.applyTo, 10), where: str(a.where, 40), ts: str(a.ts, 30) }));
     return o;
   }
   // AI 검색 답변(aiqa) 한 건: Claude가 매일 검색해 남긴 답 { qid, p, a, src:[https…], ts }
@@ -302,6 +302,12 @@
     const link = (url, label) => `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>`;
     const km = (a, b) => { const r = Math.PI / 180, h = Math.sin((b.lat - a.lat) * r / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin((b.lon - a.lon) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
     const day = ts => ts ? `${+ts.slice(5, 7)}/${+ts.slice(8, 10)}` : '';
+    // 기간 표시: 11/7(토) ~ 11/8(일) · 2일간 · 진행 중 2일 남음 / D-5 / 오늘 마감 / 끝남
+    const DOW = '일월화수목금토', dnum = s => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5), todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    const md = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}(${DOW[new Date(s + 'T12:00:00').getDay()]})`;
+    const ISO = /^\d{4}-\d\d-\d\d$/;
+    function periodText(a, b) { if (!ISO.test(a || '')) return ''; b = ISO.test(b || '') ? b : a; const t = dnum(todayStr()), n = dnum(b) - dnum(a) + 1, left = dnum(b) - t, until = dnum(a) - t;
+      return `${a === b ? md(a) + ' 하루' : md(a) + ' ~ ' + md(b) + ' · ' + n + '일간'} · ${left < 0 ? '끝남' : until > 0 ? 'D-' + until : left === 0 ? '오늘 마감' : '진행 중 ' + left + '일 남음'}`; }
 
     function filters() {
       if (st.tab === 'rank') { R('filters').innerHTML = ['day', 'week', 'month', 'year'].map(p => `<button class="chip" data-period="${p}" aria-pressed="${st.period === p}">${{ day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[p]}</button>`).join(''); return; }
@@ -540,7 +546,9 @@
     }
     function addView() {
       const k = st.addKind, regions = Object.keys(D.regions), mine = store.myAdded();
-      R('view').innerHTML = `<div class="card">${store.canWrite ? '' : '<div class="notice">보기 전용입니다. 등록하려면 참여 권한이 필요합니다.</div>'}
+      const evAll = V.added.filter(a => a.kind === 'event' && a.when).sort((x, y) => x.when.localeCompare(y.when));
+      const evNow = evAll.filter(a => (a.until || a.when) >= todayStr()), evPast = evAll.filter(a => (a.until || a.when) < todayStr());
+      R('view').innerHTML = `<div class="card" style="margin-bottom:10px"><h2>🏆 등록된 대회·이벤트 <span class="small muted">기간순 · 진행 중·예정 ${evNow.length} · 지난 것 ${evPast.length}</span></h2>${evNow.map(a => `<div class="rank"><span class="n">🏆</span><span><b>${esc(a.name)}</b><br><span class="small">🗓 ${periodText(a.when, a.until)}</span>${a.applyTo ? `<br><span class="small muted">✍ 참가 접수 ${periodText(a.applyFrom || a.applyTo, a.applyTo)}</span>` : ''}<br><span class="small muted">📍 ${esc(a.region)} ${esc(a.where || a.addr || '')}${a.phone ? ' · ☎ ' + esc(a.phone) : ''}</span></span><span></span></div>`).join('') || '<div class="small dim">진행 중이거나 예정된 대회·이벤트가 없습니다. 아래에서 등록하세요.</div>'}</div><div class="card">${store.canWrite ? '' : '<div class="notice">보기 전용입니다. 등록하려면 참여 권한이 필요합니다.</div>'}
         <div class="bar">${[['shop', '🏪 낚시점'], ['boat', '🚤 선상(배)'], ['event', '🏆 대회·이벤트']].map(([kk, l]) => `<button class="chip" data-kind="${kk}" aria-pressed="${k === kk}">${l}</button>`).join('')}</div>
         <form id="pl-form" class="form">
           <label>이름<input id="pl-fName" required maxlength="40" placeholder="${k === 'event' ? '예: 제1회 보령 쭈꾸미 선상대회' : k === 'boat' ? '예: OO호' : '예: OO낚시'}"></label>
@@ -548,19 +556,19 @@
           ${k === 'shop' ? `<label>구분<select id="pl-fCh"><option>오프라인</option><option>온라인</option></select></label><label>홈페이지(https)<input id="pl-fWeb" placeholder="https://"></label>` : ''}
           ${k === 'boat' ? `<label>정원(명)<input id="pl-fCap" type="number" min="1" max="99"></label><label>출항 시각<input id="pl-fDep" placeholder="05:30"></label><label>선비<input id="pl-fFee" placeholder="1인 9만원"></label>
             <label>자리 정하는 방식<select id="pl-fSeat"><option value="">미확인</option>${SEATS.map(s => `<option>${s}</option>`).join('')}</select></label>` : ''}
-          ${k === 'event' ? `<label>날짜<input id="pl-fWhen" type="date"></label><label>장소<input id="pl-fWhere" placeholder="오천항"></label>` : ''}
+          ${k === 'event' ? `<label>시작일<input id="pl-fWhen" type="date" required></label><label>종료일<input id="pl-fUntil" type="date"></label><label>참가 접수 시작<input id="pl-fApplyFrom" type="date"></label><label>참가 접수 마감<input id="pl-fApplyTo" type="date"></label><label>장소<input id="pl-fWhere" placeholder="오천항"></label>` : ''}
           <label class="wide">주소<input id="pl-fAddr" maxlength="80"></label><label>연락처(업체 대표번호)<input id="pl-fPhone" maxlength="20"></label>
           <label>종목(쉼표로)<input id="pl-fSp" placeholder="쭈꾸미, 갑오징어"></label><label class="wide">메모<input id="pl-fNote" maxlength="120"></label>
           <div class="wide bar"><button class="btn primary" type="submit" ${store.canWrite ? '' : 'disabled'}>등록</button><span class="small muted" id="pl-msg">${store.shared ? '등록하면 조황 수첩을 쓰는 모두에게 보입니다.' : '이 기기에 저장됩니다.'} 사진·승선 위치·주차는 등록 뒤 상세 화면에서 넣습니다.</span></div>
         </form></div>
-        <div class="card" style="margin-top:10px"><h2>내가 등록한 곳 (${mine.length})</h2>${mine.map(a => `<div class="rank"><span class="n">${{ shop: '🏪', boat: '🚤', event: '🏆' }[a.kind]}</span><span><b>${esc(a.name)}</b><br><span class="small muted">${esc(a.region)} · ${esc(a.addr || a.where || '')}${a.when ? ' · ' + esc(a.when) : ''}</span></span><button class="btn" data-del="${esc(a.id)}">삭제</button></div>`).join('') || '<div class="small dim">아직 없습니다.</div>'}</div>`;
+        <div class="card" style="margin-top:10px"><h2>내가 등록한 곳 (${mine.length})</h2>${mine.map(a => `<div class="rank"><span class="n">${{ shop: '🏪', boat: '🚤', event: '🏆' }[a.kind]}</span><span><b>${esc(a.name)}</b><br><span class="small muted">${esc(a.region)} · ${esc(a.addr || a.where || '')}${a.when ? ' · 🗓 ' + periodText(a.when, a.until) : ''}${a.applyTo ? ' · ✍ 접수 ' + periodText(a.applyFrom || a.applyTo, a.applyTo) : ''}</span></span><button class="btn" data-del="${esc(a.id)}">삭제</button></div>`).join('') || '<div class="small dim">아직 없습니다.</div>'}</div>`;
       root.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { st.addKind = b.dataset.kind; addView(); });
       root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => run(store.remove(b.dataset.del)));
       $('form').onsubmit = e => { e.preventDefault(); const g = id => ($(id) ? $(id).value.trim() : '');
         const o = { id: `${k}-u${Date.now().toString(36)}`, kind: k, region: g('fRegion'), name: g('fName'), addr: g('fAddr'), phone: g('fPhone'), species: g('fSp').split(/[,·\s]+/).filter(Boolean).slice(0, 8), note: g('fNote') };
         if (k === 'shop') Object.assign(o, { channel: g('fCh') || '오프라인', web: /^https:\/\//.test(g('fWeb')) ? g('fWeb') : '' });
         if (k === 'boat') Object.assign(o, { capacity: +g('fCap') || null, depart: g('fDep'), fee: g('fFee'), seat: g('fSeat') });
-        if (k === 'event') Object.assign(o, { when: g('fWhen'), where: g('fWhere') });
+        if (k === 'event') { Object.assign(o, { when: g('fWhen'), until: g('fUntil') || g('fWhen'), applyFrom: g('fApplyFrom'), applyTo: g('fApplyTo'), where: g('fWhere') }); if (!o.when) { say('대회·이벤트는 시작일을 넣어 주세요'); return; } if (o.until < o.when) { say('종료일이 시작일보다 빠릅니다'); return; } }
         if (!o.name) return; run(store.add(o), '등록했습니다').then(() => { if (k !== 'event') { st.tab = k; st.sel = o.id; render(); } }); };
     }
     function body() { if (st.tab === 'shop' || st.tab === 'boat') listView(st.tab); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips(); }

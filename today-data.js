@@ -20,6 +20,7 @@ window.TODAY_DATA = {
   ],
 
   // 선상·낚시 대회 (주최 측 공지·지자체 보도자료로 확인된 것만, 없으면 빈 배열)
+  //   { title, region, where, start: "YYYY-MM-DD", end: "YYYY-MM-DD", apply: ["접수 시작", "접수 마감"], note, img } — 기간·접수 기간을 꼭 넣음
   tournaments: [],
   tournamentNote: '이번 주 확인된 국내 선상낚시 대회가 없습니다. 주최 측·선장님이 등록하면 지역별로 함께 홍보됩니다.',
 

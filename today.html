@@ -46,6 +46,7 @@
   .ev .now { position: absolute; right: 6px; top: 6px; background: var(--ok); color: #0E2A1D; border-radius: 4px; padding: 1px 6px; font: 700 11px inherit; }
   .ev .body { padding: 9px 10px; display: grid; gap: 5px; align-content: start; }
   .ev .body b { font-size: 13.5px; }
+  .per { font-size: 12px; color: var(--muted); } .per b { color: var(--ok); font-weight: 700; } .per.soon b { color: var(--accent); } .per.last b { color: var(--warn); } .per.end b { color: var(--dim); }
   .near { font-size: 12px; } .near .score { font: 700 11.5px Consolas, monospace; padding: 0 5px; border-radius: 4px; }
   .foot { color: var(--dim); font-size: 11px; line-height: 1.6; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
@@ -121,6 +122,18 @@ function fishArt(sp, i) {
 const state = { sea: '전체', tag: '전체', home: null };
 const inSea = region => state.sea === '전체' || seaOf(region) === state.sea;
 const dshort = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
+// 기간: "11/6(금) ~ 11/8(일) · 3일간" + 상태 "진행 중 · 2일 남음 / 오늘 마감 / D-14 / 끝남 / 연중"
+const dn = s => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5);
+function period(start, end, base) {
+  if (!start) return { label: '', status: '', cls: '' };
+  end = end || start; base = base || D.date;
+  if (start.slice(5) === '01-01' && end.slice(5) === '12-31') return { label: `${start.slice(0, 4)}년 연중`, status: '연중 상시', cls: 'live', days: 365 };
+  const days = dn(end) - dn(start) + 1, left = dn(end) - dn(base), until = dn(start) - dn(base);
+  const label = start === end ? `${dshort(start)}(${dow(start)}) 하루` : `${dshort(start)}(${dow(start)}) ~ ${dshort(end)}(${dow(end)}) · ${days}일간`;
+  const status = left < 0 ? '끝남' : until > 0 ? `D-${until} · ${dshort(start)} 시작` : left === 0 ? '오늘 마감' : `진행 중 · ${left}일 남음`;
+  return { label, status, cls: left < 0 ? 'end' : until > 0 ? 'soon' : left === 0 ? 'last' : 'live', days };
+}
+const periodHtml = (start, end) => { const p = period(start, end); return p.label ? `<span class="per ${p.cls}">🗓 ${p.label} · <b>${p.status}</b></span>` : ''; };
 const dow = s => '일월화수목금토'[new Date(s + 'T12:00:00').getDay()];
 
 function render() {
@@ -146,11 +159,11 @@ function render() {
   // 추천 코스
   $('picks').innerHTML = D.picks.filter(p => inSea(p.region)).map(p => { const ev = D.events.find(e => e.id === p.event) || {}, s = D.scores[p.region];
     return `<div class="pick">${ev.img ? `<img src="${esc(ev.img)}" alt="${esc(ev.title)}" loading="lazy">` : '<div></div>'}<div style="display:grid;gap:3px;min-width:0">
-      <b>${esc(p.title)}</b><span>${s ? `<span class="score ${s[1]}">${esc(p.region)} ${s[0]} ${s[1]}</span>` : ''} <span class="dim">${esc(ev.title || '')}</span></span>
+      <b>${esc(p.title)}</b><span>${s ? `<span class="score ${s[1]}">${esc(p.region)} ${s[0]} ${s[1]}</span>` : ''} <span class="dim">${esc(ev.title || '')}</span></span>${ev.start ? periodHtml(ev.start, ev.end) : ''}
       <span class="muted" style="font-size:12px">${esc(p.why)}</span></div></div>`; }).join('') || '<div class="empty">이 바다의 추천 코스가 없습니다.</div>';
 
   // 대회
-  $('tours').innerHTML = D.tournaments.length ? D.tournaments.filter(t => inSea(t.region)).map(t => `<div class="pick">${t.img ? `<img src="${esc(t.img)}" alt="">` : '<div></div>'}<div><b>${esc(t.title)}</b><div class="muted">${esc(t.when)} · ${esc(t.where)}</div><div class="dim">${esc(t.note || '')}</div></div></div>`).join('')
+  $('tours').innerHTML = D.tournaments.length ? D.tournaments.filter(t => inSea(t.region)).map(t => `<div class="pick">${t.img ? `<img src="${esc(t.img)}" alt="">` : '<div></div>'}<div><b>${esc(t.title)}</b><div class="muted">${t.start ? periodHtml(t.start, t.end) : esc(t.when || '')} · ${esc(t.where || '')}</div>${t.apply ? `<div class="small">✍ 접수 ${period(t.apply[0], t.apply[1]).label} · ${period(t.apply[0], t.apply[1]).status}</div>` : ''}<div class="dim">${esc(t.note || '')}</div></div></div>`).join('')
     : `<div class="empty">${esc(D.tournamentNote)}<button class="btn" id="regTour">＋ 대회·이벤트 등록하기</button></div>`;
   if ($('regTour')) $('regTour').onclick = () => post({ type: 'today-register', kind: 'tournament' });
 
@@ -162,7 +175,7 @@ function render() {
     const when = yearRound ? '연중' : e.start === e.end ? `${dshort(e.start)}(${dow(e.start)})` : `${dshort(e.start)}~${dshort(e.end)}`;
     return `<a class="ev" href="https://korean.visitkorea.or.kr/search/search_list.do?keyword=${encodeURIComponent(e.title)}" target="_blank" rel="noopener" data-title="${esc(e.title)}">
       <div class="img"><img src="${esc(e.img)}" alt="${esc(e.title)}" loading="lazy"><span class="when">${when}</span>${live ? '<span class="now">진행 중</span>' : e.upcoming ? '<span class="now" style="background:var(--accent);color:#0D2433">예정</span>' : ''}</div>
-      <div class="body"><b>${esc(e.title)}</b><span class="muted" style="font-size:12px">${esc(e.addr)}</span>
+      <div class="body"><b>${esc(e.title)}</b>${periodHtml(e.start, e.end)}<span class="muted" style="font-size:12px">${esc(e.addr)}</span>
       <div class="chips">${e.tags.map(t => `<span class="chip tag">#${t}</span>`).join('')}</div>
       <span class="near">${state.home ? `📍 ${esc(state.home.name)}에서 ${km(state.home.lat, state.home.lon, e.lat, e.lon).toFixed(0)}km · ` : ""}⚓ ${esc(n.name)}에서 ${n.km.toFixed(0)}km${s && s.km < 60 ? ` · <span class="score ${s.s[1]}">${esc(s.name)} 지수 ${s.s[0]}</span>` : ''}</span></div></a>`; }).join('') || '<div class="empty">조건에 맞는 행사가 없습니다.</div>';
   document.querySelectorAll('.ev').forEach(a => a.addEventListener('click', ev => { if (window.chrome && window.chrome.webview) { ev.preventDefault(); post({ type: 'open', url: a.href }); } }));
