@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '3.9-mobile';
+const VERSION = '4.3-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -73,7 +73,7 @@ function renderHmi() {
     $('dayText').textContent = `판정 날짜 ${best.day} (04~16시 예보) · Open-Meteo 모델`;
   }
   renderHazard();
-  $('regions').innerHTML = rs.map((x, i) => `<div class="rrow" data-i="${results.list.indexOf(x)}"><div><b>${esc(x.r.name)}</b><small>${esc(x.r.prov)} · ${x.s == null ? '예보 없음' : `풍속 ${x.wind.toFixed(1)} · 파고 ${x.wave.toFixed(1)}${x.rain >= 0 ? ' · 비' : ''}`}</small></div>
+  $('regions').innerHTML = rs.map((x, i) => `<div class="rrow" data-i="${results.list.indexOf(x)}"><div><b>${esc(x.r.name)}</b><small>${esc(x.r.prov)} · ${x.s == null ? '예보 없음' : `풍속 ${x.wind.toFixed(1)} · 파고 ${x.wave.toFixed(1)}${curSst(x) != null ? ` · 수온 ${curSst(x).toFixed(1)}℃` : ''}${x.rain >= 0 ? ' · 비' : ''}`}</small></div>
     <span class="small ${x.g}">${hzIcon(x)}${x.s == null ? '' : x.best === '조건 충족 없음' ? '—' : x.best.slice(0, 5)}</span><span class="pill ${x.g}">${x.s ?? '—'}</span></div>`).join('');
   document.querySelectorAll('#regions .rrow').forEach(el => el.onclick = () => showDetail(results.list[+el.dataset.i]));
   drawPins();
@@ -86,7 +86,7 @@ function showDetail(x) {
   d.innerHTML = `<h2>${esc(x.r.name)} <small>${esc(x.r.prov)} · ${esc(x.r.sea)} · ${x.day || ''}</small></h2>
     <dl><dt>출조 지수</dt><dd class="${x.g}"><b>${x.s ?? '—'} ${x.g}</b></dd><dt>최대 풍속</dt><dd>${x.wind != null ? x.wind.toFixed(1) + ' m/s' : '—'}</dd>
     <dt>최대 파고</dt><dd>${x.wave != null ? x.wave.toFixed(1) + ' m' : '—'}</dd><dt>비</dt><dd>${x.rain >= 0 ? `있음 (최대 ${x.rain}mm/h)` : '없음'}</dd>
-    <dt>수온</dt><dd>${sst ? sst.sst.toFixed(1) + ' ℃' : '—'}</dd><dt>최적 시간</dt><dd>${esc(x.best || '—')}</dd><dt>물때</dt><dd>${esc(mulText(x.r.sea === '서해' ? 7 : 8))}</dd></dl>
+    <dt>수온</dt><dd>${sst ? `${sst.sst.toFixed(1)} ℃ · ${K.tempAdvice(sst.sst).label}<br><small>잘 무는 어종: ${K.tempAdvice(sst.sst).best.join(' · ') || '—'}</small>` : '—'}</dd><dt>최적 시간</dt><dd>${esc(x.best || '—')}</dd><dt>물때</dt><dd>${esc(mulText(x.r.sea === '서해' ? 7 : 8))}</dd></dl>
     <div class="hours">${hrs.map(h => `<div class="${(h.wind ?? 99) <= 5 && (h.wave ?? 9) < 1 ? 'good' : ''}"><b>${h.hr}시</b><br>${(h.wind ?? 0).toFixed(0)}m/s<br>${h.wave != null ? h.wave.toFixed(1) + 'm' : '—'}</div>`).join('')}</div>
     <div class="small muted">초록 칸 = 풍속 5m/s 이하·파고 1m 미만. 출항 여부는 선장·해경 통제를 따르세요.</div>${detailExtra(x)}`;
   d.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -316,6 +316,103 @@ function locateMe(save) {
 $('locBtn') && ($('locBtn').onclick = () => locateMe(false));
 $('locSaveBtn') && ($('locSaveBtn').onclick = () => locateMe(true));
 
+// ⑥ 바다 수온(내 위치) · 낚시 중 자동 위치 기록 · 사진 위치(EXIF GPS)
+function curSst(x) { if (!x || !x.hours) return null; const n = new Date(), h = x.hours.find(o => o.day === iso(n) && o.hr === n.getHours() && o.sst != null) || x.hours.find(o => o.sst != null); return h ? h.sst : null; }
+function sstHtml(v, sp) {
+  const a = K.tempAdvice(v.t), rng = K.WATER[sp];
+  const fit = rng ? (v.t < rng[0] ? `조금 차가워요(잘 무는 수온 ${rng[0]}~${rng[1]}℃)` : v.t > rng[1] ? `조금 높아요(잘 무는 수온 ${rng[0]}~${rng[1]}℃)` : `잘 맞아요(${rng[0]}~${rng[1]}℃)`) : '';
+  return `<div class="hero" style="margin:6px 0"><div class="score" style="color:${a.color}">${v.t.toFixed(1)}<small>℃</small></div>
+    <div><b style="color:${a.color}">${a.label}</b>${v.min != null ? ` · 이틀 사이 ${v.min.toFixed(1)}~${v.max.toFixed(1)}℃` : ''}
+    <div class="small">${v.km ? `육지라 ${v.km}km 떨어진 바다 지점 값입니다` : '바로 이 자리의 값입니다'} · ${v.lat.toFixed(4)}, ${v.lon.toFixed(4)}</div>
+    ${sp ? `<div class="small">${esc(sp)}: ${fit || '수온 자료 없음'}</div>` : ''}</div></div>
+    <div class="small">이 수온에 잘 무는 어종: <b>${a.best.length ? a.best.map(esc).join(' · ') : '— (찬물·더운물 시기라 활성도 낮음)'}</b></div>
+    <div class="small muted">Open-Meteo 해양 모델(위성 관측 기반 예측)의 표층 수온입니다. 바닥 수온·물때에 따라 실제와 다를 수 있어요. ${v.time ? `기준 ${String(v.time).replace('T', ' ')}` : ''}</div>`;
+}
+async function checkMySst() {
+  const box = $('sstBox'); if (!navigator.geolocation) { box.textContent = '이 브라우저는 위치를 지원하지 않습니다'; return; }
+  box.textContent = '위치 확인 중… (권한을 허용해 주세요)';
+  navigator.geolocation.getCurrentPosition(async p => {
+    myPos = { lat: p.coords.latitude, lon: p.coords.longitude }; box.textContent = '수온 받는 중…';
+    try { const v = await K.seaTemp(myPos.lat, myPos.lon);
+      if (!v) { box.textContent = '주변 20km 안에서 바다 수온 자료를 찾지 못했습니다. 바다 가까이에서 다시 눌러 주세요.'; return; }
+      ls.set('m.sstMine', Object.assign({ at: Date.now() }, v)); box.innerHTML = sstHtml(v, $('sstSp').value); box.classList.remove('muted');
+    } catch (e) { box.textContent = '수온을 받지 못했습니다(인터넷 연결 확인)'; }
+  }, err => { box.textContent = `위치를 받지 못했습니다 (${err.code === 1 ? '권한 거부' : '신호 없음'})`; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+if ($('sstSp')) {
+  $('sstSp').innerHTML = Object.keys(K.WATER).map(s => `<option>${s}</option>`).join(''); $('sstSp').value = K.WATER[ls.get('m.sp', '')] ? ls.get('m.sp') : '쭈꾸미';
+  $('sstBtn').onclick = checkMySst;
+  const last = ls.get('m.sstMine', null); if (last && Date.now() - last.at < 6 * 3600000) { $('sstBox').innerHTML = sstHtml(last, $('sstSp').value) + `<div class="small muted">(${new Date(last.at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}에 확인한 값)</div>`; $('sstBox').classList.remove('muted'); }
+  $('sstSp').onchange = () => { const v = ls.get('m.sstMine', null); if (v) $('sstBox').innerHTML = sstHtml(v, $('sstSp').value); };
+}
+
+// 낚시 중 자동 위치 기록(화면을 켠 동안) — 간격마다 또는 50m 이상 움직이면 한 점
+const track = () => ls.get('m.track', []);
+const trk = { watch: null, wake: null, last: 0, cur: null, line: null };
+async function holdScreen() { try { if ('wakeLock' in navigator && !trk.wake && document.visibilityState === 'visible') { trk.wake = await navigator.wakeLock.request('screen'); trk.wake.addEventListener('release', () => trk.wake = null); } } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (trk.watch != null && document.visibilityState === 'visible') holdScreen(); });
+function trkPoint(p, force) {
+  const pt = { lat: +p.coords.latitude.toFixed(6), lon: +p.coords.longitude.toFixed(6), acc: Math.round(p.coords.accuracy), spd: p.coords.speed != null ? +(p.coords.speed * 1.944).toFixed(1) : null, t: new Date().toISOString() };
+  trk.cur = pt; myPos = { lat: pt.lat, lon: pt.lon };
+  const all = track(), prev = all[all.length - 1], every = (+$('trkEvery').value || 3) * 60000;
+  if (force || !prev || Date.now() - trk.last >= every || K.distance(prev, pt).km >= .05) {
+    if (pt.acc > 200 && prev && !force) return renderTrack();   // 너무 부정확한 점은 건너뜀
+    trk.last = Date.now(); ls.set('m.track', all.concat(pt).slice(-3000));
+  }
+  renderTrack();
+}
+function startTrack() {
+  if (!navigator.geolocation) { $('trkBox').textContent = '이 브라우저는 위치를 지원하지 않습니다'; return; }
+  trk.last = 0; $('trkBox').textContent = '위치 신호 찾는 중…';
+  trk.watch = navigator.geolocation.watchPosition(p => trkPoint(p, trk.last === 0), err => { $('trkBox').textContent = `위치를 받지 못했습니다 (${err.code === 1 ? '권한 거부 — 브라우저 설정에서 위치를 허용해 주세요' : '신호 없음'})`; },
+    { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 });
+  holdScreen(); ls.set('m.trkOn', true); $('trkBtn').textContent = '⏸ 기록 멈춤'; $('trkBtn').setAttribute('aria-pressed', 'true');
+}
+function stopTrack() {
+  if (trk.watch != null) navigator.geolocation.clearWatch(trk.watch); trk.watch = null;
+  if (trk.wake) { trk.wake.release().catch(() => {}); trk.wake = null; }
+  ls.set('m.trkOn', false); $('trkBtn').textContent = '▶ 기록 시작'; $('trkBtn').setAttribute('aria-pressed', 'false'); renderTrack();
+}
+function renderTrack() {
+  const all = track(), box = $('trkBox'); if (!box) return;
+  let km = 0; for (let i = 1; i < all.length; i++) km += K.distance(all[i - 1], all[i]).km;
+  const last = all[all.length - 1], on = trk.watch != null;
+  box.innerHTML = all.length ? `${on ? '<b style="color:var(--ok)">● 기록 중</b>' : '멈춤'} · 점 <b>${all.length}</b>개 · 이동 ${km.toFixed(1)}km${trk.cur && trk.cur.spd != null && on ? ` · 속도 ${trk.cur.spd}노트` : ''}
+    <br>마지막 ${new Date(last.t).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · <b>${last.lat.toFixed(5)}, ${last.lon.toFixed(5)}</b> (±${last.acc}m) <button class="chip" data-savespot="${last.lat},${last.lon}">📍 포인트로</button> <button class="chip" id="trkSst">🌡 이 자리 수온</button>`
+    : (on ? '위치 신호 찾는 중…' : '아직 기록이 없습니다. 배에 오르면 「▶ 기록 시작」을 누르세요.');
+  const b = $('trkSst'); if (b) b.onclick = async () => { b.textContent = '받는 중…'; const v = await K.seaTemp(last.lat, last.lon).catch(() => null); b.textContent = v ? `🌡 ${v.t.toFixed(1)}℃ ${K.tempAdvice(v.t).label}` : '수온 자료 없음'; };
+  if (map) { if (trk.line) map.removeLayer(trk.line); trk.line = null; if (all.length > 1) trk.line = L.polyline(all.map(p => [p.lat, p.lon]), { color: '#FFD166', weight: 3, opacity: .9, dashArray: '6 4' }).bindTooltip('내 이동 기록').addTo(map); }
+}
+if ($('trkBtn')) {
+  $('trkBtn').onclick = () => trk.watch != null ? stopTrack() : startTrack();
+  $('trkClear').onclick = () => { if (confirm('자동 위치 기록을 모두 지울까요? (저장한 포인트·조과 기록은 그대로)')) { ls.set('m.track', []); renderTrack(); } };
+  $('trkGpx').onclick = () => { const all = track(); if (!all.length) return alert('기록이 없습니다');
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="SunsangHelper" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>낚시 이동 기록 ${iso(new Date(all[0].t))}</name><trkseg>\n${all.map(p => `<trkpt lat="${p.lat}" lon="${p.lon}"><time>${p.t}</time></trkpt>`).join('\n')}\n</trkseg></trk></gpx>`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' })); a.download = `fishing-track-${iso(new Date(all[0].t))}.gpx`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  renderTrack(); if (ls.get('m.trkOn', false)) startTrack();   // 앱을 다시 열면 이어서 기록
+}
+
+// 사진 속 GPS(EXIF) 읽기 — 휴대폰 카메라가 위치를 넣어 둔 경우
+function exifGps(buf) {
+  try { const v = new DataView(buf); if (v.getUint16(0) !== 0xFFD8) return null; let o = 2;
+    while (o < v.byteLength - 10) { const m = v.getUint16(o), len = v.getUint16(o + 2);
+      if (m === 0xFFE1 && v.getUint32(o + 4) === 0x45786966) { const t = o + 10, le = v.getUint16(t) === 0x4949, u16 = p => v.getUint16(p, le), u32 = p => v.getUint32(p, le);
+        const ifd = t + u32(t + 4); let gps = 0; for (let i = 0; i < u16(ifd); i++) { const e = ifd + 2 + i * 12; if (u16(e) === 0x8825) gps = t + u32(e + 8); }
+        if (!gps) return null; const g = {};
+        for (let i = 0; i < u16(gps); i++) { const e = gps + 2 + i * 12, tag = u16(e), type = u16(e + 2);
+          if (type === 2) g[tag] = String.fromCharCode(v.getUint8(e + 8)); else if (type === 5) { const p = t + u32(e + 8); g[tag] = [0, 1, 2].map(k => u32(p + k * 8) / (u32(p + k * 8 + 4) || 1)); } }
+        const dms = a => a ? a[0] + a[1] / 60 + a[2] / 3600 : NaN; let lat = dms(g[2]), lon = dms(g[4]);
+        if (!isFinite(lat) || !isFinite(lon) || (!lat && !lon)) return null; if (g[1] === 'S') lat = -lat; if (g[3] === 'W') lon = -lon; return { lat: +lat.toFixed(6), lon: +lon.toFixed(6), src: '사진 GPS' }; }
+      if ((m & 0xFF00) !== 0xFF00) break; o += 2 + len; } } catch (e) {}
+  return null;
+}
+let logPos = null;
+function logPosNow() {   // 사진 GPS > 자동 기록 최근 점(10분 안) > 지금 위치
+  if (logPos) return Promise.resolve(logPos);
+  const t = track().slice(-1)[0]; if (t && Date.now() - new Date(t.t) < 600000) return Promise.resolve({ lat: t.lat, lon: t.lon, src: '자동 기록' });
+  return new Promise(res => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => res({ lat: +p.coords.latitude.toFixed(6), lon: +p.coords.longitude.toFixed(6), src: '지금 위치' }), () => res(null), { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 }) : res(null));
+}
+
 // ⑤ 조과 일지(로그북): 기록 순간의 날씨·물때·솔루나를 자동 첨부, 금지체장 확인, 통계, CSV
 const logs = () => ls.get('m.logs', []);
 let logPhoto = null;
@@ -328,13 +425,14 @@ function logForm() {
   const chk = () => { const c = K.legalCheck($('lgSp').value, $('lgSp').value === '문어' ? $('lgWt').value : $('lgLen').value, new Date($('lgAt').value || Date.now()));
     $('lgLegal').innerHTML = `<span style="color:${c.ok ? 'var(--ok)' : 'var(--bad)'}">${esc(c.msg)}</span>`; };
   ['lgSp', 'lgLen', 'lgWt', 'lgAt'].forEach(id => $(id).addEventListener('input', chk)); chk();
-  $('lgPhoto').onchange = e => { const file = e.target.files[0]; if (!file) return; const img = new Image(), url = URL.createObjectURL(file);
+  $('lgPhoto').onchange = e => { const file = e.target.files[0]; if (!file) return; logPos = null; file.slice(0, 131072).arrayBuffer().then(b => { logPos = exifGps(b); $('lgPos').innerHTML = logPos ? `📍 사진 GPS: <b>${logPos.lat.toFixed(5)}, ${logPos.lon.toFixed(5)}</b> (사진 찍은 자리)` : '📍 사진에 위치 정보가 없어 저장할 때 지금 위치(또는 자동 기록의 마지막 위치)를 붙입니다.'; }).catch(() => {}); const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => { const k = Math.min(1, 640 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = img.width * k; c.height = img.height * k;
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); logPhoto = c.toDataURL('image/jpeg', .7); URL.revokeObjectURL(url);
       $('lgPrev').innerHTML = `<img src="${logPhoto}" alt="조과 사진 미리보기" style="max-width:120px;border-radius:10px">`; }; img.src = url; };
   $('lgSave').onclick = saveLog;
 }
-function saveLog() {
+async function saveLog() {
+  $('lgMsg').textContent = '위치 확인 중…'; const pos = await logPosNow();
   const at = $('lgAt').value ? new Date($('lgAt').value) : new Date(), sp = $('lgSp').value, r = REGIONS.find(x => x.name === $('lgRegion').value) || REGIONS[0];
   const x = regionResult(r.name), h = x && x.hours ? x.hours.find(o => o.day === iso(at) && o.hr === at.getHours()) : null;
   const sol = K.solunar(at, r.lat, r.lon), ld = lunarDay(at), inPeriod = sol.periods.find(p => at >= p.from && at <= p.to);
@@ -342,13 +440,15 @@ function saveLog() {
   const e = { id: Date.now(), at: $('lgAt').value || at.toISOString().slice(0, 16), sp, len: +$('lgLen').value || null, wt: +$('lgWt').value || null, count: Math.max(1, +$('lgCount').value || 1),
     bait: $('lgBait').value.trim().slice(0, 30), method: $('lgMethod').value, region: r.name, memo: $('lgMemo').value.trim().slice(0, 200), released: !legal.ok || $('lgRel').checked,
     mul: ld ? `${mul(ld, mulMethodOf(r))} (물살 ${strength(ld)}%)` : '', moon: sol.moon.name, sol: inPeriod ? `${inPeriod.kind === 'major' ? '메이저' : '마이너'}(${inPeriod.label})` : '피딩 타임 밖',
-    wx: h ? { wind: h.wind, gust: h.gust, wave: h.wave, sst: h.sst, wdir: K.dirName(h.wdir) } : null, photo: logPhoto };
+    wx: h ? { wind: h.wind, gust: h.gust, wave: h.wave, sst: h.sst, wdir: K.dirName(h.wdir) } : null, photo: logPhoto, pos };
   const all = logs().concat(e);
   try { ls.set('m.logs', all); if (!localStorage.getItem('m.logs') || JSON.parse(localStorage.getItem('m.logs')).length !== all.length) throw 0; }
   catch (err) { e.photo = null; ls.set('m.logs', logs().concat(e)); alert('저장 공간이 부족해 사진 없이 저장했습니다. 오래된 사진 기록을 지우면 다시 사진을 넣을 수 있습니다.'); }
+  if (pos && (!e.wx || e.wx.sst == null)) K.seaTemp(pos.lat, pos.lon).then(v => { if (!v) return; const all2 = logs(), o = all2.find(z => z.id === e.id); if (!o) return; o.wx = Object.assign(o.wx || {}, { sst: v.t }); ls.set('m.logs', all2); renderLog(); }).catch(() => {});
+  logPos = null; $('lgPos').textContent = '📍 위치: 사진에 GPS 정보가 있으면 그 자리, 없으면 지금 위치(또는 자동 기록의 마지막 위치)를 붙입니다.';
   logPhoto = null; $('lgPrev').innerHTML = ''; $('lgPhoto').value = ''; $('lgLen').value = ''; $('lgWt').value = ''; $('lgMemo').value = ''; $('lgRel').checked = false;
   ls.set('m.sp', sp); mission('log'); renderLog();
-  $('lgMsg').textContent = `저장했습니다 · ${e.mul || ''} · ${e.sol}${e.wx ? ` · 풍속 ${e.wx.wind.toFixed(0)}m/s 파고 ${e.wx.wave != null ? e.wx.wave.toFixed(1) : '—'}m` : ' · (그 시각 예보 없음)'}`;
+  $('lgMsg').textContent = `저장했습니다 · ${pos ? `📍${pos.lat.toFixed(4)},${pos.lon.toFixed(4)}(${pos.src}) · ` : ''}${e.mul || ''} · ${e.sol}${e.wx ? ` · 풍속 ${e.wx.wind.toFixed(0)}m/s 파고 ${e.wx.wave != null ? e.wx.wave.toFixed(1) : '—'}m` : ' · (그 시각 예보 없음)'}`;
 }
 function renderLog() {
   logForm(); renderMission();
@@ -361,13 +461,14 @@ function renderLog() {
       <div><b>${esc(e.sp)}${e.len ? ` ${e.len}cm` : ''}${e.wt ? ` ${e.wt}g` : ''}${e.count > 1 ? ` ×${e.count}` : ''}</b>${e.released ? ' <span class="small" style="color:var(--sea)">방생</span>' : ''}
       <div class="small muted">${e.at.replace('T', ' ')} · ${esc(e.region)} · ${esc(e.method || '')} ${esc(e.bait || '')}</div>
       <div class="small">${esc(e.mul)} · ${esc(e.moon)} · ${esc(e.sol)}${e.wx ? ` · ${e.wx.wdir || ''}풍 ${(+e.wx.wind).toFixed(0)}m/s · 파고 ${e.wx.wave != null ? (+e.wx.wave).toFixed(1) : '—'}m${e.wx.sst != null ? ` · 수온 ${(+e.wx.sst).toFixed(1)}℃` : ''}` : ''}</div>
+      ${e.pos ? `<div class="small">📍 ${(+e.pos.lat).toFixed(5)}, ${(+e.pos.lon).toFixed(5)} <span class="muted">(${esc(e.pos.src || '')})</span> <button class="chip" data-savespot="${e.pos.lat},${e.pos.lon}">포인트로</button></div>` : ''}
       ${e.memo ? `<div class="small">${esc(e.memo)}</div>` : ''}</div><button class="chip" data-dellog="${e.id}" aria-label="삭제">✕</button></div>`).join('')
     : '<div class="small muted">첫 조과를 기록해 보세요. 그 시각의 바람·파고·수온·물때·솔루나가 자동으로 붙습니다.</div>';
   $('logList').querySelectorAll('[data-dellog]').forEach(b => b.onclick = () => { if (confirm('이 기록을 지울까요?')) { ls.set('m.logs', logs().filter(o => o.id !== +b.dataset.dellog)); renderLog(); } });
 }
 $('lgCsv') && ($('lgCsv').onclick = () => {
-  const cols = ['at', 'sp', 'len', 'wt', 'count', 'released', 'region', 'method', 'bait', 'mul', 'moon', 'sol', 'wind', 'wave', 'sst', 'memo'];
-  const rows = logs().map(e => cols.map(c => { const v = ['wind', 'wave', 'sst'].includes(c) ? (e.wx || {})[c] : e[c]; return `"${String(v ?? '').replace(/"/g, '""')}"`; }).join(','));
+  const cols = ['at', 'sp', 'len', 'wt', 'count', 'released', 'region', 'method', 'bait', 'mul', 'moon', 'sol', 'wind', 'wave', 'sst', 'lat', 'lon', 'memo'];
+  const rows = logs().map(e => cols.map(c => { const v = ['wind', 'wave', 'sst'].includes(c) ? (e.wx || {})[c] : ['lat', 'lon'].includes(c) ? (e.pos || {})[c] : e[c]; return `"${String(v ?? '').replace(/"/g, '""')}"`; }).join(','));
   const blob = new Blob(['﻿' + [cols.join(',')].concat(rows).join('\r\n')], { type: 'text/csv' }), a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `조과일지_${todayIso()}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 });
@@ -392,7 +493,7 @@ function renderMission() {
 function go(v) {
   document.querySelectorAll('[data-view]').forEach(s => s.hidden = s.dataset.view !== v);
   document.querySelectorAll('nav.tabbar button').forEach(b => b.setAttribute('aria-current', b.dataset.go === v ? 'page' : 'false'));
-  if (v === 'map') { initMap(); renderSpots(); setTimeout(() => map && map.invalidateSize(), 50); }
+  if (v === 'map') { initMap(); renderSpots(); renderTrack(); setTimeout(() => map && map.invalidateSize(), 50); }
   if (v === 'game') initGames();
   if (v === 'more') renderMore();
   if (v === 'log') renderLog();

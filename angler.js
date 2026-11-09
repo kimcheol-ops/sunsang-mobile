@@ -152,6 +152,28 @@
     const order = { closed: 0, soon: 1, peak: 2 }; return out.sort((a, b) => order[a.kind] - order[b.kind]);
   }
 
+  // ── 바다 수온: 어종별 잘 무는 수온(대략, 참고용) · 지금 위치 수온 받아오기(Open-Meteo 해양, 키 불필요) ──
+  const WATER = { 쭈꾸미: [15, 24], 갑오징어: [14, 22], 우럭: [10, 20], 광어: [12, 22], 참돔: [15, 24], 갈치: [16, 25], 문어: [12, 22], 무늬오징어: [17, 26], 한치: [18, 26],
+    감성돔: [12, 20], 농어: [14, 24], 볼락: [10, 18], 방어: [12, 20], 고등어: [14, 22], 도루묵: [2, 10] };
+  function tempAdvice(t) {
+    if (t == null || isNaN(t)) return null;
+    const level = t < 8 ? ['매우 차가움', '#7AB8FF'] : t < 13 ? ['차가움', '#8CC8F2'] : t < 20 ? ['적당', '#6FD3A4'] : t < 25 ? ['따뜻함', '#F5C46B'] : ['높음', '#FF8A8D'];
+    const fish = Object.entries(WATER).map(([sp, [a, b]]) => ({ sp, a, b, mid: (a + b) / 2, ok: t >= a && t <= b })).filter(f => f.ok).sort((x, y) => Math.abs(t - x.mid) - Math.abs(t - y.mid));
+    return { t, label: level[0], color: level[1], fish: fish.map(f => f.sp), best: fish.slice(0, 4).map(f => f.sp) };
+  }
+  // 지점 수온: 해양 모델은 육지에서 값이 없으므로, 없으면 주변 바다 쪽(8방향 약 9·18km)을 찾아봄
+  async function seaTemp(lat, lon) {
+    const get = async (la, lo) => { const r = await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${la.toFixed(4)}&longitude=${lo.toFixed(4)}&current=sea_surface_temperature&hourly=sea_surface_temperature&forecast_days=2&timezone=Asia%2FSeoul`).then(x => x.json());
+      const t = r.current && r.current.sea_surface_temperature; const hs = (r.hourly && r.hourly.sea_surface_temperature || []).filter(v => v != null);
+      return t == null && !hs.length ? null : { t: t ?? hs[0], min: hs.length ? Math.min(...hs) : null, max: hs.length ? Math.max(...hs) : null, time: r.current && r.current.time }; };
+    let v = await get(lat, lon); if (v) return Object.assign(v, { lat, lon, km: 0 });
+    for (const d of [.08, .16]) for (const [dy, dx] of [[0, -1], [-1, 0], [0, 1], [1, 0], [-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+      const la = lat + dy * d, lo = lon + dx * d / Math.cos(lat * rad); v = await get(la, lo).catch(() => null);
+      if (v) return Object.assign(v, { lat: la, lon: lo, km: Math.round(distance({ lat, lon }, { lat: la, lon: lo }).km) });
+    }
+    return null;
+  }
+
   // 조과 일지 통계
   function logStats(entries) {
     const by = (key, f = x => x[key]) => { const m = {}; entries.forEach(x => { const k = f(x); if (!k) return; const o = m[k] = m[k] || { k, n: 0, max: 0 };
@@ -176,5 +198,5 @@
   const hm = t => t ? `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}` : '—';
   const dirName = deg => deg == null ? '' : ['북', '북북동', '북동', '동북동', '동', '동남동', '남동', '남남동', '남', '남남서', '남서', '서남서', '서', '서북서', '북서', '북북서'][Math.round(deg / 22.5) % 16];
 
-  root.AnglerKit = { seasons, SEASON, monthRuns, solunar, moonPhase, altitude, biteTimeline, hazards, hazardLevel, HZ, legalCheck, LEGAL, logStats, distance, hm, dirName, HABIT };
+  root.AnglerKit = { WATER, tempAdvice, seaTemp, seasons, SEASON, monthRuns, solunar, moonPhase, altitude, biteTimeline, hazards, hazardLevel, HZ, legalCheck, LEGAL, logStats, distance, hm, dirName, HABIT };
 })(typeof window !== 'undefined' ? window : globalThis);
