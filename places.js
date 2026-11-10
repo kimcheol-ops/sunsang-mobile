@@ -456,7 +456,7 @@
         <dt>종목</dt><dd>${esc((x.species || []).join(', ')) || '<span class="dim">미확인</span>'}</dd><dt>연락처</dt><dd>${x.phone ? esc(x.phone) : '<span class="dim">카카오맵에서 확인</span>'}</dd>${x.note ? `<dt>메모</dt><dd>${esc(x.note)}</dd>` : ''}</dl>`;
       if (x.kind === 'shop') return head + photoBlock(x) + info + basicBlock(x) + links
         + `<h3>대여 · 서비스 <span class="dim small">(❔ 미확인 — 직접 확인하면 바꿔 주세요)</span></h3><div class="checks">${RENT.map(([k, label]) => `<div class="ck ${cls(val(x, k))}">${mark(val(x, k))} ${label}${sel('rent.' + k, label, val(x, k))}</div>`).join('')}</div>`
-        + miniMap + qaBlock(x) + review + `<div class="small dim">출처: ${esc(x.src || '직접 등록')} · 위치 ${x.approx ? '항구 기준 대략' : '등록 좌표'}</div>`;
+        + stayHtml(x) + miniMap + qaBlock(x) + review + `<div class="small dim">출처: ${esc(x.src || '직접 등록')} · 위치 ${x.approx ? '항구 기준 대략' : '등록 좌표'}</div>`;
       const amen = AMEN.map(([g, items]) => `<h3>${g}</h3><div class="checks">${items.map(([k, label, opts]) => { const v = val(x, k);
         return `<div class="ck ${cls(v)}">${mark(v)} ${label}${opts && isYes(v) ? ` <span class="small">(${esc(v)})</span>` : ''}${sel('amen.' + k, label, v, opts)}</div>`; }).join('')}</div>`).join('');
       const trip = `<div class="box"><b>🔰 이 배 타러 가세요?</b><div class="bar"><button class="btn primary" id="pl-goFind">🧭 이 배 찾아가기 (단계별 안내)</button>
@@ -548,7 +548,13 @@
     function nearHtml(x) { const c = moorPt(x) || x, q = x.port || x.region;
       const shops = D.shops.map(s => ({ s, d: km(c, s) })).filter(o => o.d < 3).sort((a, b) => a.d - b.d).slice(0, 4);
       return `<div class="box"><b>🏪 주변 편의시설</b>${shops.length ? `<div class="small">가까운 낚시점: ${shops.map(o => `<a href="#" data-near="${esc(o.s.id)}">${esc(o.s.name)}</a> ${fmtM(o.d * 1000)}`).join(' · ')}</div>` : '<div class="small dim">3km 안에 등록된 낚시점이 없습니다.</div>'}
-        <div class="bar">${[['편의점', '🏬'], ['식당', '🍚'], ['공중화장실', '🚻'], ['주차장', '🅿'], ['약국', '💊']].map(([w, i]) => link(`https://map.kakao.com/link/search/${encodeURIComponent(q + ' ' + w)}`, `${i} ${w}`)).join('')}</div></div>`; }
+        <div class="bar">${[['편의점', '🏬'], ['식당', '🍚'], ['공중화장실', '🚻'], ['주차장', '🅿'], ['약국', '💊']].map(([w, i]) => link(`https://map.kakao.com/link/search/${encodeURIComponent(q + ' ' + w)}`, `${i} ${w}`)).join('')}</div></div>` + stayHtml(x); }
+    // ── 전날 1박: 새벽 출항이라 항구 근처 숙소(모텔·호텔·펜션·민박) — 지도 검색 링크만(예약·결제 없음) ──
+    function stayHtml(x) { const q = x.port || x.region, c = moorPt(x) || x;
+      return `<div class="box"><b>🛏 전날 1박 — 주변 모텔·호텔</b><div class="small muted">새벽 출항이면 전날 항구 근처에서 자고 가는 분이 많습니다. ${x.meet || x.depart ? `집결·출항(${esc(x.meet || x.depart)}) 기준 ` : ''}걸어서 갈 수 있는 1km 안 숙소가 편합니다(아침 주차 걱정이 없음).</div>
+        <div class="bar">${[['모텔', '🏩'], ['호텔', '🏨'], ['펜션', '🏡'], ['민박', '🛖'], ['게스트하우스', '🛏']].map(([w, i]) => link(`https://map.kakao.com/link/search/${encodeURIComponent(q + ' ' + w)}`, `${i} ${w}`)).join('')}
+          ${link(`https://map.naver.com/p/search/${encodeURIComponent(q + ' 숙박')}?c=${c.lon.toFixed(5)},${c.lat.toFixed(5)},15,0,0,0,dh`, '🗺 네이버 지도 숙박')}</div>
+        <div class="small dim">팁: 체크인 때 "새벽 ○시에 나간다"고 미리 말하고, 차를 아침까지 세워 둘 수 있는지 물어보세요. 예약·결제는 숙소에 직접 합니다.</div></div>`; }
     // ── 실제 조과(승선자 보고) ──
     const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
     function catchStats(list) { const by = {}; for (const c of list) { const o = by[c.sp] = by[c.sp] || { sp: c.sp, n: 0, sum: 0, max: 0 }; o.n++; o.sum += c.n; o.max = Math.max(o.max, c.max || 0); }
@@ -616,7 +622,7 @@
         ['early', `⏰ ${x.meet ? '집결 ' + x.meet : '출항 30분 전까지 도착'}${x.depart ? ` (출항 ${x.depart})` : ''}`], ['vest', `🦺 구명조끼 ${vest === 'yes' ? '— 배에 있음' : vest === 'no' ? '— 직접 챙기기' : '— 배에 있는지 확인'}`],
         ['sick', `💊 멀미약은 출항 30분 전에${sick === 'yes' ? ' (배에도 있음)' : ''}`], ['cloth', '🧥 방수·방한 옷, 여벌 양말, 모자·장갑'],
         ['box', `🧊 아이스박스${ice === 'yes' ? ' — 배에서 줌' : ''}`], ['cash', `💵 현금(선비 ${x.fee || '확인'}${p.fee ? ` · 주차 ${p.fee}` : ''})`],
-        ['wc', `🚻 ${x.moorToilet === 'no' ? '정박지에 화장실이 없어요 — 미리 다녀오기' : '출항 전 화장실 다녀오기'}${val(x, 'toilet') === '없음' ? ' (배에 화장실 없음!)' : ''}`], ['share', '📤 가족에게 출조 정보 보내기(아래 버튼)']];
+        ['wc', `🚻 ${x.moorToilet === 'no' ? '정박지에 화장실이 없어요 — 미리 다녀오기' : '출항 전 화장실 다녀오기'}${val(x, 'toilet') === '없음' ? ' (배에 화장실 없음!)' : ''}`], ['stay', '🛏 새벽 출항이면 전날 항구 근처 숙소(아래 ④ 다음 「주변 모텔·호텔」)'], ['share', '📤 가족에게 출조 정보 보내기(아래 버튼)']];
       const done = items.filter(([k]) => ck[ckKey + '|' + k]).length;
       const photos = x.photos.filter(ph => ph.k === 'moor' || ph.k === 'boat');
       R('view').innerHTML = `<div class="grid2">
@@ -636,6 +642,7 @@
         <div class="card"><h2>④ 배 알아보기</h2><div class="row3"><span>이름</span><span><b style="font-size:18px">${esc(x.name)}</b></span><span>특징</span><span>${x.look ? esc(x.look) : '<span class="dim">미등록</span>'}</span><span>크기</span><span>${esc(x.size || (x.capacity ? `정원 ${x.capacity}명` : '미등록'))}</span></div>
           ${photos.length ? `<div class="photos">${photos.slice(0, 4).map(ph => `<figure><img src="${esc(ph.u)}" alt="${esc(PHOTO_KIND[ph.k])} 사진"><figcaption>${esc(PHOTO_KIND[ph.k])}</figcaption></figure>`).join('')}</div>` : '<div class="small dim">정박 위치·배 사진이 아직 없습니다. 도착하면 「배 상세 보기」에서 올려 주세요.</div>'}
           <div class="bar"><button class="btn" id="pl-fbig">🔠 배 이름 크게 보기(주변에 물어볼 때)</button>${x.phone ? `<a class="btn" href="tel:${esc(x.phone)}">📞 선장님께 전화</a>` : ''}</div></div>
+        ${stayHtml(x).replace('class="box"', 'class="card"')}
         <div class="card"><h2>⑤ 도착하면</h2><div class="small">1. 선장님께 예약자 이름을 말하고 <b>승선명부</b>를 확인합니다.<br>2. <b>구명조끼</b>를 입습니다(법으로 의무, 안 입으면 승선 거절).<br>3. 자리: <b>${esc(x.seat || '확인 필요')}</b>${x.seat ? ' — ' + esc(SEAT_HELP[x.seat]) : ''}<br>4. 처음이라고 말하면 대부분 채비·방법을 알려 줍니다${val(x, 'teach') === 'yes' ? ' (이 배는 설명해 줌 ✅)' : ''}.<br>5. 돌아와서 「🎣 실제 조과」와 항목별 후기를 남겨 주세요.</div>
           <div class="bar"><button class="btn" id="pl-frep">🎣 조과·후기 남기러 가기</button></div></div></div>
         <div id="pl-big" style="position:fixed;inset:0;background:#000;color:#fff;z-index:9999;display:none;place-items:center;align-content:center;text-align:center;font-weight:900;font-size:min(15vw,120px);line-height:1.1;padding:20px;cursor:pointer" role="dialog" aria-label="배 이름">${esc(x.name)}<div style="font-size:min(5vw,32px);font-weight:600;margin-top:16px">${esc(x.port || '')} · 이 배를 찾고 있어요<br><small>(누르면 닫힘)</small></div></div>`;
