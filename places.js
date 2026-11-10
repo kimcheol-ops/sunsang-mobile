@@ -377,12 +377,12 @@
       return all(kind).filter(x => (st.region === '전체' || x.region === st.region) && (st.sea === '전체' || x.sea === st.sea)
         && (st.sp === '전체' || (x.species || []).includes(st.sp)) && (kind !== 'shop' || st.channel === '전체' || (x.channel || '오프라인') === st.channel)
         && (kind !== 'spot' || !st.stype || st.stype === '전체' || x.type === st.stype) && (!st.need || missing(x).length) && (!q || [x.name, x.addr, x.port, x.region, x.type || '', (x.species || []).join(' '), x.note, kind === 'shop' ? RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1]).join(' ') : ''].join(' ').toLowerCase().includes(q)))
-        .map(x => ({ x, s: score(x) })).sort((a, b) => (a.x.sample ? 1 : 0) - (b.x.sample ? 1 : 0) || b.s.total - a.s.total || a.x.region.localeCompare(b.x.region));
+        .map(x => ({ x, s: score(x) })).sort((a, b) => (a.x.sample ? 1 : 0) - (b.x.sample ? 1 : 0) || (a.x.reg && a.x.reg.biz ? 1 : 0) - (b.x.reg && b.x.reg.biz ? 1 : 0) || b.s.total - a.s.total || a.x.region.localeCompare(b.x.region));
     }
     function itemHtml(x, s) {
       const ph = mainPhoto(x), miss = missing(x), rv = s.n ? ` · ★${s.avg.toFixed(1)}(${s.n})` : '';
       const th = ph ? `<img class="th" src="${esc(ph.u)}" alt="" loading="lazy">` : `<span class="th" aria-hidden="true">📷</span>`;
-      const tags = (x.sample ? ' <span class="sample">예시</span>' : '') + (x.channel === '온라인' ? ' <span class="chip s">온라인</span>' : '') + (x.src === '이용자 등록' ? ' <span class="chip s">이용자 등록</span>' : '');
+      const tags = (x.sample ? ' <span class="sample">예시</span>' : '') + (x.reg && x.reg.biz ? ' <span class="chip need">어업 허가 선박</span>' : '') + (x.channel === '온라인' ? ' <span class="chip s">온라인</span>' : '') + (x.src === '이용자 등록' ? ' <span class="chip s">이용자 등록</span>' : '');
       const needs = miss.length ? `<span class="icons">${miss.map(m => `<span class="chip need">${m} 필요</span>`).join('')}</span>` : '';
       if (x.kind === 'shop') { const yes = RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1].split(' ')[0]);
         return `<button class="item${st.sel === x.id ? ' sel' : ''}" data-id="${esc(x.id)}">${th}<span><b>${esc(x.name)}</b>${tags}</span><span class="score ${scoreCls(s.total)}">${s.total}</span>
@@ -531,14 +531,16 @@
       const trip = `<div class="box"><b>🔰 이 배 타러 가세요?</b><div class="bar"><button class="btn primary" id="pl-goFind">🧭 이 배 찾아가기 (단계별 안내)</button>
           <label class="small muted">출조일 <input type="date" id="pl-tripD" value="${esc((getTrip() && getTrip().id === x.id && getTrip().d) || '')}"></label><button class="btn" id="pl-tripSave">📌 내 출조로 저장</button></div>
           <div class="small muted">저장하면 「🧭 내 배 찾기」 탭에 D-day·준비물·주차→배 길안내가 바로 나옵니다.</div></div>`;
-      const rg = x.reg, regBox = rg ? `<div class="box"><b>📋 선박 수첩 <span class="small dim">공공데이터 낚시어선업 신고${rg.base ? ' · 기준 ' + esc(rg.base) : ''}</span></b><div class="row3">
+      const rg = x.reg, regBox = rg ? `<div class="box">${rg.biz ? `<div class="notice" style="border-color:var(--p-warn)">⚠ <b>어업 허가 선박</b>(${esc(rg.biz)}) — 낚시 손님을 태우는 낚시어선업이 아닐 수 있습니다. 선상 낚시 예약 전 꼭 확인하세요.</div>` : ''}<b>📋 선박 수첩 <span class="small dim">공공데이터 낚시어선업 신고${rg.base ? ' · 기준 ' + esc(rg.base) : ''}</span></b><div class="row3">
           <span>선박명</span><span><b>${esc(x.name)}</b></span><span>시군·항구</span><span>${esc(x.prov)} ${esc(x.region)} · ${esc(x.port)}</span>${rg.area ? `<span>주영업장소</span><span>${esc(rg.area)}</span>` : ''}
           ${rg.ton ? `<span>톤수</span><span>${rg.ton}톤</span>` : ''}${rg.cap ? `<span>승객 정원</span><span>${rg.cap}명</span>` : ''}${rg.crew ? `<span>선원</span><span>${rg.crew}명</span>` : ''}
           ${rg.status ? `<span>영업 상태</span><span>${esc(rg.status)}</span>` : ''}${rg.biz ? `<span>업종</span><span>${esc(rg.biz)}</span>` : ''}${rg.hull ? `<span>선질</span><span>${esc(rg.hull)}${rg.ob === 'Y' ? ' · 선외기' : ''}</span>` : ''}
           ${rg.from || rg.to ? `<span>신고·허가 기간</span><span>${esc(rg.from || '?')} ~ ${esc(rg.to || '?')}${rg.to && rg.to < todayStr() ? ' <span style="color:var(--p-warn)">(기간 지남 — 운영 여부 확인)</span>' : ''}</span>` : ''}</div>
-          <div class="bar">${link(`https://map.kakao.com/link/search/${encodeURIComponent(x.port + ' ' + x.name)}`, '🔎 카카오맵에서 이 배 찾기')}${link(`https://map.kakao.com/link/search/${encodeURIComponent(x.port)}`, '⚓ ' + x.port + ' 위치')}${link(`https://search.naver.com/search.naver?query=${encodeURIComponent(x.port + ' ' + x.name + ' 낚시')}`, '🔎 조황·예약 검색')}</div>
+          <div class="bar">${link(`https://map.kakao.com/link/search/${encodeURIComponent(x.port + ' ' + x.name)}`, '🔎 카카오맵에서 이 배 찾기')}${link(`https://map.kakao.com/link/search/${encodeURIComponent(x.port)}`, '⚓ ' + x.port + ' 위치')}${link(`https://search.naver.com/search.naver?query=${encodeURIComponent(x.port + ' ' + x.name + ' 낚시')}`, '🔎 조황·예약 검색')}${link('https://www.sunsang24.com/', '⛴ 선상24 열기')}${link(`https://search.naver.com/search.naver?query=${encodeURIComponent('선상24 ' + x.name + ' ' + x.port)}`, '🔎 선상24에서 이 배')}</div>
           <div class="small dim">지도 위치는 항구 기준 대략값입니다. 전화번호·예약은 검색 결과나 항구에서 확인하세요. 선장·대표자 개인 정보는 싣지 않습니다.</div></div>` : '';
-      return head + trip + regBox + photoBlock(x) + boardBlock(x) + nearHtml(x) + miniMap + info + basicBlock(x) + links + catchBlock(x)
+      const capBox = `<div class="box"><b>📣 선장님이 직접 올리기</b><div class="small">조과 사진·출항 정보는 <b>선장님이나 탄 분이 직접 올린 것</b>만 보여 줍니다(다른 사이트 사진은 복사하지 않음). 이 배 선장님을 아시면 아래 안내문을 보내 주세요.</div>
+        <div class="bar"><button class="btn" id="pl-capCopy">📋 선장님께 보낼 안내문 복사</button>${x.reg ? '' : link('https://www.sunsang24.com/', '⛴ 선상24 열기')}</div></div>`;
+      return head + trip + regBox + photoBlock(x) + boardBlock(x) + nearHtml(x) + miniMap + info + basicBlock(x) + links + catchBlock(x) + capBox
         + `<h3>🪑 자리 정하는 방식</h3><div class="bar">${SEATS.map(s2 => `<button class="chip" data-seat="${s2}" aria-pressed="${x.seat === s2}" ${ro ? 'disabled' : ''}>${s2}</button>`).join('')}</div>
         <div class="small">${x.seat ? `<b>${esc(x.seat)}</b> — ${SEAT_HELP[x.seat]}${x.seatNote ? `<br>${esc(x.seatNote)}` : ''}` : '<span class="dim">미확인 — 승선해 보셨다면 골라 주세요.</span>'}</div>`
         + amen + qaBlock(x) + review;
@@ -557,6 +559,8 @@
         run(store.report({ p: x.id, d, sp, n, max: +$('repMax').value || null, note: $('repNote').value.trim(), lead: +$('repLead').value || null, egi: $('repEgi').value.trim(), rig: $('repRig').value }), '조과를 올렸습니다. 고맙습니다!'); };
       root.querySelectorAll('[data-unrep]').forEach(b => b.onclick = () => run(store.unreport(b.dataset.unrep)));
       if ($('tripSave')) $('tripSave').onclick = () => { const d = $('tripD').value; if (!/^\d{4}-\d\d-\d\d$/.test(d)) { say('출조 날짜를 골라 주세요'); return; } setTrip({ id: x.id, d }); st.tab = 'find'; render(); };
+      if ($('capCopy')) $('capCopy').onclick = async () => { const txt = `안녕하세요, 선장님. 「출조 관제 우주 프로」(무료 낚시 정보 앱)에 ${x.name}(${x.region} ${x.port}) 정보가 올라가 있습니다.\n초보 손님이 배를 쉽게 찾도록 아래를 직접 올려 주시면 고맙겠습니다(무료, 결제 없음).\n· 배가 정박한 자리 사진과 위치\n· 주차(무료/유료·요금), 집결 시각, 배 특징(색·간판)\n· 오늘 조과 사진과 마릿수, 쓰는 봉돌 호수\n앱 주소: https://kimcheol-ops.github.io/sunsang-mobile/ → 낚시점·선상 → 선상 정보에서 「${x.name}」 검색`;
+        try { await navigator.clipboard.writeText(txt); say('안내문을 복사했습니다. 문자·카톡에 붙여 넣어 보내세요.'); } catch (e) { prompt('아래 안내문을 복사하세요', txt); } };
       if ($('goFind')) $('goFind').onclick = () => { setTrip({ id: x.id, d: (getTrip() && getTrip().id === x.id && getTrip().d) || todayStr() }); st.tab = 'find'; render(); };
       root.querySelectorAll('[data-edit]').forEach(s => s.onchange = () => run(store.edit(x.id, { [s.dataset.edit]: s.value })));
       root.querySelectorAll('[data-seat]').forEach(b => b.onclick = () => run(store.edit(x.id, { seat: b.dataset.seat })));
@@ -732,7 +736,7 @@
     function findView() {
       const t = getTrip(), x = t && findPlace(t.id);
       if (!x) {   // 배 고르기
-        const rows = all('boat').filter(b => !b.sample && (st.region === '전체' || b.region === st.region)).map(b => ({ b, s: score(b) })).sort((a, b) => b.s.total - a.s.total).slice(0, 40);
+        const rows = all('boat').filter(b => !b.sample && !(b.reg && b.reg.biz) && (st.region === '전체' || b.region === st.region)).map(b => ({ b, s: score(b) })).sort((a, b) => b.s.total - a.s.total).slice(0, 40);
         R('view').innerHTML = `<div class="card"><h2>🧭 처음 타는 배, 헤매지 않고 찾아가기</h2>
           <div class="small">항구에는 비슷한 배가 수십 척 묶여 있어 처음 가면 내 배를 찾기 어렵습니다. 탈 배를 고르면 <b>전날 준비물 → 주차 → 걸어서 배까지 실시간 방향 → 배 알아보는 특징·사진 → 도착 후 할 일</b>을 순서대로 안내합니다.</div>
           <div class="bar"><select id="pl-fregion" aria-label="지역">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select><span class="small muted">정보가 많은 배부터</span></div>
