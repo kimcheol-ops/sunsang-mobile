@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '4.9-mobile';
+const VERSION = '5.0-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -184,6 +184,7 @@ function initGames() {
     ...(window.Games3D ? Games3D.extra(r => { addCoins(r.coins); hub.record(r); }, { store, wallet }) : []),   // 친환경 3D 5종 + 낚시점
     ...(window.Space ? Space.extra(r => { addCoins(r.coins); hub.record(r); }, { store }) : []),   // 은하 낚시 원정대 10편
     ...(window.SeaHome ? SeaHome.extra(r => { addCoins(r.coins); hub.record(r); }, { store }) : []),   // 아라의 바다 고향 10경
+    ...(window.TrendGames ? TrendGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 요즘 유행 장르 5종
   ];
   hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
     onUnlock: key => { const w = wallet.get(); return wallet.set({ owned: AnglerDress.unlock(w.owned, key) }); } });
