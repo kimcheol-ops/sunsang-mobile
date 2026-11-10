@@ -85,12 +85,16 @@
     ['조과 보관', [['bag', '🛍 고기 봉지·망'], ['icebox', '🧊 아이스박스'], ['ice', '❄ 얼음']]],
     ['낚시 도움', [['teach', '👨‍🏫 낚시 방법 설명'], ['rentRod', '🎣 낚싯대 대여'], ['rentReel', '🌀 릴 대여'], ['vest', '🦺 구명조끼'], ['seasick', '💊 멀미약']]],
   ];
+  // 고정 낚시터(좌대·낚시공원·바다낚시터·방파제) 시설
+  const SPOT_TYPES = ['좌대', '낚시공원', '바다낚시터', '방파제·포구'];
+  const SPOT_HELP = { 좌대: '바다 위에 띄워 고정한 좌대 — 작은 배로 들어가며, 멀미가 적고 가족이 함께하기 좋습니다', 낚시공원: '바다 위로 놓인 다리·데크에서 하는 공원형 낚시터 — 난간이 있어 초보·어린이에게 안전합니다', 바다낚시터: '가두리·수조에 고기를 넣어 두는 유료 낚시터 — 조과가 비교적 확실합니다', '방파제·포구': '무료로 할 수 있는 방파제·포구 — 테트라포드(삼발이) 위는 위험하니 들어가지 마세요' };
+  const SPOT_AMEN = [['toilet', '🚻 화장실', ['수세식', '간이', '없음']], ['store', '🏪 매점·라면'], ['rentRod', '🎣 낚싯대 대여'], ['bait', '🦐 미끼 판매'], ['rail', '🛡 안전 난간'], ['lifering', '🛟 구명튜브·조끼'], ['shade', '⛱ 그늘·실내 쉼터'], ['kids', '👧 어린이 가능'], ['night', '🌙 야간 낚시'], ['clean', '🐟 손질·포장']];
   const SEATS = ['추첨', '선착순 승선', '예약 순', '선장 배정', '자유'];
   const SEAT_HELP = { 추첨: '출항 전 제비뽑기로 자리를 정합니다', '선착순 승선': '먼저 배에 오른 사람이 자리를 고릅니다', '예약 순': '먼저 예약한 순서대로 자리를 고릅니다', '선장 배정': '선장님이 경험·채비를 보고 자리를 정합니다', 자유: '정해진 자리 없이 돌아가며 낚시합니다' };
   const PARKING = { free: '있음 · 무료', paid: '있음 · 유료', public: '공영주차장', street: '전용 없음 · 주변 도로·상가 이용', none: '주차 어려움' };
   const SPECIES = ['쭈꾸미', '갑오징어', '우럭', '광어', '참돔', '갈치', '문어', '한치', '무늬오징어', '방어', '감성돔', '농어', '볼락', '삼치', '대구'];
-  const PHOTO_KIND = { shop: '가게', moor: '배 정박 위치', parking: '주차장', boat: '배', catch: '조과', other: '기타' };
-  const QUICK_Q = { shop: ['주차 가능한가요?', '새벽 몇 시에 여나요?', '낚싯대·릴 대여 되나요?', '생미끼 있나요?'], boat: ['처음인데 배를 어떻게 찾아가나요?', '배가 정확히 어디에 정박해 있나요?', '주차는 무료인가요? 얼마인가요?', '정박지 근처에 화장실 있나요?', '자리는 어떻게 정하나요?', '간식·음료 주나요?'] };
+  const PHOTO_KIND = { spot: '낚시터 모습', shop: '가게', moor: '배 정박 위치', parking: '주차장', boat: '배', catch: '조과', other: '기타' };
+  const QUICK_Q = { shop: ['주차 가능한가요?', '새벽 몇 시에 여나요?', '낚싯대·릴 대여 되나요?', '생미끼 있나요?'], spot: ['이용 요금이 얼마인가요?', '주차는 무료인가요?', '화장실·매점 있나요?', '초보·아이도 할 수 있나요?', '낚싯대 대여되나요?'], boat: ['처음인데 배를 어떻게 찾아가나요?', '배가 정확히 어디에 정박해 있나요?', '주차는 무료인가요? 얼마인가요?', '정박지 근처에 화장실 있나요?', '자리는 어떻게 정하나요?', '간식·음료 주나요?'] };
   // 배 후기 항목별 평가(1~5): 초보자가 가장 궁금해하는 것
   const ASPECT = [['size', '🚤 배 크기·넓이'], ['comfort', '🪑 편의성'], ['toilet', '🚻 화장실'], ['clean', '🧽 청결'], ['snack', '🍜 먹거리'], ['beginner', '🔰 초보 친절'], ['catch', '🎣 조과']];
   const ASPECT_KEYS = ASPECT.map(a => a[0]);
@@ -98,7 +102,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const nowIso = () => new Date().toISOString();
   const rid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const AMEN_KEYS = AMEN.flatMap(g => g[1].map(a => a[0])), RENT_KEYS = RENT.map(r => r[0]);
+  const AMEN_KEYS = AMEN.flatMap(g => g[1].map(a => a[0])).concat(SPOT_AMEN.map(a => a[0]).filter(k => !AMEN.flatMap(g => g[1].map(a => a[0])).includes(k))), RENT_KEYS = RENT.map(r => r[0]);
   const YN = new Set(['yes', 'no', 'unk']), TOILET = new Set(['수세식', '간이', '없음', 'unk']);
   const okLat = n => typeof n === 'number' && n > 32 && n < 39.5, okLon = n => typeof n === 'number' && n > 123.5 && n < 132.5;
   const str = (s, n) => String(s ?? '').slice(0, n);
@@ -114,7 +118,8 @@
     if (k === 'moor') return v && okLat(+v.lat) && okLon(+v.lon) ? { lat: +(+v.lat).toFixed(6), lon: +(+v.lon).toFixed(6), desc: str(v.desc, 120) } : v && v.desc && !v.lat ? { desc: str(v.desc, 120) } : undefined;
     if (k === 'parking') { if (!v || !(v.has in PARKING || v.has === 'unk')) return; const o = { has: v.has, guide: str(v.guide, 120), fee: str(v.fee, 40) }; if (okLat(+v.lat) && okLon(+v.lon)) { o.lat = +(+v.lat).toFixed(6); o.lon = +(+v.lon).toFixed(6); } return o; }
     if (k === 'basic.species') return Array.isArray(v) ? v.map(s => str(s, 10)).slice(0, 8) : undefined;
-    if (/^basic\.(phone|addr|depart|fee|note|web|size|look|meet|ret)$/.test(k)) { const s = str(v, k === 'basic.note' ? 160 : 80); return k === 'basic.web' && s && !/^https:\/\//.test(s) ? undefined : s; }
+    if (k === 'basic.type') return SPOT_TYPES.includes(v) ? v : undefined;
+    if (/^basic\.(phone|addr|depart|fee|note|web|size|look|meet|ret|hours)$/.test(k)) { const s = str(v, k === 'basic.note' ? 160 : 80); return k === 'basic.web' && s && !/^https:\/\//.test(s) ? undefined : s; }
   }
   function cleanAsp(a) { if (!a || typeof a !== 'object') return undefined; const o = {}; for (const k of ASPECT_KEYS) if (a[k] >= 1 && a[k] <= 5) o[k] = Math.round(a[k]); return Object.keys(o).length ? o : undefined; }
   function cleanDoc(v) {
@@ -135,11 +140,11 @@
     for (const [qid, q] of Object.entries(v.qs || {})) if (q && typeof q.p === 'string' && typeof q.q === 'string' && q.q.trim()) o.qs[qid] = { p: q.p, q: str(q.q, 140), ts: str(q.ts, 30) };
     for (const [aid, a] of Object.entries(v.ans || {})) if (a && typeof a.qid === 'string' && typeof a.t === 'string' && a.t.trim()) o.ans[aid] = { qid: a.qid, t: str(a.t, 240), ts: str(a.ts, 30) };
     for (const [aid, n] of Object.entries(v.votes || {})) if (n === 1 || n === -1) o.votes[aid] = n;
-    if (Array.isArray(v.added)) o.added = v.added.filter(a => a && typeof a.id === 'string' && ['shop', 'boat', 'event'].includes(a.kind) && typeof a.name === 'string').slice(0, 30)
+    if (Array.isArray(v.added)) o.added = v.added.filter(a => a && typeof a.id === 'string' && ['shop', 'boat', 'spot', 'event'].includes(a.kind) && typeof a.name === 'string').slice(0, 30)
       .map(a => ({ id: a.id, kind: a.kind, region: str(a.region, 20), name: str(a.name, 40), addr: str(a.addr, 80), phone: str(a.phone, 20),
         species: Array.isArray(a.species) ? a.species.map(s => str(s, 10)).slice(0, 8) : [], note: str(a.note, 120), channel: a.channel === '온라인' ? '온라인' : '오프라인', web: /^https:\/\//.test(a.web || '') ? str(a.web, 120) : '',
         capacity: +a.capacity > 0 && +a.capacity < 100 ? Math.round(+a.capacity) : null, depart: str(a.depart, 10), fee: str(a.fee, 30), seat: SEATS.includes(a.seat) ? a.seat : '',
-        when: str(a.when, 10), until: str(a.until, 10), applyFrom: str(a.applyFrom, 10), applyTo: str(a.applyTo, 10), where: str(a.where, 40), ts: str(a.ts, 30) }));
+        when: str(a.when, 10), until: str(a.until, 10), applyFrom: str(a.applyFrom, 10), applyTo: str(a.applyTo, 10), where: str(a.where, 40), type: SPOT_TYPES.includes(a.type) ? a.type : '', ts: str(a.ts, 30) }));
     return o;
   }
   // AI 검색 답변(aiqa) 한 건: Claude가 매일 검색해 남긴 답 { qid, p, a, src:[https…], ts }
@@ -258,7 +263,7 @@
     if (!document.getElementById('pl-css')) { const s = document.createElement('style'); s.id = 'pl-css'; s.textContent = CSS; document.head.appendChild(s); }
     root.classList.add('pl');
     root.innerHTML = `<div class="tabs" role="tablist">
-        <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button>
+        <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button><button class="tab" role="tab" data-tab="spot">🎣 낚시터·좌대</button>
         <button class="tab" role="tab" data-tab="find">🧭 내 배 찾기(초보)</button><button class="tab" role="tab" data-tab="catch">🎣 실제 조과</button>
         <button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
       <div data-r="filters" class="bar"></div><div class="status" data-r="status" role="status"></div><div data-r="view"></div><div class="dim small" data-r="foot"></div>`;
@@ -267,7 +272,7 @@
     let V = store.view(), editOpen = null, pick = null, aiAnswer = {};
     const st = { tab: 'shop', q: '', region: '전체', sea: '전체', sp: '전체', channel: '전체', sel: null, period: 'week', addKind: 'shop', need: false };
     try { Object.assign(st, JSON.parse(localStorage.getItem('places.ui') || '{}'), { sel: null, q: '' }); } catch (e) {}
-    if (!['shop', 'boat', 'find', 'catch', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
+    if (!['shop', 'boat', 'spot', 'find', 'catch', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
     const saveUi = () => { try { localStorage.setItem('places.ui', JSON.stringify({ tab: st.tab, region: st.region, sea: st.sea, period: st.period })); } catch (e) {} };
     const say = msg => { R('status').textContent = msg || store.status || ''; };
     const run = (p, okMsg) => Promise.resolve(p).then(() => say(store.status || okMsg || ''), e => say(e && e.message === 'no-assets' ? '이 화면에서는 사진을 올릴 수 없습니다(권한 없음).' : '처리하지 못했습니다. 다시 해 주세요.'));
@@ -285,28 +290,30 @@
       return o;
     }
     function all(kind) {
-      const base = D[kind === 'shop' ? 'shops' : 'boats'];
+      const base = D[kind === 'shop' ? 'shops' : kind === 'spot' ? 'spots' : 'boats'] || [];
       const added = V.added.filter(a => a.kind === kind).map(a => { const r = regionInfo(a.region);
         return Object.assign({ prov: r[0], sea: r[1], port: r[4], lat: r[2], lon: r[3], approx: true, src: '이용자 등록', rent: {}, amen: {} }, a); });
       return base.concat(added).map(apply);
     }
-    const findPlace = id => all('shop').concat(all('boat')).find(x => x.id === id);
+    const findPlace = id => all('shop').concat(all('boat'), all('spot')).find(x => x.id === id);
     const val = (x, k) => ((x.kind === 'shop' ? x.rent : x.amen) || {})[k] || 'unk';
     const isYes = v => v === 'yes' || v === '수세식' || v === '간이';
     const mark = v => isYes(v) ? '✅' : v === 'no' || v === '없음' ? '❌' : '❔';
     const cls = v => isYes(v) ? 'yes' : v === 'no' || v === '없음' ? 'no' : 'unk';
-    const mainPhoto = x => x.photos.find(p => p.k === (x.kind === 'shop' ? 'shop' : 'moor'));
+    const mainPhoto = x => x.photos.find(p => p.k === (x.kind === 'shop' ? 'shop' : x.kind === 'spot' ? 'spot' : 'moor'));
     const moorPt = x => x.moor && x.moor.lat ? x.moor : null;
     function missing(x) {   // 필수 정보
       const out = [];
-      if (!mainPhoto(x)) out.push(x.kind === 'shop' ? '📷 가게 사진' : '📷 정박 위치 사진');
+      if (!mainPhoto(x)) out.push(x.kind === 'shop' ? '📷 가게 사진' : x.kind === 'spot' ? '📷 낚시터 사진' : '📷 정박 위치 사진');
+      if (x.kind === 'spot') { if (!x.parking || x.parking.has === 'unk') out.push('🅿 주차'); if (!x.fee) out.push('💰 이용 요금'); }
       if (x.kind === 'boat') { if (!moorPt(x)) out.push('📍 승선 위치'); if (!x.parking || x.parking.has === 'unk') out.push('🅿 주차'); if (!x.moorToilet || x.moorToilet === 'unk') out.push('🚻 정박지 화장실'); }
       return out;
     }
     function score(x) {   // 우수 점수(0~100) = 정보 충실도 40(필수 사진·위치 포함) + 후기 별점 40 + 하트 20
-      const keys = x.kind === 'shop' ? RENT_KEYS : AMEN_KEYS;
+      const keys = x.kind === 'shop' ? RENT_KEYS : x.kind === 'spot' ? SPOT_AMEN.map(a => a[0]) : AMEN.flatMap(g => g[1].map(a => a[0]));
       let filled = keys.filter(k => val(x, k) !== 'unk').length + (x.species && x.species.length ? 1 : 0) + (x.phone ? 1 : 0) + (mainPhoto(x) ? 4 : 0);
       let total = keys.length + 6;
+      if (x.kind === 'spot') { filled += (x.fee ? 2 : 0) + (x.hours ? 1 : 0) + (x.parking && x.parking.has !== 'unk' ? 2 : 0); total += 5; }
       if (x.kind === 'boat') { filled += (x.capacity ? 1 : 0) + (x.seat ? 1 : 0) + (moorPt(x) ? 2 : 0) + (x.parking && x.parking.has !== 'unk' ? 1 : 0) + (x.moorToilet && x.moorToilet !== 'unk' ? 1 : 0); total += 6; }
       const info = Math.round(40 * filled / total);
       const rv = V.reviews[x.id] || [], avg = rv.length ? rv.reduce((a, r) => a + r.stars, 0) / rv.length : 0, hearts = (V.hearts[x.id] || []).length;
@@ -326,10 +333,11 @@
     function filters() {
       if (st.tab === 'rank') { R('filters').innerHTML = ['day', 'week', 'month', 'year'].map(p => `<button class="chip" data-period="${p}" aria-pressed="${st.period === p}">${{ day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[p]}</button>`).join(''); return; }
       if (['add', 'qa', 'find', 'catch'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
-      R('filters').innerHTML = `<input type="search" id="pl-q" placeholder="${st.tab === 'shop' ? '낚시점 이름·주소·대여 품목' : '배 이름·항구·어종'} 검색" value="${esc(st.q)}" aria-label="검색">
+      R('filters').innerHTML = `<input type="search" id="pl-q" placeholder="${st.tab === 'shop' ? '낚시점 이름·주소·대여 품목' : st.tab === 'spot' ? '낚시터 이름·주소·종류' : '배 이름·항구·어종'} 검색" value="${esc(st.q)}" aria-label="검색">
         <select id="pl-region" aria-label="지역">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select>
         ${['전체', '서해', '남해', '동해', '제주'].map(s => `<button class="chip" data-sea="${s}" aria-pressed="${st.sea === s}">${s}</button>`).join('')}
         <select id="pl-sp" aria-label="종목">${['전체', ...SPECIES].map(s => `<option value="${s}" ${s === st.sp ? 'selected' : ''}>${s === '전체' ? '모든 종목' : s}</option>`).join('')}</select>
+        ${st.tab === 'spot' ? ['전체', ...SPOT_TYPES].map(t => `<button class="chip" data-stype="${t}" aria-pressed="${(st.stype || '전체') === t}">${t === '전체' ? '모든 종류' : t}</button>`).join('') : ''}
         ${st.tab === 'shop' ? ['전체', '오프라인', '온라인'].map(c => `<button class="chip" data-ch="${c}" aria-pressed="${st.channel === c}">${c === '전체' ? '온·오프라인' : c}</button>`).join('') : ''}
         <button class="chip" data-need="1" aria-pressed="${st.need}">필수 정보 빠진 곳</button>`;
       $('q').oninput = e => { st.q = e.target.value; body(); };
@@ -340,7 +348,7 @@
       const q = st.q.trim().toLowerCase();
       return all(kind).filter(x => (st.region === '전체' || x.region === st.region) && (st.sea === '전체' || x.sea === st.sea)
         && (st.sp === '전체' || (x.species || []).includes(st.sp)) && (kind !== 'shop' || st.channel === '전체' || (x.channel || '오프라인') === st.channel)
-        && (!st.need || missing(x).length) && (!q || [x.name, x.addr, x.port, x.region, (x.species || []).join(' '), x.note, kind === 'shop' ? RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1]).join(' ') : ''].join(' ').toLowerCase().includes(q)))
+        && (kind !== 'spot' || !st.stype || st.stype === '전체' || x.type === st.stype) && (!st.need || missing(x).length) && (!q || [x.name, x.addr, x.port, x.region, x.type || '', (x.species || []).join(' '), x.note, kind === 'shop' ? RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1]).join(' ') : ''].join(' ').toLowerCase().includes(q)))
         .map(x => ({ x, s: score(x) })).sort((a, b) => (a.x.sample ? 1 : 0) - (b.x.sample ? 1 : 0) || b.s.total - a.s.total || a.x.region.localeCompare(b.x.region));
     }
     function itemHtml(x, s) {
@@ -352,6 +360,11 @@
         return `<button class="item${st.sel === x.id ? ' sel' : ''}" data-id="${esc(x.id)}">${th}<span><b>${esc(x.name)}</b>${tags}</span><span class="score ${scoreCls(s.total)}">${s.total}</span>
           <span class="small muted">${esc(x.region)} · ${esc(x.addr)}</span><span class="small" style="color:var(--p-heart)">❤ ${s.hearts}</span>
           <span class="icons">${yes.length ? '대여·서비스 ' + yes.join(' ') : ''}${rv}${needs}</span><span class="small dim">조회 ${s.hits}</span></button>`; }
+      if (x.kind === 'spot') { const pk2 = x.parking && x.parking.has !== 'unk' ? '🅿' + (x.parking.has === 'none' ? '❌' : '✅') + (x.parking.fee || x.parking.has === 'free' ? ' ' + esc(x.parking.fee || '무료') : '') : '🅿❔';
+        const cs2 = catchStats(catchesOf(x.id, 14))[0];
+        return `<button class="item${st.sel === x.id ? ' sel' : ''}" data-id="${esc(x.id)}">${th}<span><b>${esc(x.name)}</b> <span class="chip s">${esc(x.type || '낚시터')}</span>${tags}</span><span class="score ${scoreCls(s.total)}">${s.total}</span>
+          <span class="small muted">${esc(x.region)} · ${esc(x.addr)}</span><span class="small" style="color:var(--p-heart)">❤ ${s.hearts}</span>
+          <span class="icons">💰 ${esc(x.fee || '요금 ?')} ${pk2} 🚻${mark(val(x, 'toilet'))} 🏪${mark(val(x, 'store'))} 🛡${mark(val(x, 'rail'))}${cs2 ? ` · 🎣${esc(cs2.sp)} 평균${cs2.avg.toFixed(0)}` : ''}${rv}${needs}</span><span class="small dim">조회 ${s.hits}</span></button>`; }
       const pk = (x.parking && x.parking.has !== 'unk' ? '🅿' + (x.parking.has === 'none' ? '❌' : '✅') : '🅿❔') + (x.parking && (x.parking.fee || x.parking.has === 'free') ? ` ${esc(x.parking.fee || '무료')}` : '');
       const cs = catchStats(catchesOf(x.id, 14))[0], as = aspectStats(x);
       const extra = (cs ? ` · 🎣${esc(cs.sp)} 평균${cs.avg.toFixed(0)}` : '') + (as.clean ? ` · 🧽${as.clean.avg.toFixed(1)}` : '') + (as.beginner ? ` · 🔰${as.beginner.avg.toFixed(1)}` : '') + (moorPt(x) ? ' · 📍' : '');
@@ -364,22 +377,47 @@
         ? `<h2>🏪 전국 낚시점</h2><div class="muted">왼쪽에서 낚시점을 고르면 사진, 대여 품목, 묻고 답하기, 후기, 길찾기가 나옵니다.</div>
            <div class="notice">📷 <b>가게 사진은 필수</b>입니다. 사진이 없는 곳은 「사진 필요」로 표시되고, 처음 올린 분 덕분에 다음 사람이 헤매지 않습니다.</div>
            <div class="small dim">기본 자료: 카카오맵 '낚시용품' 업체 ${D.shops.length}곳(${Object.keys(D.regions).length}개 지역, ${esc(D.collectedAt)} 수집).</div>`
+        : kind === 'spot' ? `<h2>🎣 낚시터 · 좌대</h2><div class="muted">배를 오래 타기 어렵거나 가족·초보와 함께라면 — <b>바다 위 좌대, 해상 낚시공원, 유료 바다낚시터, 방파제·포구</b>를 고르세요. 가는 길, 주차(요금), 화장실·매점, 주변 숙소를 함께 보여 줍니다.</div>
+           <div class="notice">${SPOT_TYPES.map(t => `<b>${t}</b> — ${SPOT_HELP[t]}`).join('<br>')}</div>
+           <div class="small dim">기본 자료: 카카오맵 낚시터 ${(D.spots || []).length}곳(${esc(D.collectedAt)} 이후 수집). 이용 요금·시설은 다녀온 분이 채워 주세요. 결제·예약은 낚시터에 직접 합니다.</div>`
         : `<h2>🚤 선상 정보</h2><div class="muted">처음 타는 배도 헤매지 않게 — <b>배가 정박한 곳 사진과 위치, 가까운 주차, 정박지 화장실</b>을 먼저 보여 줍니다.</div>
            <div class="notice">📷 <b>정박 위치 사진</b>과 📍 <b>승선 위치</b>는 필수입니다. 다녀오신 분이 올려 주시면 초보자가 장비를 들고 헤매지 않습니다.</div>
            <div class="small dim">기본 자료: 카카오맵 '낚시' 업체 ${D.boats.filter(b => !b.sample).length}곳.</div>`)
         + `<div class="small ${store.shared ? 'shared' : 'dim'}">${store.shared ? '🌐 ' : '💾 '}${esc(store.label)}</div>`;
     }
     function photoBlock(x) {
-      const need = x.kind === 'shop' ? 'shop' : 'moor', has = x.photos.some(p => p.k === need);
-      const kinds = x.kind === 'shop' ? ['shop', 'parking', 'other'] : ['moor', 'boat', 'parking', 'other'];
+      const need = x.kind === 'shop' ? 'shop' : x.kind === 'spot' ? 'spot' : 'moor', has = x.photos.some(p => p.k === need);
+      const kinds = x.kind === 'shop' ? ['shop', 'parking', 'other'] : x.kind === 'spot' ? ['spot', 'parking', 'catch', 'other'] : ['moor', 'boat', 'parking', 'other'];
       const ref = moorPt(x) || x;
-      return `<div class="box${has ? '' : ' need'}"><b>📷 ${x.kind === 'shop' ? '가게 사진' : '배 정박 위치 사진'} <span class="small" style="color:var(--p-warn)">(필수)</span></b>
+      return `<div class="box${has ? '' : ' need'}"><b>📷 ${x.kind === 'shop' ? '가게 사진' : x.kind === 'spot' ? '낚시터 사진' : '배 정박 위치 사진'} <span class="small" style="color:var(--p-warn)">(필수)</span></b>
         ${x.photos.length ? `<div class="photos">${x.photos.map(p => `<figure><img src="${esc(p.u)}" alt="${esc(PHOTO_KIND[p.k])} 사진" loading="lazy"><figcaption>${esc(PHOTO_KIND[p.k])} · ${day(p.ts)}</figcaption>
             ${store.isMinePhoto(p.u) ? `<button class="vote" data-unphoto="${esc(p.u)}" style="position:absolute;right:4px;top:4px;background:#000A;color:#fff">✕</button>` : ''}</figure>`).join('')}</div>`
-          : `<div class="small muted">아직 사진이 없습니다. ${x.kind === 'shop' ? '가게 앞모습' : '배가 묶여 있는 부두·부잔교와 배'} 사진을 처음 올려 주세요.</div>`}
+          : `<div class="small muted">아직 사진이 없습니다. ${x.kind === 'shop' ? '가게 앞모습' : x.kind === 'spot' ? '입구·좌대·낚시 자리' : '배가 묶여 있는 부두·부잔교와 배'} 사진을 처음 올려 주세요.</div>`}
         ${store.canUpload ? `<div class="bar"><select id="pl-pkind" aria-label="사진 종류">${kinds.map(k => `<option value="${k}">${PHOTO_KIND[k]}</option>`).join('')}</select>
           <label class="btn primary" style="cursor:pointer">📷 사진 올리기<input id="pl-pfile" type="file" accept="image/*" capture="environment" hidden></label></div>` : '<div class="small dim">사진을 올리려면 참여 권한이 필요합니다.</div>'}
         <div class="bar">${link(`https://map.kakao.com/link/roadview/${ref.lat.toFixed(6)},${ref.lon.toFixed(6)}`, '🛣 로드뷰로 주변 보기')}</div></div>`;
+    }
+    // 낚시터: 종류·요금·시간 + 가는 길(자동차·대중교통) + 주차
+    function spotBlock(x) {
+      const p = x.parking || { has: 'unk' }, c = moorPt(x) || x, nm = encodeURIComponent(x.name);
+      const view = `<div class="row3"><span>종류</span><span><b>${esc(x.type || '미확인')}</b>${x.type ? `<br><span class="small muted">${esc(SPOT_HELP[x.type])}</span>` : ''}</span>
+          <span>💰 이용 요금</span><span>${x.fee ? esc(x.fee) : '<span style="color:var(--p-warn)">미확인 — 아시면 넣어 주세요</span>'} <span class="small dim">(정보만 · 결제는 현장에서)</span></span>
+          <span>⏰ 운영 시간</span><span>${x.hours ? esc(x.hours) : '<span class="dim">미확인</span>'}</span>
+          <span>🅿 주차</span><span>${p.has === 'unk' ? '<span class="dim">미확인</span>' : esc(PARKING[p.has])}${p.fee ? ` · 💰 ${esc(p.fee)}` : p.has === 'free' ? ' · 💰 무료' : ''}${p.guide ? `<br>${esc(p.guide)}` : ''}</span>
+          <span>📍 주소</span><span>${esc(x.addr)}</span><span>🎣 어종</span><span>${esc((x.species || []).join(', ')) || '<span class="dim">미확인</span>'}</span></div>`;
+      const way = `<div class="bar">${x.kakao ? link(x.kakao, '📍 카카오맵(정확한 위치·전화)') : ''}${link(`https://map.kakao.com/link/to/${nm},${c.lat.toFixed(5)},${c.lon.toFixed(5)}`, '🚗 자동차 길찾기')}
+          ${link(`https://map.naver.com/p/directions/-/${c.lon.toFixed(6)},${c.lat.toFixed(6)},${nm}/-/transit`, '🚌 대중교통 길찾기')}${p.lat ? link(`https://map.kakao.com/link/to/${encodeURIComponent(x.name + ' 주차')},${p.lat},${p.lon}`, '🅿 주차장까지') : link(`https://map.kakao.com/link/search/${encodeURIComponent(x.name + ' 주차장')}`, '🔎 주변 주차장')}</div>
+        <div class="small muted">${x.approx ? '지도 위치는 지역 기준 대략값이라, 길찾기 전에 「카카오맵」으로 정확한 위치를 확인하세요. ' : ''}좌대는 보통 항구에서 작은 배로 들어가니 출발 항구와 시간을 전화로 확인하세요.</div>`;
+      const form = editOpen === 'spot' ? `<div class="form">
+          <label>종류<select id="pl-sType"><option value="">미확인</option>${SPOT_TYPES.map(t => `<option ${x.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label>이용 요금<input id="pl-sFee" maxlength="80" value="${esc(x.fee || '')}" placeholder="예: 성인 3만원(5시간), 어린이 반값"></label>
+          <label>운영 시간<input id="pl-sHours" maxlength="80" value="${esc(x.hours || '')}" placeholder="예: 06:00~18:00, 월 휴무"></label>
+          <label>주차<select id="pl-pHas"><option value="unk">미확인</option>${Object.entries(PARKING).map(([k, v]) => `<option value="${k}" ${p.has === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+          <label>주차 요금<input id="pl-pFee" maxlength="40" value="${esc(p.fee || '')}" placeholder="예: 무료 / 1일 3,000원"></label>
+          <label class="wide">주차 안내<input id="pl-pGuide" maxlength="120" value="${esc(p.guide || '')}" placeholder="예: 입구 앞 전용 주차장 30대"></label>
+          <label class="wide">정확한 위치 좌표(선택)<input id="pl-sLL" value="${moorPt(x) ? `${x.moor.lat}, ${x.moor.lon}` : ''}" placeholder="예: 36.12345, 126.12345 — 카카오맵에서 길게 눌러 복사"></label>
+          <div class="wide bar"><button class="btn primary" id="pl-spotSave">저장</button><button class="btn" id="pl-spotCancel">닫기</button>${navigator.geolocation ? '<button class="btn" id="pl-spotHere">지금 내 위치를 낚시터 위치로</button>' : ''}</div></div>` : '';
+      return `<div class="box${x.fee && p.has !== 'unk' ? '' : ' need'}"><b>🧭 이용 정보 · 가는 길</b>${view}${way}${editOpen === 'spot' ? form : store.canWrite ? '<button class="btn" id="pl-spotEdit">✏ 종류·요금·시간·주차 고치기</button>' : ''}</div>`;
     }
     function boardBlock(x) {   // 처음 가는 분: 주차 → 걸어서 배까지
       const m = moorPt(x), p = x.parking || { has: 'unk' }, walk = m && p.lat ? km(p, m) * 1000 : null;
@@ -454,6 +492,9 @@
       const info = `<dl class="kv"><dt>지역</dt><dd>${esc(x.prov)} ${esc(x.region)}${x.port ? ' · ' + esc(x.port) : ''} (${esc(x.sea)})</dd><dt>주소</dt><dd>${esc(x.addr)}</dd>
         ${x.kind === 'boat' ? `<dt>정원</dt><dd><span class="cap">${x.capacity ? x.capacity + '명' : '?'}</span></dd><dt>출항·선비</dt><dd>${esc(x.depart || '—')} · ${esc(x.fee || '—')}</dd>` : `<dt>구분</dt><dd>${esc(x.channel || '오프라인')}</dd>`}
         <dt>종목</dt><dd>${esc((x.species || []).join(', ')) || '<span class="dim">미확인</span>'}</dd><dt>연락처</dt><dd>${x.phone ? esc(x.phone) : '<span class="dim">카카오맵에서 확인</span>'}</dd>${x.note ? `<dt>메모</dt><dd>${esc(x.note)}</dd>` : ''}</dl>`;
+      if (x.kind === 'spot') return head + photoBlock(x) + spotBlock(x) + miniMap + basicBlock(x) + links
+        + `<h3>시설 <span class="dim small">(❔ 미확인 — 다녀오셨다면 바꿔 주세요)</span></h3><div class="checks">${SPOT_AMEN.map(([k, label, opts]) => { const v = val(x, k); return `<div class="ck ${cls(v)}">${mark(v)} ${label}${opts && isYes(v) ? ` <span class="small">(${esc(v)})</span>` : ''}${sel('amen.' + k, label, v, opts)}</div>`; }).join('')}</div>`
+        + nearHtml(x) + catchBlock(x) + qaBlock(x) + review + `<div class="small dim">출처: ${esc(x.src || '직접 등록')} · 위치 ${x.approx ? '항구 기준 대략 — 정확한 위치는 카카오맵' : '등록 좌표'}</div>`;
       if (x.kind === 'shop') return head + photoBlock(x) + info + basicBlock(x) + links
         + `<h3>대여 · 서비스 <span class="dim small">(❔ 미확인 — 직접 확인하면 바꿔 주세요)</span></h3><div class="checks">${RENT.map(([k, label]) => `<div class="ck ${cls(val(x, k))}">${mark(val(x, k))} ${label}${sel('rent.' + k, label, val(x, k))}</div>`).join('')}</div>`
         + stayHtml(x) + miniMap + qaBlock(x) + review + `<div class="small dim">출처: ${esc(x.src || '직접 등록')} · 위치 ${x.approx ? '항구 기준 대략' : '등록 좌표'}</div>`;
@@ -501,6 +542,14 @@
       if ($('pickPark')) $('pickPark').onclick = () => { pick = 'park'; body(); };
       if ($('here')) $('here').onclick = () => navigator.geolocation.getCurrentPosition(p => { $('moorLL').value = `${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`; say(`현재 위치(±${Math.round(p.coords.accuracy)}m)를 넣었습니다. 저장을 누르세요.`); },
         () => say('위치를 받지 못했습니다(권한 거부 또는 신호 없음). 좌표를 직접 넣어 주세요.'), { enableHighAccuracy: true, timeout: 15000 });
+      // 낚시터 정보
+      if ($('spotEdit')) $('spotEdit').onclick = () => open('spot');
+      if ($('spotCancel')) $('spotCancel').onclick = () => open(null);
+      if ($('spotHere')) $('spotHere').onclick = () => navigator.geolocation.getCurrentPosition(p => { $('sLL').value = `${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`; say(`현재 위치(±${Math.round(p.coords.accuracy)}m)를 넣었습니다. 저장을 누르세요.`); }, () => say('위치를 받지 못했습니다'), { enableHighAccuracy: true, timeout: 15000 });
+      if ($('spotSave')) $('spotSave').onclick = () => { const ll = parseLL($('sLL').value); if ($('sLL').value.trim() && !ll) { say('좌표를 "36.12345, 126.12345"처럼 넣어 주세요'); return; }
+        const patch = { 'basic.type': $('sType').value, 'basic.fee': $('sFee').value.trim(), 'basic.hours': $('sHours').value.trim(), parking: { has: $('pHas').value, guide: $('pGuide').value.trim(), fee: $('pFee').value.trim() } };
+        if (ll) patch.moor = { lat: ll.lat, lon: ll.lon, desc: '' }; if (!patch['basic.type']) delete patch['basic.type'];
+        editOpen = null; run(store.edit(x.id, patch), '저장했습니다'); };
       // 기본 정보
       if ($('basicEdit')) $('basicEdit').onclick = () => open('basic');
       if ($('basicCancel')) $('basicCancel').onclick = () => open(null);
@@ -561,10 +610,10 @@
       return Object.values(by).map(o => Object.assign(o, { avg: o.sum / o.n })).sort((a, b) => b.n - a.n); }
     const catchesOf = (id, days) => V.catches.filter(c => c.p === id && c.d >= daysAgo(days));
     function catchLine(c, withBoat) { const b = withBoat ? findPlace(c.p) : null;
-      return `<div class="rev"><b>${md(c.d)}</b> ${withBoat ? (b ? `<a href="#" data-near="${esc(b.id)}">🚤 ${esc(b.name)}</a> <span class="dim">${esc(b.region)}</span> · ` : '') : ''}🎣 ${esc(c.sp)} <b>${c.n}마리</b>${c.max ? ` · 최대 ${c.max}cm` : ''}${c.note ? `<br><span class="muted">${esc(c.note)}</span>` : ''}
+      return `<div class="rev"><b>${md(c.d)}</b> ${withBoat ? (b ? `<a href="#" data-near="${esc(b.id)}">${b.kind === 'spot' ? '🎣' : '🚤'} ${esc(b.name)}</a> <span class="dim">${esc(b.region)}</span> · ` : '') : ''}🎣 ${esc(c.sp)} <b>${c.n}마리</b>${c.max ? ` · 최대 ${c.max}cm` : ''}${c.note ? `<br><span class="muted">${esc(c.note)}</span>` : ''}
         ${c.me ? ` <button class="vote" data-unrep="${esc(c.cid)}">지우기</button>` : ''}</div>`; }
     function catchBlock(x) { const rec = catchesOf(x.id, 30), st2 = catchStats(rec.filter(c => c.d >= daysAgo(14))), sps = (x.species && x.species.length ? x.species : SPECIES);
-      return `<h3>🎣 실제 조과 <span class="small dim">— 직접 탄 분들의 보고(선장 홍보 글 아님)</span></h3>
+      return `<h3>🎣 실제 조과 <span class="small dim">— ${x.kind === 'spot' ? '다녀온 분들의 보고' : '직접 탄 분들의 보고(선장 홍보 글 아님)'}</span></h3>
         ${st2.length ? `<div class="checks">${st2.map(o => `<div class="ck yes">${esc(o.sp)} 평균 <b>${o.avg.toFixed(0)}</b>마리<span class="dim small">(${o.n}건${o.max ? ` · 최대 ${o.max}cm` : ''})</span></div>`).join('')}</div><div class="small dim">최근 14일 기준</div>` : '<div class="small dim">최근 보고가 없습니다.</div>'}
         ${rec.slice(0, 6).map(c => catchLine(c)).join('')}
         ${store.canWrite ? `<div class="form"><label>날짜<input type="date" id="pl-repD" value="${todayStr()}" max="${todayStr()}"></label><label>어종<select id="pl-repSp">${sps.map(s => `<option>${esc(s)}</option>`).join('')}</select></label>
@@ -579,7 +628,7 @@
             <select id="pl-cregion" aria-label="지역">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select>
             <select id="pl-csp" aria-label="어종">${['전체', ...SPECIES].map(s => `<option value="${s}" ${s === st.sp ? 'selected' : ''}>${s === '전체' ? '모든 어종' : s}</option>`).join('')}</select></div>
           ${rows.slice(0, 40).map(o => catchLine(o.c, true)).join('') || '<div class="empty">이 조건의 보고가 아직 없습니다. 배를 타고 오셨다면 「🚤 선상 정보」에서 그 배를 고르고 조과를 올려 주세요. 다음 초보자가 배를 고를 때 큰 도움이 됩니다.</div>'}</div>
-        <div class="card"><h2>🏆 조과 좋은 배 <span class="small muted">1인 평균 마릿수(보고 2건 이상 가중)</span></h2>
+        <div class="card"><h2>🏆 조과 좋은 배·낚시터 <span class="small muted">1인 평균 마릿수(보고 2건 이상 가중)</span></h2>
           ${rank.slice(0, 10).map((o, i) => `<div class="rank"><span class="n">${i + 1}</span><span><a href="#" data-near="${esc(o.b.id)}"><b>${esc(o.b.name)}</b></a><br><span class="small muted">${esc(o.b.region)} · ${esc(o.sp)} · 보고 ${o.n}건</span></span><span class="score hi">${o.avg.toFixed(0)}마리</span></div>`).join('') || '<div class="small dim">보고가 쌓이면 순위가 생깁니다.</div>'}
           <div class="notice">조과는 물때·날씨·실력에 따라 크게 달라집니다. 같은 날 여러 배의 보고를 함께 보세요. 거짓 보고를 막기 위해 한 사람이 올린 보고는 60건까지만 남습니다.</div></div></div>`;
       root.querySelectorAll('[data-cdays]').forEach(b => b.onclick = () => { st.cdays = +b.dataset.cdays; body(); });
@@ -673,7 +722,7 @@
       bindDetail(sel && sel.x);
       if (useMap && $('map')) { const map = L.map($('map')).setView([35.9, 127.8], 6);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
-        const pts = rows.map(({ x, s }) => { const p = moorPt(x) || x; return L.circleMarker([p.lat, p.lon], { radius: x.id === st.sel ? 9 : 6, color: '#0B1A1F', weight: 1.5, fillColor: x.kind === 'shop' ? '#8CC8F2' : '#F5C46B', fillOpacity: .95 })
+        const pts = rows.map(({ x, s }) => { const p = moorPt(x) || x; return L.circleMarker([p.lat, p.lon], { radius: x.id === st.sel ? 9 : 6, color: '#0B1A1F', weight: 1.5, fillColor: x.kind === 'shop' ? '#8CC8F2' : x.kind === 'spot' ? '#6FD3A4' : '#F5C46B', fillOpacity: .95 })
           .bindTooltip(`${x.name} · ${s.total}`).on('click', () => select(x.id)).addTo(map); });
         if (sel) { const p = moorPt(sel.x) || sel.x; map.setView([p.lat, p.lon], 13); } else if (pts.length && st.region !== '전체') map.fitBounds(L.featureGroup(pts).getBounds().pad(.3)); }
     }
@@ -712,34 +761,37 @@
       const evAll = V.added.filter(a => a.kind === 'event' && a.when).sort((x, y) => x.when.localeCompare(y.when));
       const evNow = evAll.filter(a => (a.until || a.when) >= todayStr()), evPast = evAll.filter(a => (a.until || a.when) < todayStr());
       R('view').innerHTML = `<div class="card" style="margin-bottom:10px"><h2>🏆 등록된 대회·이벤트 <span class="small muted">기간순 · 진행 중·예정 ${evNow.length} · 지난 것 ${evPast.length}</span></h2>${evNow.map(a => `<div class="rank"><span class="n">🏆</span><span><b>${esc(a.name)}</b><br><span class="small">🗓 ${periodText(a.when, a.until)}</span>${a.applyTo ? `<br><span class="small muted">✍ 참가 접수 ${periodText(a.applyFrom || a.applyTo, a.applyTo)}</span>` : ''}<br><span class="small muted">📍 ${esc(a.region)} ${esc(a.where || a.addr || '')}${a.phone ? ' · ☎ ' + esc(a.phone) : ''}</span></span><span></span></div>`).join('') || '<div class="small dim">진행 중이거나 예정된 대회·이벤트가 없습니다. 아래에서 등록하세요.</div>'}</div><div class="card">${store.canWrite ? '' : '<div class="notice">보기 전용입니다. 등록하려면 참여 권한이 필요합니다.</div>'}
-        <div class="bar">${[['shop', '🏪 낚시점'], ['boat', '🚤 선상(배)'], ['event', '🏆 대회·이벤트']].map(([kk, l]) => `<button class="chip" data-kind="${kk}" aria-pressed="${k === kk}">${l}</button>`).join('')}</div>
+        <div class="bar">${[['shop', '🏪 낚시점'], ['boat', '🚤 선상(배)'], ['spot', '🎣 낚시터·좌대'], ['event', '🏆 대회·이벤트']].map(([kk, l]) => `<button class="chip" data-kind="${kk}" aria-pressed="${k === kk}">${l}</button>`).join('')}</div>
         <form id="pl-form" class="form">
           <label>이름<input id="pl-fName" required maxlength="40" placeholder="${k === 'event' ? '예: 제1회 보령 쭈꾸미 선상대회' : k === 'boat' ? '예: OO호' : '예: OO낚시'}"></label>
           <label>지역<select id="pl-fRegion">${regions.map(r => `<option>${esc(r)}</option>`).join('')}</select></label>
           ${k === 'shop' ? `<label>구분<select id="pl-fCh"><option>오프라인</option><option>온라인</option></select></label><label>홈페이지(https)<input id="pl-fWeb" placeholder="https://"></label>` : ''}
           ${k === 'boat' ? `<label>정원(명)<input id="pl-fCap" type="number" min="1" max="99"></label><label>출항 시각<input id="pl-fDep" placeholder="05:30"></label><label>선비<input id="pl-fFee" placeholder="1인 9만원"></label>
             <label>자리 정하는 방식<select id="pl-fSeat"><option value="">미확인</option>${SEATS.map(s => `<option>${s}</option>`).join('')}</select></label>` : ''}
+          ${k === 'spot' ? `<label>종류<select id="pl-fType">${SPOT_TYPES.map(t => `<option>${t}</option>`).join('')}</select></label><label>이용 요금<input id="pl-fFee" placeholder="성인 3만원"></label>` : ''}
           ${k === 'event' ? `<label>시작일<input id="pl-fWhen" type="date" required></label><label>종료일<input id="pl-fUntil" type="date"></label><label>참가 접수 시작<input id="pl-fApplyFrom" type="date"></label><label>참가 접수 마감<input id="pl-fApplyTo" type="date"></label><label>장소<input id="pl-fWhere" placeholder="오천항"></label>` : ''}
           <label class="wide">주소<input id="pl-fAddr" maxlength="80"></label><label>연락처(업체 대표번호)<input id="pl-fPhone" maxlength="20"></label>
           <label>종목(쉼표로)<input id="pl-fSp" placeholder="쭈꾸미, 갑오징어"></label><label class="wide">메모<input id="pl-fNote" maxlength="120"></label>
           <div class="wide bar"><button class="btn primary" type="submit" ${store.canWrite ? '' : 'disabled'}>등록</button><span class="small muted" id="pl-msg">${store.shared ? '등록하면 조황 수첩을 쓰는 모두에게 보입니다.' : '이 기기에 저장됩니다.'} 사진·승선 위치·주차는 등록 뒤 상세 화면에서 넣습니다.</span></div>
         </form></div>
-        <div class="card" style="margin-top:10px"><h2>내가 등록한 곳 (${mine.length})</h2>${mine.map(a => `<div class="rank"><span class="n">${{ shop: '🏪', boat: '🚤', event: '🏆' }[a.kind]}</span><span><b>${esc(a.name)}</b><br><span class="small muted">${esc(a.region)} · ${esc(a.addr || a.where || '')}${a.when ? ' · 🗓 ' + periodText(a.when, a.until) : ''}${a.applyTo ? ' · ✍ 접수 ' + periodText(a.applyFrom || a.applyTo, a.applyTo) : ''}</span></span><button class="btn" data-del="${esc(a.id)}">삭제</button></div>`).join('') || '<div class="small dim">아직 없습니다.</div>'}</div>`;
+        <div class="card" style="margin-top:10px"><h2>내가 등록한 곳 (${mine.length})</h2>${mine.map(a => `<div class="rank"><span class="n">${{ shop: '🏪', boat: '🚤', spot: '🎣', event: '🏆' }[a.kind]}</span><span><b>${esc(a.name)}</b><br><span class="small muted">${esc(a.region)} · ${esc(a.addr || a.where || '')}${a.when ? ' · 🗓 ' + periodText(a.when, a.until) : ''}${a.applyTo ? ' · ✍ 접수 ' + periodText(a.applyFrom || a.applyTo, a.applyTo) : ''}</span></span><button class="btn" data-del="${esc(a.id)}">삭제</button></div>`).join('') || '<div class="small dim">아직 없습니다.</div>'}</div>`;
       root.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { st.addKind = b.dataset.kind; addView(); });
       root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => run(store.remove(b.dataset.del)));
       $('form').onsubmit = e => { e.preventDefault(); const g = id => ($(id) ? $(id).value.trim() : '');
         const o = { id: `${k}-u${Date.now().toString(36)}`, kind: k, region: g('fRegion'), name: g('fName'), addr: g('fAddr'), phone: g('fPhone'), species: g('fSp').split(/[,·\s]+/).filter(Boolean).slice(0, 8), note: g('fNote') };
         if (k === 'shop') Object.assign(o, { channel: g('fCh') || '오프라인', web: /^https:\/\//.test(g('fWeb')) ? g('fWeb') : '' });
+        if (k === 'spot') Object.assign(o, { type: g('fType'), fee: g('fFee') });
         if (k === 'boat') Object.assign(o, { capacity: +g('fCap') || null, depart: g('fDep'), fee: g('fFee'), seat: g('fSeat') });
         if (k === 'event') { Object.assign(o, { when: g('fWhen'), until: g('fUntil') || g('fWhen'), applyFrom: g('fApplyFrom'), applyTo: g('fApplyTo'), where: g('fWhere') }); if (!o.when) { say('대회·이벤트는 시작일을 넣어 주세요'); return; } if (o.until < o.when) { say('종료일이 시작일보다 빠릅니다'); return; } }
         if (!o.name) return; run(store.add(o), '등록했습니다').then(() => { if (k !== 'event') { st.tab = k; st.sel = o.id; render(); } }); };
     }
     function body() { if (st.tab !== 'find') stopFinder();
-      if (st.tab === 'shop' || st.tab === 'boat') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
+      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
       root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); }); }
     function bindChips() {
       root.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { st.sea = b.dataset.sea; saveUi(); render(); });
       root.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { st.channel = b.dataset.ch; render(); });
+      root.querySelectorAll('[data-stype]').forEach(b => b.onclick = () => { st.stype = b.dataset.stype; render(); });
       root.querySelectorAll('[data-need]').forEach(b => b.onclick = () => { st.need = !st.need; render(); });
       root.querySelectorAll('[data-period]').forEach(b => b.onclick = () => { st.period = b.dataset.period; saveUi(); render(); });
     }
@@ -753,7 +805,7 @@
     store.onChange(() => { V = store.view(); const ae = document.activeElement;
       if (ae && root.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.value && ae.type !== 'file') { say(); return; }   // 입력 중이면 화면을 다시 그리지 않음
       body(); say(); });
-    const h = location.hash.slice(1); if (['shop', 'boat', 'find', 'catch', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
+    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'find', 'catch', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
     render();
     return { setRegion(name, lat, lon) {   // 기준 지역(PC 운전 개요): 같은 이름이 없으면 가까운 지역(60km 안)
         let key = D.regions[name] ? name : null;
