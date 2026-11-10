@@ -531,7 +531,14 @@
       const trip = `<div class="box"><b>🔰 이 배 타러 가세요?</b><div class="bar"><button class="btn primary" id="pl-goFind">🧭 이 배 찾아가기 (단계별 안내)</button>
           <label class="small muted">출조일 <input type="date" id="pl-tripD" value="${esc((getTrip() && getTrip().id === x.id && getTrip().d) || '')}"></label><button class="btn" id="pl-tripSave">📌 내 출조로 저장</button></div>
           <div class="small muted">저장하면 「🧭 내 배 찾기」 탭에 D-day·준비물·주차→배 길안내가 바로 나옵니다.</div></div>`;
-      return head + trip + photoBlock(x) + boardBlock(x) + nearHtml(x) + miniMap + info + basicBlock(x) + links + catchBlock(x)
+      const rg = x.reg, regBox = rg ? `<div class="box"><b>📋 선박 수첩 <span class="small dim">공공데이터 낚시어선업 신고${rg.base ? ' · 기준 ' + esc(rg.base) : ''}</span></b><div class="row3">
+          <span>선박명</span><span><b>${esc(x.name)}</b></span><span>시군·항구</span><span>${esc(x.prov)} ${esc(x.region)} · ${esc(x.port)}</span>${rg.area ? `<span>주영업장소</span><span>${esc(rg.area)}</span>` : ''}
+          ${rg.ton ? `<span>톤수</span><span>${rg.ton}톤</span>` : ''}${rg.cap ? `<span>승객 정원</span><span>${rg.cap}명</span>` : ''}${rg.crew ? `<span>선원</span><span>${rg.crew}명</span>` : ''}
+          ${rg.status ? `<span>영업 상태</span><span>${esc(rg.status)}</span>` : ''}${rg.biz ? `<span>업종</span><span>${esc(rg.biz)}</span>` : ''}${rg.hull ? `<span>선질</span><span>${esc(rg.hull)}${rg.ob === 'Y' ? ' · 선외기' : ''}</span>` : ''}
+          ${rg.from || rg.to ? `<span>신고·허가 기간</span><span>${esc(rg.from || '?')} ~ ${esc(rg.to || '?')}${rg.to && rg.to < todayStr() ? ' <span style="color:var(--p-warn)">(기간 지남 — 운영 여부 확인)</span>' : ''}</span>` : ''}</div>
+          <div class="bar">${link(`https://map.kakao.com/link/search/${encodeURIComponent(x.port + ' ' + x.name)}`, '🔎 카카오맵에서 이 배 찾기')}${link(`https://map.kakao.com/link/search/${encodeURIComponent(x.port)}`, '⚓ ' + x.port + ' 위치')}${link(`https://search.naver.com/search.naver?query=${encodeURIComponent(x.port + ' ' + x.name + ' 낚시')}`, '🔎 조황·예약 검색')}</div>
+          <div class="small dim">지도 위치는 항구 기준 대략값입니다. 전화번호·예약은 검색 결과나 항구에서 확인하세요. 선장·대표자 개인 정보는 싣지 않습니다.</div></div>` : '';
+      return head + trip + regBox + photoBlock(x) + boardBlock(x) + nearHtml(x) + miniMap + info + basicBlock(x) + links + catchBlock(x)
         + `<h3>🪑 자리 정하는 방식</h3><div class="bar">${SEATS.map(s2 => `<button class="chip" data-seat="${s2}" aria-pressed="${x.seat === s2}" ${ro ? 'disabled' : ''}>${s2}</button>`).join('')}</div>
         <div class="small">${x.seat ? `<b>${esc(x.seat)}</b> — ${SEAT_HELP[x.seat]}${x.seatNote ? `<br>${esc(x.seatNote)}` : ''}` : '<span class="dim">미확인 — 승선해 보셨다면 골라 주세요.</span>'}</div>`
         + amen + qaBlock(x) + review;
@@ -786,9 +793,10 @@
           <div class="small muted">${rows.length}곳 · 점수순 · 📷 필수 사진 있는 곳 ${rows.filter(r => mainPhoto(r.x)).length}곳</div>
           ${kind === 'shop' && st.channel !== '오프라인' ? `<div class="notice">🌐 온라인 판매처는 PC 「장비·용품」 탭의 제품 검색과 연결됩니다. ${link('https://search.shopping.naver.com/search/all?query=' + encodeURIComponent('바다낚시용품'), '네이버 쇼핑 판매처 보기')}</div>` : ''}
           ${useMap ? '<div id="pl-map" class="mapbox"></div>' : ''}
-          <div class="list">${rows.map(({ x, s }) => itemHtml(x, s)).join('') || '<div class="empty">조건에 맞는 곳이 없습니다.</div>'}</div></div>
+          <div class="list">${rows.slice(0, st.more || 120).map(({ x, s }) => itemHtml(x, s)).join('')}${rows.length > (st.more || 120) ? `<button class="btn" id="pl-more">더 보기 (${rows.length - (st.more || 120)}곳 남음)</button>` : ''}${rows.length ? '' : '' || '<div class="empty">조건에 맞는 곳이 없습니다.</div>'}</div></div>
         <div class="panel" id="pl-detail">${sel ? detailHtml(sel.x, sel.s) : guideHtml(kind)}</div></div>`;
       root.querySelectorAll('[data-id]').forEach(b => b.onclick = () => select(b.dataset.id));
+      if ($('more')) $('more').onclick = () => { st.more = (st.more || 120) + 200; body(); };
       bindDetail(sel && sel.x);
       if (useMap && $('map')) { const map = L.map($('map')).setView([35.9, 127.8], 6);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
