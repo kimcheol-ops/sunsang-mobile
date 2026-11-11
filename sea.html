@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>섬 · 바다 속</title>
+<style>
+  html, body { margin: 0; background: #15191E; color: #E6EAEE; font: 13.5px/1.5 'Malgun Gothic', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; color-scheme: dark; }
+  #app { padding: 10px max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="places-data.js"></script>
+<script src="angler.js"></script>
+<script src="sea-data.js"></script>
+<script src="sea-trails.js"></script>
+<script src="sea-depth.js" onerror="window.SEA_DEPTH=null"></script>
+<script src="sea.js"></script>
+<script>
+  // PC 탭 · 휴대폰 앱: 섬길 미리 걷기 · 바다 속 미리보기 · 도감 · 갯벌 · 섬 코스 · 인어 만화
+  const inPC = !!(window.chrome && window.chrome.webview);
+  window.seaApi = SeaApp.mount(document.getElementById('app'), { data: window.SEA_DATA, trails: window.SEA_TRAILS, depth: window.SEA_DEPTH, places: window.PLACES_DATA, net: true, inPC });
+  try { window.chrome.webview.postMessage({ type: 'ready' }); } catch (e) {}
+</script>
+</body>
+</html>
