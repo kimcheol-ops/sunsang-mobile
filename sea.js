@@ -1,6 +1,6 @@
 /* SeaApp — 「섬 · 바다 속」 화면 (PC 탭 · 휴대폰 앱 · 바다 조황 수첩 공용)
  *  SeaApp.mount(root, { data: SEA_DATA, trails: SEA_TRAILS, depth: SEA_DEPTH, places: PLACES_DATA, net: true, inPC })
- *  탭: 섬길 미리 걷기 · 바다 속 미리보기 · 바다 생물 도감 · 갯벌·조개잡이 · 섬 여행 코스 · 인어 바다지기 만화
+ *  탭: 섬길 미리 걷기 · 바다 속 미리보기 · 바다 생물 도감 · 갯벌·조개잡이 · 섬 여행 코스 · 인어 바다지기 만화 · 섬길·우주 원정(walk.js) · 바다 그리기(art.js)
  *  net=false(조황 수첩처럼 외부 접속이 막힌 곳)면 수온·물높이 예보를 부르지 않음
  *  도감 도장은 이 기기 localStorage 'sea.dex' — 바다 속 탐험 게임(games10.js)도 같은 곳에 찍음
  */
@@ -52,7 +52,7 @@
     const net = opts.net !== false;
     if (!document.getElementById('sea-css')) { const st = document.createElement('style'); st.id = 'sea-css'; st.textContent = CSS; document.head.appendChild(st); }
     root.classList.add('sea');
-    const TABS = [['trail', '🏝 섬길 미리 걷기'], ['under', '🌊 바다 속 미리보기'], ['dex', '🐚 바다 생물 도감'], ['mud', '🦀 갯벌·조개잡이'], ['course', '⛴ 섬 여행 코스'], ['comic', '🧜 바다지기 만화']];
+    const TABS = [['trail', '🏝 섬길 미리 걷기'], ['under', '🌊 바다 속 미리보기'], ['dex', '🐚 바다 생물 도감'], ['mud', '🦀 갯벌·조개잡이'], ['course', '⛴ 섬 여행 코스'], ['comic', '🧜 바다지기 만화'], ['walk', '🚶 섬길·우주 원정'], ['art', '🎨 바다 그리기']];
     const st = Object.assign({ tab: 'trail', isle: (T[0] && T[0].id) || 'geumo', route: 0, under: '통영', kind: '', sea: '', season: true, q: '', comic: 0 }, lsGet('sea.ui', {}));
     let stop = () => {};
     const link = (url, label) => `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>`;
@@ -66,9 +66,19 @@
       root.innerHTML = `<div class="tabs" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${st.tab === k}">${l}</button>`).join('')}</div><div id="sea-body"></div>`;
       root.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { st.tab = b.dataset.tab; render(); });
       const body = root.querySelector('#sea-body');
-      ({ trail: trailView, under: underView, dex: dexView, mud: mudView, course: courseView, comic: comicView })[st.tab](body);
+      ({ trail: trailView, under: underView, dex: dexView, mud: mudView, course: courseView, comic: comicView, walk: walkView, art: artView })[st.tab](body);
     }
     function go(tab, patch) { Object.assign(st, patch || {}); st.tab = tab; render(); root.scrollIntoView({ block: 'start' }); }
+
+    /* ───────── 🚶 섬길·우주 원정(walk.js) · 🎨 바다 그리기(art.js) ───────── */
+    function walkView(el) {
+      if (!window.WalkApp) { el.innerHTML = '<div class="box muted">원정 게임 파일을 불러오지 못했습니다.</div>'; return; }
+      WalkApp.view(el, { trails: T, data: D, setStop: f => { stop = f; }, rank: opts.rank || null, inPC: opts.inPC });
+    }
+    function artView(el) {
+      if (!window.ArtApp) { el.innerHTML = '<div class="box muted">그리기 파일을 불러오지 못했습니다.</div>'; return; }
+      ArtApp.view(el, { setStop: f => { stop = f; }, download: opts.download || null });
+    }
 
     /* ───────── 🏝 섬길 미리 걷기 ───────── */
     function trailView(el) {
