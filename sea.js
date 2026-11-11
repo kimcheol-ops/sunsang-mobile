@@ -100,7 +100,8 @@
       el.querySelectorAll('[data-go-under]').forEach(b => b.onclick = () => go('under', { under: b.dataset.goUnder }));
       if (!r) return;
       // 거리 누적·오르막
-      const pts = r.pts, cum = [0]; let up = 0, top = -1e9, low = 1e9;
+      // 고도(90m 격자)는 들쭉날쭉해 앞뒤 7점 평균으로 다듬음
+      const pts = r.pts.map((p, i, a) => { let s = 0, n = 0; for (let k = Math.max(0, i - 3); k <= Math.min(a.length - 1, i + 3); k++) { s += a[k][2]; n++; } return [p[0], p[1], s / n]; }), cum = [0]; let up = 0, top = -1e9, low = 1e9;
       for (let i = 1; i < pts.length; i++) { cum.push(cum[i - 1] + hav(pts[i - 1], pts[i])); const d = pts[i][2] - pts[i - 1][2]; if (d > 0) up += d; }
       pts.forEach(p => { top = Math.max(top, p[2]); low = Math.min(low, p[2]); });
       const total = cum[cum.length - 1], mins = Math.round(total / 1000 / 3.5 * 60 + up / 100 * 10);
