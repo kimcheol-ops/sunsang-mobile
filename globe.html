@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>지구·세계 우주 관제도</title>
+<style>
+  html, body { margin: 0; background: #05070D; color: #E6EAEE; font: 13.5px/1.5 'Malgun Gothic', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; color-scheme: dark; }
+  #app { padding: 10px max(12px, env(safe-area-inset-right, 0px)) 20px max(12px, env(safe-area-inset-left, 0px)); }
+</style>
+</head>
+<body>
+<div id="app"><div style="padding:16px;color:#9AA5B1">지구 관제도를 불러오는 중…</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="globe-world.js"></script>
+<script src="globe-data.js"></script>
+<script src="sea-data.js"></script>
+<script src="sea-trails.js"></script>
+<script src="globe.js"></script>
+<script>
+  // PC 계통도 탭 · 휴대폰 앱: 지구 전체 · 대한민국 · 나라 비교 · 바다 속 · 국내 섬 관제도
+  let inPC = !!(window.chrome && window.chrome.webview); try { inPC = inPC || !!(window.parent !== window && window.parent.chrome && window.parent.chrome.webview); } catch (e) {}
+  window.globeApi = GlobeApp.mount(document.getElementById('app'), { world: window.GLOBE_WORLD, places: window.GLOBE_PLACES, sea: window.SEA_DATA, trails: window.SEA_TRAILS, inPC });
+</script>
+</body>
+</html>

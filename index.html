@@ -86,10 +86,15 @@
     <div class="chips"><button class="chip" data-goto="hmi">← 관제</button><button class="chip" data-goto="places">🏪 낚시점·선상</button></div>
     <iframe id="seaFrame" title="섬 · 바다 속" class="subpage"></iframe>
   </div>
+  <div data-view="globe" hidden>
+    <div class="chips"><button class="chip" data-goto="hmi">← 관제</button><button class="chip" data-goto="sea">🏝 섬 · 바다 속</button></div>
+    <iframe id="globeFrame" title="지구·세계 우주 관제도" class="subpage"></iframe>
+  </div>
   <!-- 관제 -->
   <div data-view="hmi">
     <div class="chips" style="margin-bottom:12px"><button class="chip" data-goto="news" style="flex:1">🌅 오늘의 바다 소식</button><button class="chip" data-goto="places" style="flex:1">🏪 낚시점 · 🚤 선상 정보</button></div>
     <div class="chips" style="margin:-4px 0 12px"><button class="chip" data-goto="sea" style="flex:1">🏝 섬길 미리 걷기 · 🌊 바다 속 · 🐚 도감 · 🦀 갯벌 · 🧜 만화</button></div>
+    <div class="chips" style="margin:-4px 0 12px"><button class="chip" data-goto="globe" style="flex:1">🌏 지구·세계 우주 관제도 — 나라·명소·바다 속·국내 섬 5D</button></div>
     <section class="card" id="heroCard">
       <div class="hero"><div class="score 미확인" id="bestScore">—<small>지수</small></div>
         <div><div class="small muted">오늘 가장 좋은 바다</div><div style="font:800 22px inherit" id="bestName">—</div><div class="small" id="bestInfo"></div></div></div>
