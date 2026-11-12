@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '5.4-mobile';
+const VERSION = '5.5-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -501,6 +501,7 @@ function go(v) {
   if (v === 'log') renderLog();
   if (v === 'tide') renderSolunar();
   if (v === 'hmi' && !results) refresh();
+  if (v === 'hmi') ensureFun();
   // 오늘의 바다 소식 · 낚시점·선상: PC와 같은 화면(today.html · places.html)을 처음 열 때만 불러옴
   if (v === 'news' || v === 'places' || v === 'sea' || v === 'globe') { const f = $(v + 'Frame'); if (!f.src) f.src = v === 'news' ? 'today.html' : v === 'sea' ? 'sea.html' : v === 'globe' ? 'globe.html' : 'places.html'; }
   if (v !== 'news' && v !== 'places' && v !== 'sea' && v !== 'globe') ls.set('m.tab', v);
@@ -521,3 +522,11 @@ setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 30
 const TABS = ['hmi', 'tide', 'map', 'log', 'game', 'more', 'news', 'places', 'sea', 'globe'];
 { const h = location.hash.slice(1); go(TABS.includes(h) ? h : ls.get('m.tab', 'hmi')); }
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.includes(h)) go(h); });   // 앱 바로가기(#game 등)
+
+// ── 🎡 오늘의 바다 놀이터(관제 화면 하단): 입질 예보·제철 달력·공개 조황·쇼츠·운세·만화·우주 웹툰 (fun.js, PC·조황 수첩과 같은 화면) ──
+var funApi = null;   // var: go()가 이 줄보다 먼저 불릴 수 있음
+function ensureFun() {
+  if (funApi || !window.FunBoard || !$('funRoot')) return;
+  funApi = FunBoard.mount($('funRoot'), { sea: window.SEA_DATA, today: window.TODAY_DATA, story: window.Story, net: true, open: k => go(k === 'comic' ? 'sea' : 'game') });
+}
+ensureFun();

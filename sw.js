@@ -1,7 +1,7 @@
 /* 출조 관제 우주 프로 모바일 서비스 워커: 앱 화면·게임은 오프라인에서도, 예보는 마지막 받은 값으로
  * 앱 파일을 바꿔 올릴 때는 CACHE 이름의 숫자를 올려야 휴대폰에 새 버전이 받아집니다. */
-const CACHE = 'sunsang-mobile-v30';
-const SHELL = ['./', './index.html', './app.js', './game.js', './games2.js', './games3.js', './games5.js', './games6.js', './games7.js', './games8.js', './games9.js', './phone.js', './angler.js', './story.js', './today.html', './today-data.js', './places.html', './places-data.js', './places.js', './sea.html', './sea.js', './sea-data.js', './sea-trails.js', './sea-depth.js', './games10.js', './walk.js', './art.js', './globe.html', './globe.js', './globe-data.js', './globe-world.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
+const CACHE = 'sunsang-mobile-v31';
+const SHELL = ['./', './index.html', './app.js', './game.js', './games2.js', './games3.js', './games5.js', './games6.js', './games7.js', './games8.js', './games9.js', './phone.js', './angler.js', './story.js', './today.html', './today-data.js', './places.html', './places-data.js', './places.js', './sea.html', './sea.js', './sea-data.js', './sea-trails.js', './sea-depth.js', './games10.js', './walk.js', './art.js', './globe.html', './globe.js', './globe-data.js', './globe-world.js', './fun.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'];
 // 설치: 브라우저 HTTP 캐시를 건너뛰고(cache: 'reload') 서버의 최신 파일로 채움 — 업데이트 뒤 옛 화면이 남지 않게
