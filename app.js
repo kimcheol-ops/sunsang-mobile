@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '5.6-mobile';
+const VERSION = '5.7-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -503,8 +503,8 @@ function go(v) {
   if (v === 'hmi' && !results) refresh();
   if (v === 'hmi') ensureFun();
   // 오늘의 바다 소식 · 낚시점·선상: PC와 같은 화면(today.html · places.html)을 처음 열 때만 불러옴
-  if (v === 'news' || v === 'places' || v === 'sea' || v === 'globe') { const f = $(v + 'Frame'); if (!f.src) f.src = v === 'news' ? 'today.html' : v === 'sea' ? 'sea.html' : v === 'globe' ? 'globe.html' : 'places.html'; }
-  if (v !== 'news' && v !== 'places' && v !== 'sea' && v !== 'globe') ls.set('m.tab', v);
+  if (v === 'news' || v === 'places' || v === 'sea' || v === 'globe' || v === 'seamap') { const f = $(v + 'Frame'); if (!f.src) f.src = v === 'news' ? 'today.html' : v === 'sea' ? 'sea.html' : v === 'globe' ? 'globe.html' : v === 'seamap' ? 'seamap.html' : 'places.html'; }
+  if (v !== 'news' && v !== 'places' && v !== 'sea' && v !== 'globe' && v !== 'seamap') ls.set('m.tab', v);
   scrollTo(0, 0);
 }
 document.querySelector('nav.tabbar').onclick = e => { const b = e.target.closest('button[data-go]'); if (b) go(b.dataset.go); };
@@ -519,7 +519,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 renderHmi(); renderTide();
 if (!results || Date.now() - results.at > 30 * 60000) refresh();
 setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 30 * 60000);   // 30분마다(공개 API 예의상)
-const TABS = ['hmi', 'tide', 'map', 'log', 'game', 'more', 'news', 'places', 'sea', 'globe'];
+const TABS = ['hmi', 'tide', 'map', 'log', 'game', 'more', 'news', 'places', 'sea', 'globe', 'seamap'];
 { const h = location.hash.slice(1); go(TABS.includes(h) ? h : ls.get('m.tab', 'hmi')); }
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.includes(h)) go(h); });   // 앱 바로가기(#game 등)
 

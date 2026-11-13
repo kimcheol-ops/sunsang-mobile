@@ -452,7 +452,7 @@
     }
 
     function build() {
-      save(); clearWorld(); hoverObj = null;
+      save(); clearWorld(); hoverObj = null; fly = null; // 모드가 바뀌면 진행 중이던 카메라 이동 취소
       ({ globe: buildGlobe, korea: buildKorea, compare: buildCompare, under: buildUnder, isles: buildIsles })[st.mode]();
       camApply();
     }
@@ -465,6 +465,7 @@
       if (!root.isConnected) { destroy(); return; }
       if (document.hidden) return;
       const dt = Math.min(.05, (now - last) / 1000); last = now; t += dt;
+      if (fly && fly.to.kind !== camS.kind) fly = null;
       if (fly) { const k = Math.min(1, (now - fly.t0) / fly.ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, a = fly.from, b = fly.to;
         if (b.kind === 'globe') { let dl = b.lon - a.lon; while (dl > 180) dl -= 360; while (dl < -180) dl += 360; camS.lat = a.lat + (b.lat - a.lat) * e; camS.lon = a.lon + dl * e; camS.dist = a.dist + (b.dist - a.dist) * e; }
         else { camS.target.lerpVectors(a.target, b.target, e); camS.yaw = a.yaw + (b.yaw - a.yaw) * e; camS.pitch = a.pitch + (b.pitch - a.pitch) * e; camS.dist = a.dist + (b.dist - a.dist) * e; }

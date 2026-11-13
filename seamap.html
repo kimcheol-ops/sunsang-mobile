@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>해상 지도</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { --bg:#15191E; --panel:#1E242B; --panel2:#242B33; --line:#343C45; --fg:#E6EAEE; --muted:#9AA5B1; --accent:#8CC8F2; --ok:#6FD3A4; --warn:#F5C46B; --bad:#FF8A8D; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px 'Malgun Gothic', 'Noto Sans KR', sans-serif; overflow: hidden; }
+  #map { position: absolute; left: 0; top: 0; bottom: 0; right: 340px; background: #0E1216; }
+  aside { position: absolute; top: 0; right: 0; width: 340px; bottom: 0; border-left: 1px solid var(--line); padding: 12px; overflow-y: auto; background: #181D23; }
+  h2 { font-size: 14px; margin: 14px 0 6px; } h2:first-child { margin-top: 0; }
+  .muted { color: var(--muted); } .small { font-size: 11.5px; line-height: 1.5; }
+  label.row { display: flex; gap: 6px; align-items: flex-start; padding: 3px 0; cursor: pointer; }
+  label.row small { display: block; color: var(--muted); font-size: 11px; }
+  button, select, input { min-height: 28px; padding: 0 10px; border-radius: 5px; border: 1px solid #3E4852; background: #2A3139; color: var(--fg); font: inherit; }
+  button { cursor: pointer; } button:hover { background: #343D47; } button.primary { background: #2E5F86; border-color: #3A6F96; }
+  .card { background: var(--panel); border: 1px solid #2C343D; border-radius: 8px; padding: 10px; margin-top: 8px; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .cellRow { display: flex; justify-content: space-between; padding: 4px 6px; border-radius: 5px; cursor: pointer; }
+  .cellRow:hover { background: var(--panel2); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; font-size: 11.5px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #1E242B; color: var(--fg); }
+  .leaflet-popup-content { margin: 10px 12px; font: 12.5px 'Malgun Gothic', sans-serif; line-height: 1.55; }
+  .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+  .leaflet-control-attribution { background: #15191ECC !important; color: var(--muted) !important; font-size: 10px; }
+  .leaflet-control-attribution a { color: var(--accent) !important; }
+  .pform { display: grid; grid-template-columns: 60px 1fr; gap: 4px 6px; align-items: center; margin-top: 6px; }
+  #satInfo { margin-top: 4px; }
+  .darkTiles { filter: invert(1) hue-rotate(180deg) brightness(.8) contrast(.9) saturate(.6); }
+  .smpIc { background: none; border: 0; } .smpIc span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #15191ECC; border: 1px solid #4A5562; font-size: 13px; line-height: 1; }
+  .smpIc.ph span { border-color: #8CC8F2; } .smpIc.me span { border-color: #F5C46B; width: 24px; height: 24px; }
+  #smpPanel { position: absolute; left: 8px; right: 348px; bottom: 8px; z-index: 900; background: #15191EF2; border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 6px; max-height: 55%; overflow: auto; }
+  #smpPanel.tall { top: 8px; max-height: none; overflow: hidden; grid-template-rows: auto 1fr auto; }
+  #smpPanel a, .leaflet-popup-content a { color: var(--accent); }
+  @media (max-width: 760px) { html, body { overflow: auto; } #map { position: relative; right: 0; height: 62vh; } aside { position: static; width: auto; border-left: 0; border-top: 1px solid var(--line); } #smpPanel { right: 8px; position: fixed; } .pcOnly { display: none !important; } }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<aside>
+  <h2>🗺 배경 지도</h2>
+  <label class="row"><input type="radio" name="base" value="dark" checked><span>어두운 지도<small>OpenStreetMap (어둡게 표시)</small></span></label>
+  <label class="row"><input type="radio" name="base" value="osm"><span>일반 지도<small>OpenStreetMap</small></span></label>
+  <label class="row"><input type="radio" name="base" value="true"><span>🛰 위성 실사(일별)<small>NASA VIIRS — 그날 찍은 구름·해무까지 보임</small></span></label>
+
+  <h2>🛰 위성 해양 정보</h2>
+  <label class="row"><input type="checkbox" data-ov="sst"><span>바다 표면 수온 (합성, 1km)<small>NASA GHRSST MUR — 구름 영향 없이 채운 일별 수온. 수온이 급하게 바뀌는 경계(조경)에 고기가 모입니다.</small></span></label>
+  <label class="row"><input type="checkbox" data-ov="sstv"><span>바다 표면 수온 (관측, 750m)<small>NASA VIIRS — 실제 관측값, 구름 낀 곳은 빈칸</small></span></label>
+  <label class="row"><input type="checkbox" data-ov="chl"><span>엽록소 (플랑크톤)<small>NASA VIIRS — 높은 곳 = 먹이가 많은 곳 (구름 낀 곳 빈칸)</small></span></label>
+  <div class="small muted" id="satInfo">위성 층을 켜면 최근 30일 중 가장 최신 날짜를 자동으로 찾습니다.</div>
+
+  <h2>⚓ 해도 · 수심</h2>
+  <label class="row"><input type="checkbox" data-ov="depth"><span>수심·해저 지형<small>GEBCO (국제 수심도) — 항해용 아님</small></span></label>
+  <label class="row"><input type="checkbox" data-ov="seamark" checked><span>항로표지 (등대·부표)<small>OpenSeaMap</small></span></label>
+  <label class="row"><input type="checkbox" data-ov="ports" checked><span>내 항구·포인트</span></label>
+
+  <div id="plus"></div>
+
+  <h2>🎣 낚시인 조황 지도 <span class="badge" id="simBadge" style="display:none;background:#F5C46B33;color:#F5C46B">시뮬레이션 자료</span></h2>
+  <label class="row"><input type="checkbox" data-ov="crowd" checked><span>어종별 조황 격자<small id="policyText">수신 대기…</small></span></label>
+  <label class="row"><input type="checkbox" data-ov="mine" checked><span>내 기록 (이 PC에만, 정확한 위치)</span></label>
+  <div style="display:flex;gap:6px;align-items:center;margin-top:4px">어종 <select id="spFilter"><option value="">전체</option></select></div>
+  <div class="legend" id="legend"></div>
+  <div class="card small" id="cellList"><span class="muted">수신 대기…</span></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+    <button id="bSim">시뮬레이션 자료 만들기</button>
+    <button id="bClearSim">시뮬레이션 지우기</button>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+    <button id="bPhone">📱 휴대폰 기록 페이지 열기</button>
+    <button id="bImport" class="primary">휴대폰 기록 가져오기</button>
+  </div>
+  <div class="card small muted">지도 아무 곳이나 누르면 그 지점의 <b>현재 파고·수온·바람</b>을 보여 주고, <b>여기 조황 기록</b>으로 오늘 잡은 어종·마릿수를 남길 수 있습니다.
+    기록은 계속 위치를 추적하지 않고 기록한 순간의 한 점만 저장합니다.</div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="sea-data.js"></script>
+<script src="seamap-photos.js" onerror="window.SEAMAP_PHOTOS=null"></script>
+<script src="seamap-plus.js"></script>
+<script>
+const post = m => { try { window.chrome.webview.postMessage(m); } catch (e) {} };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SP_COLOR = { '쭈꾸미': '#F5C46B', '갑오징어': '#E8A0FF', '우럭': '#8CC8F2', '광어': '#6FD3A4', '참돔': '#FF8A8D', '갈치': '#C9D1D9', '문어': '#FFB36B', '무늬오징어': '#B0A0FF', '한치': '#7FE0E0' };
+const spColor = s => SP_COLOR[s] || '#9AA5B1';
+
+const map = L.map('map', { zoomControl: true, worldCopyJump: false, preferCanvas: true }).setView([35.6, 127.6], 7);
+const GIBS = (layer, date, ext, level) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${date}/GoogleMapsCompatible_Level${level}/{z}/{y}/{x}.${ext}`;
+const NASA = '<a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a>';
+const bases = {
+  // 어두운 지도: OSM 타일을 CSS 필터로 반전(별도 키 불필요)
+  dark: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }),
+  osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }),
+  true: null,
+};
+let base = bases.dark.addTo(map);
+
+// 위성 층: 날짜마다 비는 날이 있어 최근 날짜부터 한 장씩 시험해 가장 최신 날짜를 찾음
+const SAT = {
+  sst:  { layer: 'GHRSST_L4_MUR_Sea_Surface_Temperature', ext: 'png', level: 7, name: '수온(합성)', lag: 1 },
+  sstv: { layer: 'VIIRS_SNPP_L2_Sea_Surface_Temp_Day', ext: 'png', level: 7, name: '수온(관측)', lag: 1 },
+  chl:  { layer: 'VIIRS_SNPP_L2_Chlorophyll_A', ext: 'png', level: 7, name: '엽록소', lag: 1 },
+  true: { layer: 'VIIRS_SNPP_CorrectedReflectance_TrueColor', ext: 'jpg', level: 9, name: '위성 실사', lag: 0 },
+};
+const ymd = d => d.toISOString().slice(0, 10);
+const probe = url => new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
+async function latestDate(cfg) {
+  if (cfg.date) return cfg.date;
+  for (let i = cfg.lag; i <= 30; i++) {
+    const d = ymd(new Date(Date.now() - i * 86400000));
+    // 한반도 주변 타일 두 장(z5) 중 하나라도 있으면 그 날짜를 씀
+    const t = GIBS(cfg.layer, d, cfg.ext, cfg.level);
+    if (await probe(t.replace('{z}/{y}/{x}', '5/12/27')) || await probe(t.replace('{z}/{y}/{x}', '5/12/26'))) return cfg.date = d;
+  }
+  return null;
+}
+async function satLayer(key) {
+  const cfg = SAT[key];
+  if (cfg.tile) return cfg.tile;
+  document.getElementById('satInfo').textContent = `${cfg.name}: 최신 날짜 찾는 중…`;
+  const d = await latestDate(cfg);
+  if (!d) { document.getElementById('satInfo').textContent = `${cfg.name}: 최근 30일 자료를 받지 못했습니다 (인터넷 연결 확인)`; return null; }
+  cfg.tile = L.tileLayer(GIBS(cfg.layer, d, cfg.ext, cfg.level), { maxNativeZoom: cfg.level, maxZoom: 14, opacity: key === 'true' ? 1 : 0.75, attribution: `${NASA} ${cfg.name} ${d}` });
+  showSatInfo();
+  return cfg.tile;
+}
+function showSatInfo() {
+  const on = Object.entries(SAT).filter(([k, c]) => c.tile && map.hasLayer(c.tile)).map(([k, c]) => `${c.name} ${c.date}`);
+  document.getElementById('satInfo').textContent = on.length ? '표시 중: ' + on.join(' · ') + ' (NASA, 하루 늦게 올라옵니다)' : '위성 층을 켜면 최근 30일 중 가장 최신 날짜를 자동으로 찾습니다.';
+}
+
+const overlays = {
+  depth: L.tileLayer.wms('https://wms.gebco.net/mapserv?', { layers: 'GEBCO_LATEST', format: 'image/png', transparent: true, opacity: 0.45, attribution: '<a href="https://www.gebco.net">GEBCO</a>' }),
+  seamark: L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '<a href="https://www.openseamap.org">OpenSeaMap</a>' }),
+  ports: L.layerGroup(), crowd: L.layerGroup(), mine: L.layerGroup(),
+};
+['seamark', 'ports', 'crowd', 'mine'].forEach(k => overlays[k].addTo(map));
+
+document.querySelectorAll('input[name=base]').forEach(r => r.onchange = async () => {
+  const next = r.value === 'true' ? await satLayer('true') : bases[r.value];
+  if (!next) return;
+  map.removeLayer(base); base = next.addTo(map); base.bringToBack(); showSatInfo();
+});
+document.querySelectorAll('input[data-ov]').forEach(cb => cb.onchange = async () => {
+  const k = cb.dataset.ov;
+  const lyr = SAT[k] ? (cb.checked ? await satLayer(k) : SAT[k].tile) : overlays[k];
+  if (!lyr) { cb.checked = false; return; }
+  if (cb.checked) lyr.addTo(map); else map.removeLayer(lyr);
+  overlays.crowd.eachLayer(l => l.bringToFront && l.bringToFront());
+  showSatInfo();
+});
+
+// ── 지점 정보: Open-Meteo 해양·기상 (키 불필요) + 조황 기록 ──
+let data = { ports: [], cells: [], mine: [], species: [] };
+map.on('click', async e => {
+  if (plus && plus.onClick(e)) return;
+  const { lat, lng } = e.latlng, la = lat.toFixed(4), lo = lng.toFixed(4);
+  const pop = L.popup().setLatLng(e.latlng).setContent(`<b>${la}, ${lo}</b><div class="muted" id="pinfo">해양 정보 받는 중…</div>${formHtml()}`).openOn(map);
+  bindForm(lat, lng);
+  try {
+    const [m, w] = await Promise.all([
+      fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${la}&longitude=${lo}&current=wave_height,wave_period,sea_surface_temperature&timezone=Asia%2FSeoul`).then(r => r.json()),
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul`).then(r => r.json()),
+    ]);
+    const c = m.current || {}, cw = w.current || {}, f = (v, u, d = 1) => v == null ? '—' : v.toFixed(d) + u;
+    const el = document.getElementById('pinfo');
+    if (el) el.innerHTML = c.wave_height == null && c.sea_surface_temperature == null ? '육지이거나 해양 자료가 없는 곳입니다.' :
+      `파고 <b>${f(c.wave_height, 'm')}</b> (주기 ${f(c.wave_period, '초', 0)}) · 수온 <b>${f(c.sea_surface_temperature, '℃')}</b><br>바람 <b>${f(cw.wind_speed_10m, 'm/s')}</b> ${cw.wind_direction_10m != null ? Math.round(cw.wind_direction_10m) + '°' : ''} <span class="muted">(Open-Meteo 모델, ${esc((c.time || '').slice(11))})</span>`;
+  } catch (x) { const el = document.getElementById('pinfo'); if (el) el.textContent = '해양 정보를 받지 못했습니다'; }
+  if (plus) plus.depthAt(lat, lng).then(v => { const el = document.getElementById('pinfo'); if (el && v != null) el.insertAdjacentHTML('beforeend', `<br>${v > 0.5 ? '육지·해안 (높이 약 ' + Math.round(v) + 'm)' : '🌊 수심 약 <b>' + Math.max(0, Math.round(-v)) + 'm</b> <span class="muted">(공개 수심 자료)</span>'}`); });
+});
+function formHtml() {
+  const opts = (data.species.length ? data.species : Object.keys(SP_COLOR)).map(s => `<option>${esc(s)}</option>`).join('');
+  return `<div class="pform"><span>어종</span><select id="fSp">${opts}</select><span>마릿수</span><input id="fCnt" type="number" min="0" max="999" value="10" style="width:80px">
+    <span>메모</span><input id="fMemo" maxlength="60" placeholder="선택"></div><button class="primary" id="fSave" style="margin-top:6px">🎣 여기 조황 기록</button>`;
+}
+function bindForm(lat, lon) {
+  const b = document.getElementById('fSave');
+  if (!b) return;
+  b.onclick = () => {
+    const cnt = parseInt(document.getElementById('fCnt').value, 10);
+    if (isNaN(cnt) || cnt < 0) return;
+    post({ type: 'checkin', lat, lon, species: document.getElementById('fSp').value, count: cnt, memo: document.getElementById('fMemo').value });
+    map.closePopup();
+  };
+}
+
+// ── 데이터 그리기 ──
+function draw() {
+  const sp = document.getElementById('spFilter').value;
+  overlays.ports.clearLayers();
+  data.ports.forEach(p => L.circleMarker([p.lat, p.lon], { radius: 5, color: '#15191E', weight: 1.5, fillColor: '#8CC8F2', fillOpacity: 1 })
+    .bindTooltip(esc(p.name)).addTo(overlays.ports));
+  overlays.crowd.clearLayers();
+  const half = (data.policy && data.policy.cellDeg || 0.05) / 2;
+  const cells = data.cells.filter(c => !sp || c.species === sp);
+  cells.forEach(c => {
+    const col = spColor(c.species);
+    L.rectangle([[c.lat - half, c.lon - half], [c.lat + half, c.lon + half]], { color: col, weight: 1, fillColor: col, fillOpacity: 0.15 + c.heat * 0.6 })
+      .bindPopup(`<b style="color:${col}">${esc(c.species)}</b> ${c.simulated ? '<span class="badge" style="background:#F5C46B33;color:#F5C46B">시뮬레이션</span>' : ''}<br>
+        평균 <b>${c.perTrip}</b>마리/회 · 기록 ${c.trips}회 · 기록자 ${c.contributors}명<br><span class="muted">최근 기록 ${esc(c.last)} · 격자 중심 ${c.lat.toFixed(3)}, ${c.lon.toFixed(3)}</span>`)
+      .addTo(overlays.crowd);
+  });
+  overlays.mine.clearLayers();
+  data.mine.filter(m => !sp || m.species === sp).forEach(m => L.circleMarker([m.lat, m.lon], { radius: 6, color: '#fff', weight: 2, fillColor: spColor(m.species), fillOpacity: 1 })
+    .bindPopup(`<b>내 기록</b> ${esc(m.species)} ${m.count}마리<br><span class="muted">${esc(m.time)} ${esc(m.memo)}</span>`).addTo(overlays.mine));
+
+  const used = [...new Set(data.cells.map(c => c.species))];
+  document.getElementById('legend').innerHTML = used.map(s => `<span><i style="background:${spColor(s)}"></i>${esc(s)}</span>`).join('');
+  document.getElementById('cellList').innerHTML = cells.length ? '<b>조황 좋은 격자</b>' + cells.slice(0, 12).map((c, i) =>
+    `<div class="cellRow" data-i="${i}"><span><span style="color:${spColor(c.species)}">■</span> ${esc(c.species)} <span class="muted">${esc(c.near || '')}</span></span><span>${c.perTrip}마리 · ${c.contributors}명</span></div>`).join('')
+    : '<span class="muted">공개 기준(기록자 수·지연 시간)을 넘은 격자가 아직 없습니다. 「시뮬레이션 자료 만들기」로 동작을 시험해 보세요.</span>';
+  document.querySelectorAll('.cellRow').forEach(el => el.onclick = () => { const c = cells[+el.dataset.i]; map.flyTo([c.lat, c.lon], 11); });
+}
+document.getElementById('spFilter').onchange = draw;
+document.getElementById('bSim').onclick = () => post({ type: 'simulate' });
+document.getElementById('bClearSim').onclick = () => post({ type: 'clearSim' });
+document.getElementById('bPhone').onclick = () => post({ type: 'phonePage' });
+document.getElementById('bImport').onclick = () => post({ type: 'importPhone' });
+
+window.seaApi = {
+  update(d) {
+    const first = !data.cells.length && !data.ports.length;
+    data = Object.assign({ ports: [], cells: [], mine: [], species: [] }, d);
+    const f = document.getElementById('spFilter'), keep = f.value;
+    f.innerHTML = '<option value="">전체</option>' + data.species.map(s => `<option${s === keep ? ' selected' : ''}>${esc(s)}</option>`).join('');
+    const p = data.policy || {};
+    document.getElementById('policyText').textContent = `개인 보호: 약 ${Math.round((p.cellDeg || 0.05) * 111)}km 격자로만 공개 · 기록자 ${p.minContributors}명 이상 · ${p.delayHours}시간 지난 기록만 · 최근 ${p.windowDays}일`;
+    document.getElementById('simBadge').style.display = data.cells.some(c => c.simulated) ? '' : 'none';
+    draw();
+    if (first && data.center) map.setView([data.center.lat, data.center.lon], 9);
+  },
+  focus(lat, lon, z) { map.flyTo([lat, lon], z || 11); },
+};
+const inPC = !!(window.chrome && window.chrome.webview);
+const plus = window.SeaMapPlus ? SeaMapPlus.attach(map, document.getElementById('plus'), { sea: window.SEA_DATA }) : null;
+if (inPC) document.addEventListener('click', e => { const a = e.target.closest('a[href^="https://"]'); if (a) { e.preventDefault(); post({ type: 'open', url: a.href }); } });
+else document.querySelectorAll('#bSim, #bClearSim, #bPhone, #bImport').forEach(b => b.parentNode.classList.add('pcOnly'));
+post({ type: 'ready' });
+</script>
+</body>
+</html>
