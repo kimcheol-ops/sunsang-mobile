@@ -144,6 +144,7 @@
 
     root.innerHTML = `<h2 class="fh">🎡 오늘의 바다 놀이터 <small>조황 대신 쓸 수 있는 예보·달력 + 쇼츠·운세·만화</small></h2>
       <div class="fgrid">
+        <div class="fc" id="f-tide" style="grid-column:1/-1"></div>
         <div class="fc" id="f-bite"></div><div class="fc" id="f-cal"></div><div class="fc" id="f-rep"></div><div class="fc" id="f-crowd"></div>
         <div class="fc" id="f-short"></div><div class="fc" id="f-luck"></div><div class="fc" id="f-prev"></div><div class="fc" id="f-toon"></div>
       </div>`;
@@ -331,8 +332,42 @@
       $('f-toon').querySelectorAll('[data-ep]').forEach(b => b.onclick = () => { S.toon = +b.dataset.ep; save(); toon(); });
     }
 
-    bite(); cal(); reports(); crowd(); short.el(); luck(); prev(); toon(); loadWx();
-    return { setRegion(name, lat, lon) { if (!name || name === region.name) return; region = { name, lat, lon }; bite(); reports(); short.prep(); loadWx(); } };
+    /* ⓪ 📡 공식 물때·해·달 (공공데이터포털 — tools\bake-public-data.ps1이 매일 만듦) */
+    function tide() {
+      const el = $('f-tide'), P = window.PUBLIC_DATA;
+      if (!P || !P.stations) { el.innerHTML = '<h3>📡 공식 물때·해·달 <span>공공데이터</span></h3><div class="small muted">공식 자료 파일(public-data.js)이 아직 없어요. 매일 아침 작업이 만들어요.</div>'; return; }
+      let code = P.regions[region.name];
+      const has = c => P.stations[c] && (P.stations[c].series || []).length > 4;
+      if (!has(code)) { // 지역 관측소 자료가 없으면 가장 가까운(자료 있는) 관측소
+        const ref = P.stations[code] || region; let best = 1e9, alt = null; Object.entries(P.stations).forEach(([c, s]) => { if (!has(c)) return; const d = (s.lat - ref.lat) ** 2 + (s.lon - ref.lon) ** 2; if (d < best) { best = d; alt = c; } }); if (alt) code = alt; }
+      const s = P.stations[code] || {}, ser = (s.series || []).filter(x => x[0]), rs = (P.riseset[region.name] || Object.values(P.riseset).find(x => x.code === code) || { days: [] }).days;
+      const hm = t => t && t.length >= 4 ? t.slice(0, 2) + ':' + t.slice(2, 4) : '—';
+      let svg = '<div class="small muted">예측 조위 자료가 없어요.</div>';
+      if (ser.length > 4) {
+        const W = 640, H = 150, vals = ser.map(x => x[1]), mn = Math.min(...vals), mx = Math.max(...vals), t0 = new Date(ser[0][0].replace(' ', 'T') + ':00+09:00').getTime(), t1 = new Date(ser[ser.length - 1][0].replace(' ', 'T') + ':00+09:00').getTime();
+        const X = t => 30 + (t - t0) / (t1 - t0) * (W - 40), Y = v => 12 + (mx - v) / ((mx - mn) || 1) * (H - 40), tt = x => new Date(x.replace(' ', 'T') + ':00+09:00').getTime();
+        const line = ser.map(x => `${X(tt(x[0])).toFixed(1)},${Y(x[1]).toFixed(1)}`).join(' '), now = Date.now();
+        const obs = (s.obs && s.obs.list || []).map(x => `<circle cx="${X(tt(x[0])).toFixed(1)}" cy="${Y(x[1]).toFixed(1)}" r="2.6" fill="#FFD27A"/>`).join('');
+        const days = [0, 1, 2].map(d => { const t = t0 + d * 864e5; return t <= t1 ? `<line x1="${X(t)}" x2="${X(t)}" y1="8" y2="${H - 24}" stroke="#2A3550"/><text x="${X(t) + 3}" y="${H - 10}" fill="#9AA5B1" font-size="11">${new Date(t).getMonth() + 1}/${new Date(t).getDate()}</text>` : ''; }).join('');
+        // 만조·간조 표시(이웃보다 높거나 낮은 점)
+        const ext = ser.map((x, i) => i > 0 && i < ser.length - 1 && ((x[1] >= ser[i - 1][1] && x[1] > ser[i + 1][1]) || (x[1] <= ser[i - 1][1] && x[1] < ser[i + 1][1])) ? `<text x="${X(tt(x[0]))}" y="${Y(x[1]) + (x[1] >= ser[i - 1][1] ? -5 : 13)}" fill="#C9D4E0" font-size="10" text-anchor="middle">${x[0].slice(11, 16)}</text>` : '').join('');
+        svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="${esc(s.name)} 예측 조위 곡선"><rect x="30" y="8" width="${W - 40}" height="${H - 32}" fill="#0B1A2E" rx="6"/>${days}
+          <polyline points="${line}" fill="none" stroke="#5CC0DC" stroke-width="2.2"/>${obs}${ext}${now > t0 && now < t1 ? `<line x1="${X(now)}" x2="${X(now)}" y1="8" y2="${H - 24}" stroke="#FF8A8D" stroke-dasharray="3 3"/><text x="${X(now) + 3}" y="20" fill="#FF8A8D" font-size="10">지금</text>` : ''}
+          <text x="2" y="${Y(mx) + 4}" fill="#9AA5B1" font-size="10">${Math.round(mx)}</text><text x="2" y="${Y(mn) + 4}" fill="#9AA5B1" font-size="10">${Math.round(mn)}</text></svg>`;
+      }
+      // 실측 vs 예측: 같은 시각의 예측 조위(시계열)와 비교 — 실측 자료의 예측 칸은 비어 있을 때가 있음
+      let o = null, diff = null; const dv = s.dev;
+      if (s.obs && s.obs.list) { for (let i = s.obs.list.length - 1; i >= 0 && !o; i--) { const x = s.obs.list[i], p = ser.find(y => y[0].slice(0, 16) === String(x[0]).slice(0, 16)); if (p && x[1]) { o = { real: x[1], at: String(x[0]) }; diff = Math.round(x[1] - p[1]); } } }
+      el.innerHTML = `<h3>📡 공식 물때·해·달 <span>📍 ${esc(region.name)} · ${esc(s.name || '')} 관측소 · ${esc(P.updated)} 받음</span></h3>
+        ${svg}<div class="small muted">파란 선: 국립해양조사원 예측 조위(cm, 1시간 간격) · 노란 점: 오늘 실제 관측 · 숫자: 만조·간조 시각</div>
+        <div class="row" style="gap:12px">${o ? `<div>🌊 실측 <b>${Math.round(o.real)}cm</b> (${esc(o.at.slice(11, 16))}) · 예보보다 <b style="color:${Math.abs(diff) >= 15 ? '#FFD27A' : '#7AD7A0'}">${diff > 0 ? '+' : ''}${diff}cm</b>${Math.abs(diff) >= 15 ? ' — 바람·기압 영향으로 물이 예보와 달라요' : ''}</div>` : ''}
+          ${dv ? `<div>⏱ 최근 고·저조 ${dv.n}회: 예보보다 평균 <b>${Math.abs(dv.tm)}분 ${dv.tm > 0 ? '늦게' : dv.tm < 0 ? '일찍' : '같게'}</b>, 높이 <b>${dv.ht > 0 ? '+' : ''}${dv.ht}cm</b> <span class="small muted">(${esc(String(dv.from).slice(0, 10))}~${esc(String(dv.to).slice(5, 10))} 편차계산표)</span></div>` : ''}</div>
+        ${rs.length ? `<table class="small" style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">날짜</th><th>🌅 시민박명</th><th>☀ 일출</th><th>🌇 일몰</th><th>🌆 박명 끝</th><th>🌙 월출</th><th>🌑 월몰</th></tr>${rs.map(d => `<tr><td>${d.d.slice(4, 6)}/${d.d.slice(6)}</td><td>${hm(d.cm)}</td><td>${hm(d.sr)}</td><td>${hm(d.ss)}</td><td>${hm(d.ce)}</td><td>${hm(d.mr)}</td><td>${hm(d.ms)}</td></tr>`).join('')}</table><div class="small muted">시민박명: 해 뜨기 전·진 뒤 불 없이 볼 수 있을 만큼 밝은 때 — 출항·철수 시각 참고</div>` : ''}
+        <div class="small muted">출처: 국립해양조사원 조석예보·조위관측소 실측·편차계산표, 한국천문연구원 출몰시각 (공공데이터포털, 공공누리 제1유형). 항해용 아님.</div>`;
+    }
+
+    tide(); bite(); cal(); reports(); crowd(); short.el(); luck(); prev(); toon(); loadWx();
+    return { setRegion(name, lat, lon) { if (!name || name === region.name) return; region = { name, lat, lon }; tide(); bite(); reports(); short.prep(); loadWx(); } };
   }
   window.FunBoard = { mount, QUIZ, TOON };
 })();

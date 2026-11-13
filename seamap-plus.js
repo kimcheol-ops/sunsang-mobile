@@ -88,7 +88,7 @@ window.SeaMapPlus = (function () {
       let j = null;
       for (const u of OVP) { try { const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 28000); const r = await fetch(u, { method: 'POST', body: 'data=' + encodeURIComponent(qry), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal }); clearTimeout(tm); if (r.ok) { j = await r.json(); break; } } catch (e) {} }
       st.loading = false;
-      if (!j) { stat.textContent = '지도 자료 서버가 바빠요. 잠시 뒤 「이 화면 포인트 불러오기」를 다시 눌러 주세요.'; return; }
+      if (!j) { drawPois(); stat.textContent = '지도 자료 서버가 바빠요(공공데이터 주차장만 표시).';  stat.textContent += ' 잠시 뒤 「이 화면 포인트 불러오기」를 다시 눌러 주세요.'; return; }
       st.pois = (j.elements || []).map(e => { const t = e.tags || {}, c = classify(t), la = e.lat != null ? e.lat : e.center && e.center.lat, lo = e.lon != null ? e.lon : e.center && e.center.lon; return c && la != null ? { k: c[0], lab: c[1], name: t['name:ko'] || t.name || '', t, lat: la, lon: lo, hab: habitat(t), id: e.type + e.id } : null; }).filter(Boolean);
       st.cache[key] = st.pois; drawPois();
     }
@@ -101,7 +101,13 @@ window.SeaMapPlus = (function () {
     function drawPois() {
       G.poi.clearLayers(); const shown = st.pois.filter(p => p.k !== '_hab' && st.kinds[p.k]);
       shown.slice(0, 900).forEach(p => L.marker([p.lat, p.lon], { icon: L.divIcon({ className: 'smpIc', html: `<span>${p.lab.split(' ')[0]}</span>`, iconSize: [22, 22] }), title: p.name || p.lab }).bindPopup(() => poiPopup(p), { maxWidth: 260 }).addTo(G.poi));
-      const cnt = k => st.pois.filter(p => p.k === k).length;
+      // 공공데이터 주차장(전국주차장정보표준데이터 — 공영·민영, 요금): 지도 화면 안만
+      let pubN = 0; const PD = window.PUBLIC_PARKING;
+      if (st.kinds.park && PD && PD.parking && map.getZoom() >= 11) { const bb = map.getBounds();
+        PD.parking.filter(p => bb.contains([p[1], p[2]])).slice(0, 400).forEach(p => { pubN++; const free = /무료/.test(p[4]);
+          L.marker([p[1], p[2]], { icon: L.divIcon({ className: 'smpIc', html: `<span style="border-color:${free ? '#6FD3A4' : '#F5C46B'}">🅿</span>`, iconSize: [22, 22] }), title: p[0] })
+            .bindPopup(`<b>🅿 ${esc(p[0])}</b> <span class="muted small">${esc(p[3])}</span><div class="small"><b style="color:${free ? '#6FD3A4' : '#F5C46B'}">${esc(p[4] || '요금 정보 없음')}</b>${p[6] && p[6] !== '0' ? ` · 기본 ${esc(p[5])}분 ${Number(p[6]).toLocaleString()}원` : ''}${p[7] ? ` · ${esc(p[7])}대` : ''}</div><div class="muted small">${esc(p[8])}${p[10] ? ' · ' + esc(p[10]) : ''}${p[9] ? ' · ☎ ' + esc(p[9]) : ''}</div><div class="small" data-dep="${p[1]},${p[2]}"></div><a href="${kakao(p[0], p[1], p[2])}" target="_blank" rel="noopener">카카오맵</a><div class="muted small">출처: 전국주차장정보표준데이터(공공데이터포털) · ${esc(PD.updated)}</div>`, { maxWidth: 260 }).addTo(G.poi); }); }
+      const cnt = k => st.pois.filter(p => p.k === k).length + (k === 'park' ? pubN : 0);
       $('#smpStat').textContent = st.pois.length ? `이 화면: ${Object.keys(KINDS).map(k => KINDS[k][0] + cnt(k)).join(' ')}` : '이 화면에는 지도에 적힌 포인트가 없어요.';
       drawEst();
     }
