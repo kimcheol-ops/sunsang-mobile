@@ -52,7 +52,7 @@
     const net = opts.net !== false;
     if (!document.getElementById('sea-css')) { const st = document.createElement('style'); st.id = 'sea-css'; st.textContent = CSS; document.head.appendChild(st); }
     root.classList.add('sea');
-    const TABS = [['trail', '🏝 섬길 미리 걷기'], ['under', '🌊 바다 속 미리보기'], ['dex', '🐚 바다 생물 도감'], ['mud', '🦀 갯벌·조개잡이'], ['course', '⛴ 섬 여행 코스'], ['comic', '🧜 바다지기 만화'], ['walk', '🚶 섬길·우주 원정'], ['art', '🎨 바다 그리기']];
+    const TABS = [['trail', '🏝 섬길 미리 걷기'], ['under', '🌊 바다 속 미리보기'], ['dex', '🐚 바다 생물 도감'], ['mud', '🦀 갯벌·조개잡이'], ['course', '⛴ 섬 여행 코스'], ['comic', '🧜 바다지기 만화'], ['walk', '🚶 섬길·우주 원정'], ['legend', '📜 옛이야기 원정'], ['art', '🎨 바다 그리기']];
     const st = Object.assign({ tab: 'trail', isle: (T[0] && T[0].id) || 'geumo', route: 0, under: '통영', kind: '', sea: '', season: true, q: '', comic: 0 }, lsGet('sea.ui', {}));
     let stop = () => {};
     const link = (url, label) => `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>`;
@@ -66,7 +66,7 @@
       root.innerHTML = `<div class="tabs" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${st.tab === k}">${l}</button>`).join('')}</div><div id="sea-body"></div>`;
       root.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { st.tab = b.dataset.tab; render(); });
       const body = root.querySelector('#sea-body');
-      ({ trail: trailView, under: underView, dex: dexView, mud: mudView, course: courseView, comic: comicView, walk: walkView, art: artView })[st.tab](body);
+      ({ trail: trailView, under: underView, dex: dexView, mud: mudView, course: courseView, comic: comicView, walk: walkView, legend: legendView, art: artView })[st.tab](body);
     }
     function go(tab, patch) { Object.assign(st, patch || {}); st.tab = tab; render(); root.scrollIntoView({ block: 'start' }); }
 
@@ -74,6 +74,10 @@
     function walkView(el) {
       if (!window.WalkApp) { el.innerHTML = '<div class="box muted">원정 게임 파일을 불러오지 못했습니다.</div>'; return; }
       WalkApp.view(el, { trails: T, data: D, setStop: f => { stop = f; }, rank: opts.rank || null, inPC: opts.inPC });
+    }
+    function legendView(el) {
+      if (!window.LegendApp) { el.innerHTML = '<div class="box muted">옛이야기 파일을 불러오지 못했습니다.</div>'; return; }
+      LegendApp.view(el, { setStop: f => { stop = f; }, inPC: false });
     }
     function artView(el) {
       if (!window.ArtApp) { el.innerHTML = '<div class="box muted">그리기 파일을 불러오지 못했습니다.</div>'; return; }

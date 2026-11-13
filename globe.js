@@ -29,6 +29,7 @@
   .glb .side { display: grid; gap: 8px; align-content: start; max-height: clamp(380px, 68vh, 780px); overflow: auto; }
   .glb .card { background: var(--g-panel); border: 1px solid var(--g-line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
   .glb .card h3 { margin: 0; font-size: 15px; }
+  .glb select.chip { max-width: 100%; background: var(--g-panel); color: inherit; font-family: inherit; }
   .glb .muted { color: var(--g-muted); } .glb .small { font-size: 12px; }
   .glb .btn { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; border-radius: 6px; border: 1px solid var(--g-line); background: #1E2738; color: var(--g-fg); font: 600 12.5px inherit; padding: 0 10px; cursor: pointer; text-decoration: none; }
   .glb .btn.pri { background: #2B5F86; border-color: #3A79A8; }
@@ -43,7 +44,7 @@
   const MODES = [['globe', '🌏 지구 전체'], ['korea', '🇰🇷 대한민국'], ['compare', '🗺 나라 비교'], ['under', '🌊 바다 속'], ['isles', '🏝 국내 섬']];
   const SEA_COL = { 서해: '#4FC0D0', 남해: '#7AD7A0', 동해: '#7A9CFF', 제주: '#FFB86B' };
   const CONT_COL = { Asia: '#6E8B5A', Europe: '#7D9068', Africa: '#A3895A', 'North America': '#6C8F60', 'South America': '#5E8A55', Oceania: '#9C8B5E', Antarctica: '#DCE6EE' };
-  const PILLAR_H = { cap: 1, sight: .75, old: .75, food: .55, sea: .65, nature: .7 };
+  const PILLAR_H = { cap: 1, sight: .75, old: .75, food: .55, sea: .65, nature: .7, legend: .9 };
 
   function sunLL(d) { // 태양 바로 아래 지점(위도·경도) — NOAA 근사식
     const y0 = Date.UTC(d.getUTCFullYear(), 0, 1), n = (d - y0) / 864e5, g = 2 * Math.PI / 365 * (n + (d.getUTCHours() - 12) / 24);
@@ -69,7 +70,11 @@
     if (!THREE) { root.innerHTML = '<div class="card">3D 엔진(three.js)을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.</div>'; return { destroy() {} }; }
     const W = opt.world || { countries: [], detail: {}, capitals: [], islands: [] }, P = opt.places, SD = opt.sea;
     const st = Object.assign({ mode: 'globe', cats: Object.keys(P.CAT), group: 'all', cmp: ['KOR', 'JPN', 'ITA'], real: false, sea: '남해', month: new Date().getMonth() + 1, iSea: '' }, lsGet('glb.ui', {}));
-    const save = () => lsSet('glb.ui', { mode: st.mode, cats: st.cats, group: st.group, cmp: st.cmp, real: st.real, sea: st.sea, month: st.month, iSea: st.iSea });
+    if (!st.v56) { if (!st.cats.includes('legend')) st.cats = st.cats.concat('legend'); st.v56 = 1; } // v5.6: 옛이야기 분류 처음엔 켜 둠
+    st.cats = st.cats.filter(k => P.CAT[k]); if (!st.cats.length) st.cats = Object.keys(P.CAT);
+    const save = () => lsSet('glb.ui', { mode: st.mode, cats: st.cats, group: st.group, cmp: st.cmp, real: st.real, sea: st.sea, month: st.month, iSea: st.iSea, v56: 1 });
+    const LG = window.LEGENDS, LA = window.LegendApp; if (LA) LA.css();
+    const net = opt.net !== false, sstCache = {};
     const byA3 = {}; W.countries.forEach(c => byA3[c.a3] = c);
     const nameOf = a3 => (byA3[a3] && byA3[a3].ko) || a3;
 
@@ -139,15 +144,22 @@
     function choose(it, byClick) {
       sel = it; const kr = it.a3 === 'KOR' || it.kind === 'isle';
       labels.forEach(L => L.d.classList.toggle('sel', L.obj === it));
-      if (it.kind === 'place') {
+      if (it.kind === 'place' && it.cat === 'legend') {
+        const l = LG && LG.L.find(x => x.id === it.lid);
+        card.innerHTML = LA && l ? `<div class="lg" style="display:grid;gap:6px">${LA.cardHTML(l)}<div class="small muted">🧜 「섬 · 바다 속 → 📜 옛이야기 원정」에서 조각을 모아 「물결이 세계 여행」 연재를 열어 보세요.</div></div>` : `<h3>📜 ${esc(it.name)}</h3><div>${esc(it.desc)}</div>`;
+        if (LA) LA.bindCard(card);
+      } else if (it.kind === 'place') {
         const cat = P.CAT[it.cat];
         card.innerHTML = `<h3>${cat[0]} ${esc(it.name)}</h3><div class="small muted">${esc((P.C[it.a3] || {}).flag || '')} ${esc(nameOf(it.a3))} · ${esc(cat[1])}</div><div>${esc(it.desc)}</div>
           <div class="row">${it.cat === 'food' ? `<a class="btn pri" href="${esc(searchLink(it.name + (kr ? ' 맛집' : ' restaurant'), kr))}" target="_blank" rel="noopener">🍽 지도에서 이 음식 맛집 찾기</a>` : ''}<a class="btn" href="${esc(mapLink(it.name, it.lat, it.lon, kr))}" target="_blank" rel="noopener">🗺 지도에서 보기</a></div>
           ${it.cat === 'food' ? '<div class="small muted">특정 가게를 추천하지 않아요. 지도 앱의 최신 정보·후기로 골라 주세요.</div>' : ''}`;
       } else if (it.kind === 'isle') {
-        card.innerHTML = `<h3>🏝 ${esc(it.name)}</h3><div class="small muted">${esc(it.sea)} · 위도 ${it.lat.toFixed(3)}, 경도 ${it.lon.toFixed(3)}</div>${it.trail ? '<div>🥾 「섬 · 바다 속」 탭의 섬길 미리 걷기·원정에 이 섬 길 자료가 있어요.</div>' : ''}
+        const lgs = LA ? LA.forIsle(it.name) : [];
+        card.innerHTML = `<h3>🏝 ${esc(it.name)}</h3><div class="small muted">${esc(it.gun ? it.gun + ' · ' : '')}${esc(it.sea)} · 위도 ${it.lat.toFixed(3)}, 경도 ${it.lon.toFixed(3)}</div>${it.desc ? `<div>${esc(it.desc)}</div>` : ''}${it.trail ? '<div>🥾 「섬 · 바다 속」 탭의 섬길 미리 걷기·원정에 이 섬 길 자료가 있어요.</div>' : ''}
+          ${lgs.length ? `<div class="lg" style="display:grid;gap:6px;border-top:1px solid #2A3550;padding-top:6px"><b>📜 이 섬의 옛이야기</b>${lgs.map(l => LA.cardHTML(l, { note: false })).join('')}</div>` : ''}
           <div class="row"><a class="btn pri" href="${esc(mapLink(it.name, it.lat, it.lon, true))}" target="_blank" rel="noopener">🗺 카카오맵</a><a class="btn" href="https://island.theksa.co.kr" target="_blank" rel="noopener">⛴ 여객선 시간표</a>${it.wd ? `<a class="btn" href="https://www.wikidata.org/wiki/${esc(it.wd)}" target="_blank" rel="noopener">📖 위키데이터</a>` : ''}</div>
-          <div class="small muted">섬 위치 © OpenStreetMap 기여자</div>`;
+          <div class="small muted">섬 위치 © OpenStreetMap 기여자 · 손으로 정리한 섬은 대략 위치</div>`;
+        if (LA) LA.bindCard(card);
       } else if (it.kind === 'fish') {
         const s = it.s; card.innerHTML = `<h3>${esc(s.emo)} ${esc(s.name)}</h3><div class="small muted">${esc(SD.LAYER[s.layer] || s.layer)} · 수심 ${esc(s.depth)} · ${s.months.join('·')}월</div><div><b>잡는 법</b> ${esc(s.how)}</div><div><b>맛</b> ${esc(s.cook)}</div>${s.caution ? `<div class="small" style="color:#F5C46B">⚠ ${esc(s.caution)}</div>` : ''}${s.ban ? `<div class="small" style="color:#FF8A8D">금어기 ${esc(s.ban)}</div>` : ''}${s.size ? `<div class="small">금지 체장 ${esc(s.size)}</div>` : ''}<div class="small muted">금어기·체장은 바뀔 수 있어요 — 해양수산부 공지를 확인하세요.</div>`;
       }
@@ -171,7 +183,8 @@
       return Object.entries(P.CAT).map(([k, v]) => `<button class="chip sm" data-cat="${k}" aria-pressed="${st.cats.includes(k)}">${v[0]} ${v[1]}</button>`).join('');
     }
     function bindCats(rebuild) { root.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { const k = b.dataset.cat; st.cats = st.cats.includes(k) ? st.cats.filter(x => x !== k) : st.cats.concat(k); if (!st.cats.length) st.cats = [k]; save(); rebuild(); }); }
-    const placesOf = a3 => ((P.C[a3] || {}).p || []).filter(p => st.cats.includes(p[0])).map(p => ({ kind: 'place', a3, cat: p[0], name: p[1], lat: p[2], lon: p[3], desc: p[4], ic: P.CAT[p[0]][0], sub: P.CAT[p[0]][1] }));
+    const placesOf = a3 => ((P.C[a3] || {}).p || []).filter(p => st.cats.includes(p[0])).map(p => ({ kind: 'place', a3, cat: p[0], name: p[1], lat: p[2], lon: p[3], desc: p[4], ic: P.CAT[p[0]][0], sub: P.CAT[p[0]][1] }))
+      .concat(LG && st.cats.includes('legend') ? LG.L.filter(l => l.a3 === a3).map(l => ({ kind: 'place', a3, cat: 'legend', lid: l.id, name: l.t.split(' — ')[0], lat: l.lat, lon: l.lon, desc: l.s, ic: '📜', sub: '옛이야기' })) : []);
 
     /* ═════ 🌏 지구 전체 ═════ */
     function texWorld(selA3, featured) {
@@ -316,6 +329,21 @@
     }
 
     /* ═════ 🗺 나라 비교 ═════ */
+    // 나라 비교 표: 항목마다 막대로(휴대폰 폭에서도 읽히게 나라는 줄로)
+    function cmpTable(a3s, grpOf) {
+      const I = a => (P.INFO && P.INFO[a]) || null, kr = I('KOR');
+      const rows = [
+        ['📐 넓이', a => I(a) ? I(a)[0] : null, v => v >= 100 ? Math.round(v).toLocaleString() + '만㎢' : v + '만㎢', a => I(a) && kr ? `한국의 ${(I(a)[0] / kr[0]).toFixed(I(a)[0] / kr[0] < 10 ? 1 : 0)}배` : ''],
+        ['👥 인구', a => byA3[a] ? byA3[a].pop / 1e4 : null, v => Math.round(v).toLocaleString() + '만 명', () => ''],
+        ['🏖 해안선', a => I(a) ? I(a)[1] : null, v => v ? v.toLocaleString() + 'km' : '바다 없음', a => I(a) && kr && I(a)[1] ? `한국의 ${(I(a)[1] / kr[1]).toFixed(1)}배` : ''],
+      ];
+      const bars = rows.map(([lab, get, fmt, rel]) => { const vals = a3s.map(get), mx = Math.max(...vals.map(v => v || 0)) || 1;
+        return `<div><b class="small">${lab}</b>${a3s.map((a, i) => `<div style="display:grid;grid-template-columns:76px 1fr;gap:6px;align-items:center;font-size:12px"><span>${P.C[a].flag} ${esc(nameOf(a))}</span><span style="display:flex;gap:6px;align-items:center;min-width:0"><i style="display:block;height:8px;border-radius:4px;background:#7FD6E8;width:${vals[i] == null ? 0 : Math.max(2, Math.round(vals[i] / mx * 100))}%;max-width:60%"></i><span style="white-space:nowrap">${vals[i] == null ? '자료 없음' : esc(fmt(vals[i]))} <span class="muted">${esc(rel(a))}</span></span></span></div>`).join('')}</div>`; }).join('');
+      const tz = a => { const t = I(a); if (!t) return '자료 없음'; const d = t[2] - 9; return d === 0 ? '한국과 같음' : `한국보다 ${Math.abs(d)}시간 ${d < 0 ? '늦음' : '빠름'}`; };
+      const tbl = `<table style="border-collapse:collapse;width:100%;font-size:12px">${[['🏛 수도', a => P.C[a].cap], ['🌏 지역', a => grpOf(a).replace(/^\S+\s/, '')], ['🕐 시차', tz], ['🌊 바다', a => I(a) ? I(a)[4] : ''], ['🐟 대표 생선', a => I(a) ? I(a)[3] : ''], ['🌡 지금 바다 수온', a => I(a) && I(a)[5] ? (net ? '받는 중…' : '인터넷 연결 때 표시') : '—'], ['📍 명소', a => P.C[a].p.length + '곳' + (LG ? ` · 📜 ${LG.L.filter(l => l.a3 === a).length}편` : '')]]
+        .map(([lab, f]) => `<tr><th style="text-align:left;padding:3px 4px;border-bottom:1px solid #2A3550;white-space:nowrap;vertical-align:top">${lab}</th><td style="padding:3px 4px;border-bottom:1px solid #2A3550">${a3s.map(a => `<div>${P.C[a].flag} ${lab.includes('수온') ? `<span data-sst="${a}">${esc(f(a))}</span>` : esc(f(a))}</div>`).join('')}</td></tr>`).join('')}</table>`;
+      return `<div style="display:grid;gap:8px">${bars}${tbl}</div>`;
+    }
     function buildCompare() {
       scene.background = new THREE.Color('#04050C'); world.add(stars); lights();
       const pool = Object.keys(P.C), sel3 = st.cmp.filter(a => pool.includes(a)); if (!sel3.length) sel3.push('KOR');
@@ -331,11 +359,18 @@
       });
       holoFloor(Math.max(60, total + 20), -0.05);
       camS = { kind: 'orbit', target: new THREE.Vector3(0, 0, 0), yaw: 0, pitch: .9, dist: Math.max(50, total * 1.35), min: 10, max: 400, focus: 22 }; home = Object.assign({}, camS, { target: camS.target.clone() });
-      root.querySelector('#g-sub').innerHTML = pool.map(a => `<button class="chip sm" data-cc="${a}" aria-pressed="${sel3.includes(a)}">${P.C[a].flag} ${esc(nameOf(a))}</button>`).join('') + `<button class="chip sm" data-real aria-pressed="${st.real}">📏 실제 크기 비교</button><span style="width:10px"></span>` + catChips();
-      root.querySelectorAll('[data-cc]').forEach(b => b.onclick = () => { const a = b.dataset.cc; st.cmp = sel3.includes(a) ? sel3.filter(x => x !== a) : sel3.concat(a).slice(-5); if (!st.cmp.length) st.cmp = [a]; save(); build(); });
+      const grpOf = a => (P.GROUPS.find(g => g[2] && g[2].includes(a)) || ['', '기타'])[1];
+      root.querySelector('#g-sub').innerHTML = sel3.map(a => `<button class="chip sm" data-cc="${a}" aria-pressed="true" title="빼기">${P.C[a].flag} ${esc(nameOf(a))} ✕</button>`).join('')
+        + `<select class="chip sm" id="g-cadd" aria-label="비교할 나라 더하기"><option value="">＋ 나라 더하기 (${pool.length}개 중 최대 5)</option>${P.GROUPS.filter(g => g[2]).map(g => `<optgroup label="${esc(g[1])}">${g[2].filter(a => pool.includes(a) && !sel3.includes(a)).map(a => `<option value="${a}">${P.C[a].flag} ${esc(nameOf(a))}</option>`).join('')}</optgroup>`).join('')}</select>`
+        + `<button class="chip sm" data-real aria-pressed="${st.real}">📏 실제 크기 비교</button><span style="width:10px"></span>` + catChips();
+      root.querySelectorAll('[data-cc]').forEach(b => b.onclick = () => { const a = b.dataset.cc; st.cmp = sel3.filter(x => x !== a); if (!st.cmp.length) st.cmp = ['KOR']; save(); build(); });
+      root.querySelector('#g-cadd').onchange = e => { const a = e.target.value; if (!a) return; st.cmp = sel3.concat(a).slice(-5); save(); build(); };
       root.querySelector('[data-real]').onclick = () => { st.real = !st.real; save(); build(); }; bindCats(build);
       badge.textContent = st.real ? '📏 실제 크기 비율(같은 축척)' : '같은 크기로 맞춰 나란히';
-      card.innerHTML = `<h3>🗺 나라 비교 관제도</h3><div class="small">나라를 최대 5곳까지 골라 나란히 봐요. <b>📏 실제 크기 비교</b>를 켜면 같은 축척으로 놓여 나라 크기 차이가 한눈에 보여요.</div><div class="small muted">지도 모양: Natural Earth · 멀리 떨어진 해외 영토는 뺐어요</div>`;
+      card.innerHTML = `<h3>🗺 나라 비교 관제도</h3><div class="small">나라를 최대 5곳까지 골라 나란히 봐요. <b>📏 실제 크기 비교</b>를 켜면 같은 축척으로 놓여 나라 크기 차이가 한눈에 보여요.</div>${cmpTable(sel3, grpOf)}<div class="small muted">지도 모양: Natural Earth · 넓이·해안선은 CIA World Factbook 대략값 · 인구는 Natural Earth 추정치 · 시차는 서머타임 제외 · 수온: Open-Meteo</div>`;
+      if (net) sel3.forEach(a => { const inf = P.INFO && P.INFO[a]; if (!inf || !inf[5]) return; const put = v => { const c = card.querySelector(`[data-sst="${a}"]`); if (c) c.textContent = v; };
+        if (sstCache[a]) { put(sstCache[a]); return; }
+        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${inf[5][0]}&longitude=${inf[5][1]}&current=sea_surface_temperature`).then(r => r.json()).then(j => { const v = j && j.current && j.current.sea_surface_temperature; sstCache[a] = v == null ? '자료 없음' : v.toFixed(1) + '℃'; put(sstCache[a]); }).catch(() => put('못 받음')); });
       listOut(sel3.map(nameOf).join(' · '));
     }
 
@@ -388,11 +423,15 @@
     function buildIsles() {
       scene.background = new THREE.Color('#02060E'); world.add(stars); lights();
       const B = board('KOR', 52, 0, '#2E5A48'); world.add(B.g); holoFloor(90, -0.05);
-      const src = (W.islands && W.islands.length) ? W.islands.map(x => ({ name: x[0], lat: x[1], lon: x[2], wd: x[3] })) : P.ISLAND_FALLBACK.map(x => ({ name: x[0], lat: x[1], lon: x[2] }));
+      // 손으로 정리한 섬(대표 30 + 더한 섬) + OpenStreetMap 섬(받았으면) — 가까운 같은 이름은 하나로
+      const hand = P.ISLAND_FALLBACK.map(x => ({ name: x[0], lat: x[1], lon: x[2], gun: (P.ISLE_INFO && P.ISLE_INFO[x[0]] || [])[0], desc: (P.ISLE_INFO && P.ISLE_INFO[x[0]] || [])[1] }))
+        .concat((P.ISLE_MORE || []).map(x => ({ name: x[0], lat: x[1], lon: x[2], gun: x[3], desc: x[4] })));
+      const osm = (W.islands || []).map(x => ({ name: x[0], lat: x[1], lon: x[2], wd: x[3] }));
+      const src = hand.slice(); osm.forEach(o => { const h = src.find(x => x.name.replace(/\(.*\)/, '').split('·')[0] === o.name && Math.abs(x.lat - o.lat) < .2 && Math.abs(x.lon - o.lon) < .2); if (h) { h.wd = o.wd; } else src.push(o); });
       const trailNames = ((opt.trails && opt.trails.islands) || []).filter(x => x.routes && x.routes.length).map(x => x.name);
       const famous = new Set(P.ISLAND_FALLBACK.map(x => x[0]));
-      items = src.filter(x => x.lat > 33 && x.lat < 38.7 && x.lon > 124.5 && x.lon < 132).map(x => { const sea = seaOf(x.lat, x.lon); return { kind: 'isle', name: x.name, lat: x.lat, lon: x.lon, wd: x.wd, sea, ic: '🏝', sub: sea, trail: trailNames.includes(x.name), famous: famous.has(x.name) }; })
-        .filter(x => !st.iSea || x.sea === st.iSea).sort((a, b) => (b.famous - a.famous) || (b.trail - a.trail) || a.name.localeCompare(b.name, 'ko'));
+      items = src.filter(x => x.lat > 33 && x.lat < 38.7 && x.lon > 124.5 && x.lon < 132).map(x => { const sea = seaOf(x.lat, x.lon), lg = LA ? LA.forIsle(x.name).length : 0; return { kind: 'isle', name: x.name, lat: x.lat, lon: x.lon, wd: x.wd, gun: x.gun, desc: x.desc, sea, ic: lg ? '📜' : '🏝', sub: (x.gun || sea) + (lg ? ' · 옛이야기' : ''), trail: trailNames.includes(x.name), famous: famous.has(x.name), lg }; })
+        .filter(x => !st.iSea || x.sea === st.iSea).sort((a, b) => (b.famous - a.famous) || (b.lg - a.lg) || (b.trail - a.trail) || a.name.localeCompare(b.name, 'ko'));
       const geo = new THREE.SphereGeometry(.32, 10, 8);
       items.forEach(it => {
         const col = SEA_COL[it.sea], p = B.project(it.lat, it.lon), g = new THREE.Group();
@@ -400,15 +439,15 @@
         const gl = glowS(col, it.famous ? 3 : 1.6, it.famous ? .9 : .6); gl.position.copy(m.position); g.add(gl);
         if (it.famous || it.trail) { const beam = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 3, 6), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .7, blending: THREE.AdditiveBlending, depthWrite: false })); beam.position.copy(p).add(new THREE.Vector3(0, 2, 0)); g.add(beam); }
         g.userData.pick = it; it.pos = m.position.clone().add(new THREE.Vector3(0, it.famous ? 3.4 : .8, 0)); world.add(g); picks.push(g);
-        if (it.famous || it.trail) label(it.name + (it.trail ? ' 🥾' : ''), it.pos, '', it);
+        if (it.famous || it.trail || it.lg) label((it.lg ? '📜 ' : '') + it.name + (it.trail ? ' 🥾' : ''), it.pos, '', it);
         const ph = Math.random() * 6; anims.push(() => { gl.material.opacity = (it.famous ? .6 : .35) + .3 * Math.sin(t * 2 + ph); });
       });
       camS = { kind: 'orbit', target: new THREE.Vector3(0, 0, 4), yaw: .15, pitch: 1.0, dist: 70, min: 10, max: 160, focus: 18 }; home = Object.assign({}, camS, { target: camS.target.clone() });
       const cnt = s => items.length && !st.iSea ? items.filter(x => x.sea === s).length : '';
       root.querySelector('#g-sub').innerHTML = `<button class="chip sm" data-is="" aria-pressed="${!st.iSea}">전체</button>` + ['서해', '남해', '동해', '제주'].map(s => `<button class="chip sm" data-is="${s}" aria-pressed="${st.iSea === s}"><span style="color:${SEA_COL[s]}">●</span> ${s} ${cnt(s)}</button>`).join('');
       root.querySelectorAll('[data-is]').forEach(b => b.onclick = () => { st.iSea = b.dataset.is; save(); build(); });
-      badge.textContent = (W.islands && W.islands.length) ? `섬 ${items.length}곳 · OpenStreetMap` : `대표 섬 ${items.length}곳(섬 자료 받는 중)`;
-      card.innerHTML = `<h3>🏝 국내 섬 관제도</h3><div class="small">바다별 색으로 섬을 보여 줘요. 이름표가 붙은 곳은 대표 섬, 🥾는 섬길 자료가 있는 섬이에요. 점을 누르면 지도·배편 링크가 나와요.</div><div class="small muted">섬 위치 © OpenStreetMap 기여자(ODbL) · 바다 구분은 위치로 나눈 대략값</div>`;
+      badge.textContent = `섬 ${items.length}곳` + ((W.islands && W.islands.length) ? ' · OpenStreetMap 포함' : ' · 손으로 정리');
+      card.innerHTML = `<h3>🏝 국내 섬 관제도</h3><div class="small">바다별 색으로 섬을 보여 줘요. 이름표가 붙은 곳은 대표 섬, 🥾는 섬길 자료, 📜는 옛이야기가 있는 섬이에요. 점을 누르면 섬 소개·지도·배편 링크와 옛이야기가 나와요.</div><div class="small muted">섬 위치 © OpenStreetMap 기여자(ODbL) · 바다 구분은 위치로 나눈 대략값</div>`;
       listOut(st.iSea ? st.iSea + ' 섬' : '국내 섬');
     }
 
