@@ -166,9 +166,10 @@
 
     function render() {
       cleanup(); cleanup = () => {}; saveUi();
-      el.innerHTML = `<div class="tabs" role="tablist">${[['trace', '✏ 따라 그리기'], ['color', '🖍 색칠 놀이'], ['paint', '🖌 예술 붓'], ['gal', '🖼 내 그림 전시관']].map(([k, l]) => `<button class="tab" role="tab" data-m="${k}" aria-selected="${ui.mode === k}">${l}</button>`).join('')}</div><div id="art-body"></div>`;
+      el.innerHTML = `<div class="tabs" role="tablist">${[['trace', '✏ 따라 그리기'], ['color', '🖍 색칠 놀이'], ['paint', '🖌 예술 붓'], ['studio', '🎬 그림 스튜디오'], ['gal', '🖼 내 그림 전시관']].map(([k, l]) => `<button class="tab" role="tab" data-m="${k}" aria-selected="${ui.mode === k}">${l}</button>`).join('')}</div><div id="art-body"></div>`;
       el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { ui.mode = b.dataset.m; render(); });
       const body = el.querySelector('#art-body');
+      if (ui.mode === 'studio') { if (window.ArtStudio) ArtStudio.view(body, { setStop: f => { cleanup = f; }, download, keep }); else body.innerHTML = '<div class="box muted">스튜디오 파일(studio.js)을 불러오지 못했습니다.</div>'; return; }
       ({ trace: traceView, color: colorView, paint: paintView, gal: galView })[ui.mode](body);
     }
     function picker(cb) {
@@ -376,5 +377,5 @@
     render();
   }
 
-  window.ArtApp = { view, CR };
+  window.ArtApp = { view, CR, svgOf, galPut, galList, toBlob };
 })();
