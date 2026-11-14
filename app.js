@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '6.3-mobile';
+const VERSION = '6.4-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -241,7 +241,7 @@ function biteBars(tl) {
 }
 
 // ③ 물때 탭: 솔루나 피딩 타임 + 어종별 시간대 입질 지수
-const SPECIES = ['우럭', '광어', '참돔', '쭈꾸미', '갑오징어', '갈치', '문어', '한치', '무늬오징어', '감성돔', '농어', '볼락', '방어'];
+const SPECIES = ['우럭', '광어', '참돔', '쭈꾸미', '갑오징어', '갈치', '문어', '낙지', '한치', '무늬오징어', '감성돔', '농어', '볼락', '방어'];
 function renderSolunar() {
   if (!$('solBox')) return;
   const focus = ls.get('m.focus', watched[0]), r = REGIONS.find(x => x.name === focus) || REGIONS.find(x => x.name === watched[0]) || REGIONS[0];

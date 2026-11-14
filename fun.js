@@ -170,7 +170,7 @@
         const closed = season.find(x => x.sp === sp && x.kind === 'closed'); const peak = season.find(x => x.sp === sp && x.kind === 'peak');
         let s = peak ? 1 : .45, why = [peak ? '제철' : '제철 아님'];
         if (wx && wx.sst != null) { const t = wx.sst, fit = t >= a && t <= b ? 1 : Math.max(0, 1 - Math.min(Math.abs(t - a), Math.abs(t - b)) / 4); s *= .4 + .6 * fit; why.push(fit >= 1 ? `수온 ${t.toFixed(1)}℃ 알맞음` : `수온 ${t.toFixed(1)}℃ (${a}~${b}℃가 좋음)`); }
-        const strong = ['참돔', '감성돔', '농어', '방어'].includes(sp), soft = ['쭈꾸미', '갑오징어', '문어', '우럭', '광어'].includes(sp);
+        const strong = ['참돔', '감성돔', '농어', '방어'].includes(sp), soft = ['쭈꾸미', '갑오징어', '문어', '낙지', '우럭', '광어'].includes(sp);
         s *= strong ? .75 + .35 * tide.k : soft ? 1.05 - .3 * tide.k : 1; why.push(strong ? (tide.k > .5 ? '물살 센 날 유리' : '물살 약해 조금 불리') : soft ? (tide.k < .5 ? '물살 약해 유리' : '물살 세 조금 불리') : '');
         if (wx && wx.wind != null && wx.wind >= 10) { s *= .6; why.push(`바람 ${wx.wind.toFixed(0)}m/s 강함`); }
         if (wx && wx.wave != null && wx.wave >= 2) { s *= .6; why.push(`파고 ${wx.wave.toFixed(1)}m 높음`); }
