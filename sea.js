@@ -267,7 +267,7 @@
           <input type="search" id="sea-q" placeholder="이름 찾기 (예: 꽃게)" value="${esc(st.q)}" aria-label="이름 찾기" style="flex:1 1 160px">
           <select id="sea-kind" aria-label="종류"><option value="">모든 종류</option>${Object.entries(D.KIND).map(([k, v]) => `<option value="${k}" ${k === st.kind ? 'selected' : ''}>${v}</option>`).join('')}</select>
           <select id="sea-sea" aria-label="바다"><option value="">모든 바다</option>${[['서', '서해'], ['남', '남해'], ['동', '동해'], ['제', '제주']].map(([k, v]) => `<option value="${k}" ${k === st.sea ? 'selected' : ''}>${v}</option>`).join('')}</select>
-          <button class="btn" id="sea-season" aria-pressed="${st.season}">🗓 ${month}월 제철만</button></div>
+          <button class="btn" id="sea-season" aria-pressed="${st.season}">🗓 ${month}월 제철만</button><button class="btn primary" id="sea-fid">🔎 생김새로 찾기</button></div>
         <div class="small muted">도장 ${n} / ${D.species.length} — 「봤어요·잡았어요」를 누르거나 🎮 바다 속 탐험 게임에서 사진을 찍으면 도장이 찍혀요.</div></div>
         <div class="cards">${list.map(s => `<button class="card ${got[s.name] ? 'got' : ''}" data-sp="${s.id}"><div><span style="font-size:22px">${s.emo}</span> <b>${esc(s.name)}</b> ${got[s.name] ? '<span class="chip">✔ 도장</span>' : ''}</div>
           <div class="small muted">${esc(D.KIND[s.kind])} · ${esc(D.LAYER[s.layer][0])} ${esc(s.depth)}m · 제철 ${s.months.slice(0, 4).join('·')}${s.months.length > 4 ? '…' : ''}월</div>
@@ -279,6 +279,7 @@
       el.querySelector('#sea-kind').onchange = e => { st.kind = e.target.value; render(); };
       el.querySelector('#sea-sea').onchange = e => { st.sea = e.target.value; render(); };
       el.querySelector('#sea-season').onclick = () => { st.season = !st.season; render(); };
+      el.querySelector('#sea-fid').onclick = () => { if (!window.FishId) return; const old = el.querySelector('.fid-box'); if (old) { old.remove(); return; } const b = document.createElement('div'); b.className = 'box fid-box'; el.prepend(b); FishId.view(b, D, s => detail(el, s)); b.scrollIntoView({ block: 'nearest' }); };
       el.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => detail(el, D.species.find(s => s.id === b.dataset.sp)));
     }
     function detail(el, s) {

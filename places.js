@@ -163,11 +163,15 @@
   }
   function cleanAsp(a) { if (!a || typeof a !== 'object') return undefined; const o = {}; for (const k of ASPECT_KEYS) if (a[k] >= 1 && a[k] <= 5) o[k] = Math.round(a[k]); return Object.keys(o).length ? o : undefined; }
   function cleanDoc(v) {
-    const o = { hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], photos: {}, qs: {}, ans: {}, votes: {}, catches: {}, posts: {}, cmts: {}, hide: {}, flags: {}, updated: '' }; if (!v || typeof v !== 'object') return o;
+    const o = { hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], photos: {}, qs: {}, ans: {}, votes: {}, catches: {}, posts: {}, cmts: {}, hide: {}, flags: {}, seats: {}, clean: {}, updated: '' }; if (!v || typeof v !== 'object') return o;
     // 함께 낚시·카풀 모집 { kind, d: 날짜, region, meet: 공개 장소 키, sp, seats, note, open, ts } · 댓글 { pid, t, ts } · 숨김·신고는 내 문서에만
     for (const [pid, p] of Object.entries(v.posts || {}).slice(0, 40)) if (p && p.kind in MATE_KIND && /^\d{4}-\d\d-\d\d$/.test(p.d || '') && typeof p.meet === 'string')
       o.posts[pid] = { kind: p.kind, d: p.d, region: str(p.region, 20), meet: str(p.meet, 80), sp: str(mask(p.sp), 10), seats: Math.max(1, Math.min(9, Math.round(+p.seats || 1))), time: /^\d\d:\d\d$/.test(p.time || '') ? p.time : '', note: str(mask(p.note), 160), open: p.open !== false, ts: str(p.ts, 30) };
     for (const [cid, c] of Object.entries(v.cmts || {}).slice(0, 200)) if (c && typeof c.pid === 'string' && typeof c.t === 'string' && c.t.trim()) o.cmts[cid] = { pid: str(c.pid, 120), t: str(mask(c.t), 160), ts: str(c.ts, 30) };
+    // 🪑 빈자리(선장님·업체가 직접 올림, 본인 확인 안 됨) { p: 배 id, d, left, sp, time, note, ts } · 🧹 깨끗한 바다 { 지역: { 'YYYY-MM': 봉지 수 } }
+    for (const [sid, s] of Object.entries(v.seats || {}).slice(0, 30)) if (s && typeof s.p === 'string' && /^\d{4}-\d\d-\d\d$/.test(s.d || ''))
+      o.seats[sid] = { p: str(s.p, 60), d: s.d, left: Math.max(0, Math.min(40, Math.round(+s.left || 0))), sp: str(mask(s.sp), 10), time: /^\d\d:\d\d$/.test(s.time || '') ? s.time : '', note: str(mask(s.note), 120), ts: str(s.ts, 30) };
+    for (const [rg, m] of Object.entries(v.clean || {}).slice(0, 40)) if (m && typeof m === 'object') { const c = {}; for (const [ym, n] of Object.entries(m)) if (/^\d{4}-\d\d$/.test(ym) && +n > 0) c[ym] = Math.min(500, Math.round(+n)); if (Object.keys(c).length) o.clean[str(rg, 20)] = c; }
     for (const [pid, x] of Object.entries(v.hide || {})) if (x === true) o.hide[str(pid, 120)] = true;
     for (const [pid, r] of Object.entries(v.flags || {})) if (typeof r === 'string') o.flags[str(pid, 120)] = str(r, 20);
     // 실제 조과 보고 { p: 배 id, d: 날짜, sp, n: 마릿수, max: 최대 cm, note, ts }
@@ -212,6 +216,11 @@
     }
     A.posts.sort((a, b) => (b.open - a.open) || a.d.localeCompare(b.d) || b.ts.localeCompare(a.ts));
     A.hiddenN = Object.keys(myHide).length;
+    A.seats = []; A.clean = { byRegion: {}, mine: {}, people: 0 };
+    for (const { uid, doc } of docs) { for (const [sid, s] of Object.entries(doc.seats || {})) A.seats.push(Object.assign({ sid, who: uid, me: uid === me }, s));
+      let any = false; for (const [rg, mm] of Object.entries(doc.clean || {})) for (const [ym, n] of Object.entries(mm)) { any = true; const r = A.clean.byRegion[rg] = A.clean.byRegion[rg] || { all: 0, month: {} }; r.all += n; r.month[ym] = (r.month[ym] || 0) + n; if (uid === me) A.clean.mine[rg + '|' + ym] = n; }
+      if (any) A.clean.people++; }
+    A.seats.sort((a, b) => a.d.localeCompare(b.d) || b.left - a.left);
     A.catches.sort((a, b) => b.d.localeCompare(a.d) || b.ts.localeCompare(a.ts));
     const cellTs = {}, qmap = {}, votes = {};
     for (const { uid, doc } of docs) {
@@ -266,6 +275,11 @@
       async mateUncmt(cid) { delete m().cmts[cid]; return save(); },
       async mateHide(pid) { if (m().hide[pid]) delete m().hide[pid]; else m().hide[pid] = true; return save(); },
       async mateFlag(pid, why) { if (m().flags[pid]) delete m().flags[pid]; else m().flags[pid] = str(why || '부적절', 20); return save(); },
+      async seatPost(o) { const all = Object.entries(m().seats); if (all.length >= 20) delete m().seats[all.sort((a, b) => a[1].ts.localeCompare(b[1].ts))[0][0]];
+        m().seats[rid('s')] = { p: str(o.p, 60), d: o.d, left: Math.max(0, Math.min(40, Math.round(+o.left || 0))), sp: str(mask(o.sp), 10), time: /^\d\d:\d\d$/.test(o.time || '') ? o.time : '', note: str(mask(o.note), 120), ts: nowIso() }; return save(); },
+      async seatLeft(sid, n) { if (m().seats[sid]) { m().seats[sid].left = Math.max(0, Math.min(40, Math.round(+n || 0))); m().seats[sid].ts = nowIso(); } return save(); },
+      async seatDel(sid) { delete m().seats[sid]; return save(); },
+      async cleanAdd(region, bags) { const ym = nowIso().slice(0, 7), r = str(region, 20), c = m().clean[r] = m().clean[r] || {}; c[ym] = Math.min(500, (c[ym] || 0) + Math.max(0, Math.round(+bags || 0))); return save(); },
       myAdded: () => m().added,
       isMinePhoto: u => Object.values(m().photos).some(arr => arr.some(p => p.u === u)),
     };
@@ -330,14 +344,14 @@
     root.innerHTML = `<div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button><button class="tab" role="tab" data-tab="spot">🎣 낚시터·좌대</button>
         <button class="tab" role="tab" data-tab="tackle">🪝 오늘의 채비</button><button class="tab" role="tab" data-tab="find">🧭 내 배 찾기(초보)</button><button class="tab" role="tab" data-tab="catch">🎣 실제 조과</button>
-        <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
+        <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="seat">🪑 빈자리</button><button class="tab" role="tab" data-tab="clean">🧹 깨끗한 바다</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
       <div data-r="filters" class="bar"></div><div class="status" data-r="status" role="status"></div><div data-r="view"></div><div class="dim small" data-r="foot"></div>`;
     const R = n => root.querySelector(`[data-r="${n}"]`);
     const $ = id => root.querySelector('#pl-' + id);
     let V = store.view(), editOpen = null, pick = null, aiAnswer = {};
     const st = { tab: 'shop', q: '', region: '전체', sea: '전체', sp: '전체', channel: '전체', sel: null, period: 'week', addKind: 'shop', need: false };
     try { Object.assign(st, JSON.parse(localStorage.getItem('places.ui') || '{}'), { sel: null, q: '' }); } catch (e) {}
-    if (!['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
+    if (!['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'seat', 'clean', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
     const saveUi = () => { try { localStorage.setItem('places.ui', JSON.stringify({ tab: st.tab, region: st.region, sea: st.sea, period: st.period })); } catch (e) {} };
     const say = msg => { R('status').textContent = msg || store.status || ''; };
     const run = (p, okMsg) => Promise.resolve(p).then(() => say(store.status || okMsg || ''), e => say(e && e.message === 'no-assets' ? '이 화면에서는 사진을 올릴 수 없습니다(권한 없음).' : '처리하지 못했습니다. 다시 해 주세요.'));
@@ -397,7 +411,7 @@
 
     function filters() {
       if (st.tab === 'rank') { R('filters').innerHTML = ['day', 'week', 'month', 'year'].map(p => `<button class="chip" data-period="${p}" aria-pressed="${st.period === p}">${{ day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[p]}</button>`).join(''); return; }
-      if (['add', 'qa', 'find', 'catch', 'tackle', 'mate'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
+      if (['add', 'qa', 'find', 'catch', 'tackle', 'mate', 'seat', 'clean'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
       R('filters').innerHTML = `<input type="search" id="pl-q" placeholder="${st.tab === 'shop' ? '낚시점 이름·주소·대여 품목' : st.tab === 'spot' ? '낚시터 이름·주소·종류' : '배 이름·항구·어종'} 검색" value="${esc(st.q)}" aria-label="검색">
         <select id="pl-region" aria-label="지역">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select>
         ${['전체', '서해', '남해', '동해', '제주'].map(s => `<button class="chip" data-sea="${s}" aria-pressed="${st.sea === s}">${s}</button>`).join('')}
@@ -748,10 +762,45 @@
           ${rows.slice(0, 40).map(o => catchLine(o.c, true)).join('') || '<div class="empty">이 조건의 보고가 아직 없습니다. 배를 타고 오셨다면 「🚤 선상 정보」에서 그 배를 고르고 조과를 올려 주세요. 다음 초보자가 배를 고를 때 큰 도움이 됩니다.</div>'}</div>
         <div class="card"><h2>🏆 조과 좋은 배·낚시터 <span class="small muted">1인 평균 마릿수(보고 2건 이상 가중)</span></h2>
           ${rank.slice(0, 10).map((o, i) => `<div class="rank"><span class="n">${i + 1}</span><span><a href="#" data-near="${esc(o.b.id)}"><b>${esc(o.b.name)}</b></a><br><span class="small muted">${esc(o.b.region)} · ${esc(o.sp)} · 보고 ${o.n}건</span></span><span class="score hi">${o.avg.toFixed(0)}마리</span></div>`).join('') || '<div class="small dim">보고가 쌓이면 순위가 생깁니다.</div>'}
-          <div class="notice">조과는 물때·날씨·실력에 따라 크게 달라집니다. 같은 날 여러 배의 보고를 함께 보세요. 거짓 보고를 막기 위해 한 사람이 올린 보고는 60건까지만 남습니다.</div></div></div>`;
+          <div class="notice">조과는 물때·날씨·실력에 따라 크게 달라집니다. 같은 날 여러 배의 보고를 함께 보세요. 거짓 보고를 막기 위해 한 사람이 올린 보고는 60건까지만 남습니다.</div></div></div>
+        ${myLogHTML()}`;
+      bindMyLog();
       root.querySelectorAll('[data-cdays]').forEach(b => b.onclick = () => { st.cdays = +b.dataset.cdays; body(); });
       $('cregion').onchange = e => { st.region = e.target.value; saveUi(); body(); }; $('csp').onchange = e => { st.sp = e.target.value; body(); };
       root.querySelectorAll('[data-unrep]').forEach(b => b.onclick = () => run(store.unreport(b.dataset.unrep)));
+    }
+    // ── 📒 나의 낚시 일지 통계: 내가 올린 조과만(월별·어종별·물때별·봉돌·수온) ──
+    const sstCache = {};
+    function tideBand(d) { const t = tideStrength(new Date(d + 'T06:00:00')); return t >= 67 ? '사리(물살 셈)' : t >= 34 ? '중간 물때' : '조금(물살 약함)'; }
+    function moonName(d) { const a = moonAge(new Date(d + 'T06:00:00')); return a < 1.8 || a > 27.7 ? '🌑 그믐' : a < 6.4 ? '🌒 초승' : a < 9.2 ? '🌓 상현' : a < 13.8 ? '🌔 차오름' : a < 16.6 ? '🌕 보름' : a < 20.3 ? '🌖 기욺' : a < 23.1 ? '🌗 하현' : '🌘 그믐 전'; }
+    function myLogHTML() {
+      const mine = V.catches.filter(c => c.me); if (!mine.length) return `<div class="card"><h2>📒 나의 낚시 일지</h2><div class="empty">내가 올린 조과가 아직 없습니다. 「🚤 선상 정보」에서 탄 배를 고르고 조과를 올리면 월별·어종별·물때별 통계가 생깁니다.</div></div>`;
+      const sum = a => a.reduce((s, c) => s + c.n, 0), days = new Set(mine.map(c => c.d)).size, big = mine.filter(c => c.max).sort((a, b) => b.max - a.max)[0];
+      const bar = (rows, unit) => { const mx = Math.max(1, ...rows.map(r => r[1])); return rows.map(([k, v, sub]) => `<div style="display:grid;grid-template-columns:96px 1fr 70px;gap:6px;align-items:center;font-size:12.5px;margin:2px 0"><span>${esc(k)}</span><span style="background:var(--p-well,#1A1F26);border-radius:6px;overflow:hidden;height:12px"><i style="display:block;height:100%;width:${(v / mx * 100).toFixed(0)}%;background:var(--p-accent,#3FB4E0)"></i></span><span>${typeof v === 'number' ? (Math.round(v * 10) / 10) : v}${unit}${sub ? ' <span class="dim">' + esc(sub) + '</span>' : ''}</span></div>`).join(''); };
+      const now = new Date(), months = []; for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
+      const byM = months.map(m => [m.slice(2).replace('-', '.') , sum(mine.filter(c => c.d.startsWith(m)))]);
+      const sp = {}; mine.forEach(c => { const o = sp[c.sp] = sp[c.sp] || { n: 0, r: 0, max: 0 }; o.n += c.n; o.r++; o.max = Math.max(o.max, c.max || 0); });
+      const bySp = Object.entries(sp).sort((a, b) => b[1].n - a[1].n).slice(0, 8).map(([k, o]) => [k, o.n, `${o.r}번${o.max ? ' · 최대 ' + o.max + 'cm' : ''}`]);
+      const grp = f => { const g = {}; mine.forEach(c => { const k = f(c); (g[k] = g[k] || []).push(c); }); return Object.entries(g).map(([k, a]) => [k, sum(a) / a.length, `${a.length}번`]).sort((a, b) => b[1] - a[1]); };
+      const byTide = grp(c => tideBand(c.d)), byMoon = grp(c => moonName(c.d)), byLead = grp(c => c.lead ? c.lead + '호' : '기록 없음').filter(r => r[0] !== '기록 없음');
+      const bestT = byTide[0], sst = Object.keys(sstCache).length ? grp(c => { const v = sstCache[c.p + '|' + c.d]; return v == null ? '수온 모름' : Math.floor(v / 2) * 2 + '~' + (Math.floor(v / 2) * 2 + 2) + '℃'; }).filter(r => r[0] !== '수온 모름') : null;
+      return `<div class="card"><h2>📒 나의 낚시 일지 <span class="small muted">내가 올린 조과 ${mine.length}건 · ${store.shared ? '조황 수첩 내 문서' : '이 기기'}</span></h2>
+        <div class="bar small"><span>🎣 출조 <b>${days}</b>일</span><span>🐟 모두 <b>${sum(mine)}</b>마리</span><span>평균 <b>${(sum(mine) / mine.length).toFixed(1)}</b>마리/번</span>${big ? `<span>📏 최대 <b>${big.max}cm</b> ${esc(big.sp)} (${esc(big.d)})</span>` : ''}</div>
+        ${bestT && byTide.length > 1 ? `<div class="notice">💡 나는 <b>${esc(bestT[0])}</b>에 가장 잘 잡았어요(한 번에 평균 ${bestT[1].toFixed(1)}마리). 다음 출조 날짜를 고를 때 참고하세요.</div>` : ''}
+        <div class="grid2"><div><b class="small">월별 마릿수(최근 12달)</b>${bar(byM, '마리')}</div><div><b class="small">어종별</b>${bar(bySp, '마리')}</div>
+          <div><b class="small">물때별 평균(한 번에)</b>${bar(byTide, '마리')}</div><div><b class="small">달 모양별 평균</b>${bar(byMoon, '마리')}</div>
+          ${byLead.length ? `<div><b class="small">봉돌 호수별 평균</b>${bar(byLead, '마리')}</div>` : ''}
+          <div><b class="small">바다 수온별 평균</b>${sst ? (sst.length ? bar(sst, '마리') : '<div class="small dim">수온 자료를 찾지 못했습니다.</div>') : '<div class="small dim">출조한 날의 바다 수온을 Open-Meteo(무료)에서 받아 계산해요.</div><button class="chip" id="pl-sst">🌡 수온 불러오기</button>'}</div></div>
+        <div class="small dim">물때는 달 나이로 계산한 값(물살 세기)이고, 수온은 그날 그 지역 바다 위 평균(대략)입니다. 일지는 내 기록만 쓰며 다른 사람에게 따로 보내지 않습니다.</div></div>`;
+    }
+    function bindMyLog() {
+      const b = $('sst'); if (!b) return;
+      b.onclick = async () => { b.disabled = true; b.textContent = '불러오는 중…';
+        const mine = V.catches.filter(c => c.me).slice(0, 40), seen = new Set();
+        for (const c of mine) { const key = c.p + '|' + c.d; if (seen.has(key)) continue; seen.add(key); const x = findPlace(c.p); if (!x || !x.lat) { sstCache[key] = null; continue; }
+          try { const u = `https://marine-api.open-meteo.com/v1/marine?latitude=${(+x.lat).toFixed(3)}&longitude=${(+x.lon).toFixed(3)}&hourly=sea_surface_temperature&start_date=${c.d}&end_date=${c.d}&timezone=Asia%2FSeoul`;
+            const j = await (await fetch(u)).json(), v = ((j.hourly || {}).sea_surface_temperature || []).filter(t => t != null); sstCache[key] = v.length ? v.reduce((a, t) => a + t, 0) / v.length : null; } catch (e) { sstCache[key] = null; } }
+        if (!Object.keys(sstCache).length) sstCache._none = null; body(); };
     }
     // ── 🧭 내 배 찾기: 초보자 단계별 안내 + 실시간 방향 ──
     let finder = null;
@@ -910,6 +959,76 @@
         const txt = `[낚시 일정] ${p.d}${p.time ? ' ' + p.time : ''} · ${p.region} · 만나는 곳: ${w ? w.n.replace(/^\S+\s/, '') : '-'} · ${MATE_KIND[p.kind].replace(/^\S+\s/, '')}${p.sp ? ' · ' + p.sp : ''}. 처음 만나는 낚시인과 함께 가요. 도착하면 연락할게요.`;
         (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => say('가족에게 보낼 문구를 복사했어요. 문자·메신저에 붙여넣어 보내세요.'), () => { window.prompt('아래 문구를 복사해 가족에게 보내세요', txt); }); });
     }
+    /* 🪑 선장님이 올리는 빈자리 — 본인 확인 안 된 정보, 예약·결제는 각 배로(자동 수집 없음) */
+    function seatView() {
+      st.seat = st.seat || { region: st.region !== '전체' ? st.region : (Object.keys(D.regions).find(r => (D.boats || []).some(b => b.region === r)) || Object.keys(D.regions)[0]), show: '전체', sp: '' };
+      const S = st.seat, today = todayStr(), boats = (D.boats || []).filter(b => b.region === S.region && !b.sample).slice(0, 200);
+      const rows = (V.seats || []).filter(s => s.d >= today).map(s => ({ s, b: findPlace(s.p) })).filter(o => o.b && (S.show === '전체' || o.b.region === S.show) && (!S.sp || (o.s.sp || '').includes(S.sp) || (o.b.species || []).includes(S.sp)));
+      R('view').innerHTML = `<div class="small ${store.shared ? 'shared' : 'dim'}" style="margin-bottom:8px">${store.shared ? '🌐 ' : '💾 '}${esc(store.label)}</div>
+        <div class="card small" style="border-color:var(--p-warn)">⚠ <b>확인 안 된 정보</b>예요. 선장님·업체가 직접 올린 빈자리이며, 이 앱은 올린 사람이 실제 선장님인지 확인하지 않습니다. <b>예약·결제는 이 앱에서 하지 않아요</b> — 반드시 배에 직접 전화하거나 배의 공식 예약 페이지에서 확인하세요.${store.shared ? '' : '<br>이 화면(PC·휴대폰 앱)에서 올린 빈자리는 이 기기에만 보입니다. 모두에게 알리려면 「바다 조황 수첩」에서 올려 주세요.'}</div>
+        <div class="grid2"><div class="card"><h2>🔍 빈자리 찾기</h2>
+          <div class="bar"><select id="pl-sshow">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === S.show ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+            <select id="pl-ssp"><option value="">모든 어종</option>${SPECIES.map(s => `<option ${s === S.sp ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div>
+          ${rows.length ? rows.map(({ s, b }) => `<div class="qa"><div><b>${esc(s.d)} (${DOW[new Date(s.d + 'T00:00').getDay()]})${s.time ? ' ' + esc(s.time) : ''}</b> · <a href="#" data-near="${esc(b.id)}">🚤 ${esc(b.name)}</a> · ${esc(b.region)}</div>
+              <div class="small">${s.left ? `남은 자리 <b style="color:var(--p-ok)">${s.left}자리</b>` : '<span class="dim">마감</span>'}${s.sp ? ' · ' + esc(s.sp) : ''}${s.note ? ' · ' + esc(s.note) : ''}</div>
+              <div class="small muted">올린 때 ${esc(new Date(s.ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))} · 확인 안 됨 ${b.kakao ? ` · <a href="${esc(b.kakao)}" target="_blank" rel="noopener">📍 카카오맵(전화·위치)</a>` : ''}${b.phone ? ` · ☎ ${esc(b.phone)}` : ''}</div>
+              ${s.me ? `<div class="bar"><label class="small">남은 자리 <input type="number" min="0" max="40" value="${s.left}" data-sleft="${esc(s.sid)}" style="width:60px"></label><button class="chip" data-sdel="${esc(s.sid)}">지우기</button></div>` : ''}</div>`).join('')
+            : '<div class="empty">오늘 이후 올라온 빈자리가 없습니다.</div>'}</div>
+        <div class="card"><h2>📣 선장님·업체: 빈자리 올리기</h2>
+          ${store.canWrite ? `<div class="bar"><label>지역 <select id="pl-sreg">${Object.keys(D.regions).map(r => `<option ${r === S.region ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label></div>
+          <div class="bar"><label style="flex:1">배 <select id="pl-sboat" style="max-width:100%">${boats.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.port ? ' · ' + esc(b.port) : ''}</option>`).join('') || '<option value="">이 지역 배 자료가 없습니다</option>'}</select></label></div>
+          <div class="bar"><label>날짜 <input type="date" id="pl-sd" min="${today}" value="${today}"></label><label>출항 <input type="time" id="pl-st" value="05:00"></label><label>남은 자리 <input type="number" id="pl-sleft" min="1" max="40" value="3" style="width:60px"></label></div>
+          <div class="bar"><input id="pl-ssp2" maxlength="10" placeholder="어종 (예: 갑오징어)"><input id="pl-snote" maxlength="120" placeholder="한 줄 안내 (예: 채비 대여 가능)" style="flex:1"></div>
+          <button class="chip" id="pl-spost">올리기</button>
+          <div class="small dim">연락처·계좌는 쓰지 마세요(자동으로 가려져요). 전화번호는 배 정보에 등록된 번호만 보여 줍니다.</div>` : '<div class="small dim">보기 전용입니다.</div>'}</div></div>`;
+      $('sshow').onchange = e => { S.show = e.target.value; seatView(); };
+      $('ssp').onchange = e => { S.sp = e.target.value; seatView(); };
+      if ($('sreg')) $('sreg').onchange = e => { S.region = e.target.value; seatView(); };
+      if ($('spost')) $('spost').onclick = () => { const p = $('sboat').value, d = $('sd').value;
+        if (!p) { say('배를 골라 주세요'); return; } if (!/^\d{4}-\d\d-\d\d$/.test(d) || d < today) { say('오늘 이후 날짜를 골라 주세요'); return; }
+        run(store.seatPost({ p, d, time: $('st').value, left: +$('sleft').value, sp: $('ssp2').value, note: $('snote').value }), '빈자리를 올렸습니다').then(() => { V = store.view(); seatView(); }); };
+      root.querySelectorAll('[data-sleft]').forEach(i => i.onchange = () => run(store.seatLeft(i.dataset.sleft, +i.value), '남은 자리를 고쳤습니다').then(() => { V = store.view(); seatView(); }));
+      root.querySelectorAll('[data-sdel]').forEach(b => b.onclick = () => run(store.seatDel(b.dataset.sdel), '지웠습니다').then(() => { V = store.view(); seatView(); }));
+      root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); });
+    }
+    /* 🧹 깨끗한 바다 도장 — 기록·사진은 이 기기에만, 공유는 지역 이름별 봉지 수만 */
+    const CLEAN_KEY = 'places.clean.v1', BADGES = [[1, '🌱 첫 봉지'], [5, '🐚 해변 지킴이'], [10, '🐢 거북이 친구'], [30, '🐬 바다 수호대'], [100, '🌊 바다의 영웅']];
+    const cleanLog = () => { try { return JSON.parse(localStorage.getItem(CLEAN_KEY) || '[]'); } catch (e) { return []; } };
+    function cleanIdb() { return new Promise((res, rej) => { const q = indexedDB.open('sea-clean', 1); q.onupgradeneeded = () => q.result.createObjectStore('ph'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+    async function cleanPhoto(id, blob) { try { const db = await cleanIdb(); return await new Promise((res, rej) => { const t = db.transaction('ph', blob ? 'readwrite' : 'readonly'), s = t.objectStore('ph'); const q = blob ? s.put(blob, id) : s.get(id); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return null; } }
+    function cleanView() {
+      st.clean = st.clean || { region: st.region !== '전체' ? st.region : Object.keys(D.regions)[0] };
+      const log = cleanLog(), total = log.reduce((s, x) => s + x.bags, 0), days = new Set(log.map(x => x.d)).size, C = V.clean || { byRegion: {}, people: 0 };
+      const ym = todayStr().slice(0, 7), regions = Object.entries(C.byRegion).map(([r, o]) => [r, o.month[ym] || 0, o.all]).sort((a, b) => b[1] - a[1] || b[2] - a[2]).slice(0, 12);
+      const next = BADGES.find(b => b[0] > total);
+      R('view').innerHTML = `<div class="small ${store.shared ? 'shared' : 'dim'}" style="margin-bottom:8px">${store.shared ? '🌐 ' : '💾 '}${esc(store.label)}</div>
+        <div class="grid2"><div class="card"><h2>🧹 오늘 주운 쓰레기 기록</h2>
+          <div class="small muted">낚시 뒤 내 자리와 주변 쓰레기를 주워 담으면 기록해요. 낚싯줄·바늘·봉돌은 새와 물고기에게 특히 위험해요.</div>
+          <div class="bar"><label>지역 <select id="pl-creg">${Object.keys(D.regions).map(r => `<option ${r === st.clean.region ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>
+            <label>봉지 <input type="number" id="pl-cbags" min="1" max="20" value="1" style="width:60px"></label></div>
+          <div class="bar">${['낚싯줄·바늘', '미끼 봉지', '페트병·캔', '스티로폼', '담배꽁초', '그 밖'].map(k => `<label class="chip"><input type="checkbox" data-ckind value="${k}"> ${k}</label>`).join('')}</div>
+          <div class="bar"><label class="chip">📷 사진(이 기기에만)<input type="file" accept="image/*" id="pl-cph" hidden></label><span class="small dim" id="pl-cphn"></span></div>
+          <button class="chip" id="pl-cadd">🧹 도장 찍기</button>
+          <div class="small dim">${store.shared ? '조황 수첩에는 「지역 이름 · 이번 달 · 봉지 수」만 올라가요. 사진·종류·시간은 이 기기에만 남아요.' : '이 기기에 기록해요. 조황 수첩에서 기록하면 지역별 합계에 함께 더해져요.'}</div></div>
+        <div class="card"><h2>🏅 나의 배지</h2><div class="bar small"><span>모두 <b>${total}</b>봉지</span><span><b>${days}</b>일</span></div>
+          <div class="bar">${BADGES.map(([n, l]) => `<span class="chip" style="${total >= n ? '' : 'opacity:.35'}">${l} (${n})</span>`).join('')}</div>
+          ${next ? `<div class="small">다음 배지 「${esc(next[1])}」까지 ${next[0] - total}봉지</div>` : '<div class="small">모든 배지를 모았어요! 🎉</div>'}
+          <h2 style="margin-top:10px">🌊 지역별 깨끗한 바다 (${esc(ym)})</h2>
+          ${regions.length ? regions.map(([r, m, a]) => `<div class="rank"><span class="n">♻</span><span><b>${esc(r)}</b><br><span class="small muted">이번 달 ${m}봉지 · 모두 ${a}봉지</span></span></div>`).join('') + `<div class="small dim">${store.shared ? `참여 ${C.people}명` : '이 기기 기록'}</div>` : '<div class="empty">아직 기록이 없습니다. 첫 도장을 찍어 보세요.</div>'}</div></div>
+        <div class="card"><h2>📒 내 기록</h2><div id="pl-clog">${log.slice(-20).reverse().map(x => `<div class="small" style="display:flex;gap:8px;align-items:center;margin:3px 0">${x.ph ? `<img data-cimg="${esc(x.id)}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:6px;background:#223">` : '<span style="width:44px;text-align:center">🧹</span>'}<span>${esc(x.d)} · ${esc(x.region)} · <b>${x.bags}봉지</b>${x.kinds && x.kinds.length ? ' · ' + esc(x.kinds.join(', ')) : ''}</span></div>`).join('') || '<div class="small dim">기록이 없습니다.</div>'}</div></div>`;
+      let photo = null;
+      $('creg').onchange = e => { st.clean.region = e.target.value; };
+      $('cph').onchange = e => { photo = e.target.files[0] || null; $('cphn').textContent = photo ? '사진 1장 준비됨' : ''; };
+      $('cadd').onclick = async () => { const bags = Math.max(1, Math.min(20, Math.round(+$('cbags').value || 1))), region = st.clean.region, id = 'c' + Date.now().toString(36);
+        let ph = false; if (photo) { try { const s = await shrink(photo, 900, .75); ph = !!(await cleanPhoto(id, s.blob)) || true; } catch (e) { ph = false; } }
+        const rec = { id, d: todayStr(), region, bags, kinds: [...root.querySelectorAll('[data-ckind]:checked')].map(i => i.value), ph };
+        const all = cleanLog(); all.push(rec); try { localStorage.setItem(CLEAN_KEY, JSON.stringify(all.slice(-300))); } catch (e) {}
+        const before = total, after = total + bags, got = BADGES.filter(b => b[0] > before && b[0] <= after).map(b => b[1]);
+        await run(store.cleanAdd(region, bags), got.length ? `🏅 새 배지: ${got.join(', ')}!` : `🧹 ${bags}봉지 도장을 찍었어요. 고마워요!`);
+        try { navigator.vibrate && navigator.vibrate(got.length ? [80, 40, 80] : 40); } catch (e) {}
+        V = store.view(); cleanView(); };
+      root.querySelectorAll('[data-cimg]').forEach(async img => { const b = await cleanPhoto(img.dataset.cimg); if (b) img.src = URL.createObjectURL(b); });
+    }
     function qaView() {   // 모든 질문 모아 보기: 답 없는 질문 먼저
       const rows = Object.entries(V.qs).flatMap(([pid, arr]) => arr.map(q => ({ q, x: findPlace(pid) }))).filter(r => r.x)
         .sort((a, b) => (a.q.answers.length ? 1 : 0) - (b.q.answers.length ? 1 : 0) || b.q.ts.localeCompare(a.q.ts));
@@ -969,7 +1088,7 @@
         if (!o.name) return; run(store.add(o), '등록했습니다').then(() => { if (k !== 'event') { st.tab = k; st.sel = o.id; render(); } }); };
     }
     function body() { if (st.tab !== 'find') stopFinder();
-      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
+      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'seat') seatView(); else if (st.tab === 'clean') cleanView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
       root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); }); }
     function bindChips() {
       root.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { st.sea = b.dataset.sea; saveUi(); render(); });
@@ -988,7 +1107,7 @@
     store.onChange(() => { V = store.view(); const ae = document.activeElement;
       if (ae && root.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.value && ae.type !== 'file') { say(); return; }   // 입력 중이면 화면을 다시 그리지 않음
       body(); say(); });
-    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
+    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'seat', 'clean', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
     render();
     return { setRegion(name, lat, lon) {   // 기준 지역(PC 운전 개요): 같은 이름이 없으면 가까운 지역(60km 안)
         let key = D.regions[name] ? name : null;
