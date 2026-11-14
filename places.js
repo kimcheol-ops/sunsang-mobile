@@ -134,6 +134,18 @@
   const YN = new Set(['yes', 'no', 'unk']), TOILET = new Set(['수세식', '간이', '없음', 'unk']);
   const okLat = n => typeof n === 'number' && n > 32 && n < 39.5, okLon = n => typeof n === 'number' && n > 123.5 && n < 132.5;
   const str = (s, n) => String(s ?? '').slice(0, n);
+  // 함께 낚시 글·댓글: 전화번호·계좌·이메일·메신저 아이디·자세한 주소는 자동으로 가림(쓸 때와 읽을 때 모두)
+  const HIDE = '〔가림〕';
+  const mask = s => String(s ?? '')
+    .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, HIDE)
+    .replace(/https?:\/\/\S+|open\.kakao\S*|(카톡|카카오톡|오픈채팅|텔레그램|라인|인스타)\s*(아이디|id|ID|주소)?\s*[:：]?\s*[A-Za-z0-9_.-]{3,}/g, HIDE)
+    .replace(/(\+?82[-.\s]?)?0\d{1,2}[-.\s)]*\d{3,4}[-.\s]*\d{4}/g, HIDE)
+    .replace(/\d{2,6}[-\s]\d{2,6}[-\s]\d{2,8}([-\s]\d{1,6})?/g, HIDE)
+    .replace(/\d{8,}/g, HIDE)
+    .replace(/\d+\s?(동|번지)\s?\d*\s?(호)?|\d+\s?호/g, HIDE)
+    .replace(/[가-힣\d]+(로|길)\s?\d+(-\d+)?(번길)?(\s?\d+(-\d+)?)?/g, HIDE)
+    .replace(/(〔가림〕\s*)+/g, HIDE + ' ');
+  const MATE_KIND = { trip: '🎣 같이 낚시', ride: '🚗 차 같이 타기' };
   const okSrc = u => typeof u === 'string' && (/^https:\/\//.test(u) || /^\/_blob\/[\w-]+$/.test(u) || /^photos\/[\w.-]+$/.test(u) || /^data:image\/(jpeg|png|webp);base64,/.test(u));
 
   // 고친 값 하나 검사: 키별로 허용된 모양만 통과(공유 데이터는 믿지 않음)
@@ -151,7 +163,13 @@
   }
   function cleanAsp(a) { if (!a || typeof a !== 'object') return undefined; const o = {}; for (const k of ASPECT_KEYS) if (a[k] >= 1 && a[k] <= 5) o[k] = Math.round(a[k]); return Object.keys(o).length ? o : undefined; }
   function cleanDoc(v) {
-    const o = { hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], photos: {}, qs: {}, ans: {}, votes: {}, catches: {}, updated: '' }; if (!v || typeof v !== 'object') return o;
+    const o = { hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], photos: {}, qs: {}, ans: {}, votes: {}, catches: {}, posts: {}, cmts: {}, hide: {}, flags: {}, updated: '' }; if (!v || typeof v !== 'object') return o;
+    // 함께 낚시·카풀 모집 { kind, d: 날짜, region, meet: 공개 장소 키, sp, seats, note, open, ts } · 댓글 { pid, t, ts } · 숨김·신고는 내 문서에만
+    for (const [pid, p] of Object.entries(v.posts || {}).slice(0, 40)) if (p && p.kind in MATE_KIND && /^\d{4}-\d\d-\d\d$/.test(p.d || '') && typeof p.meet === 'string')
+      o.posts[pid] = { kind: p.kind, d: p.d, region: str(p.region, 20), meet: str(p.meet, 80), sp: str(mask(p.sp), 10), seats: Math.max(1, Math.min(9, Math.round(+p.seats || 1))), time: /^\d\d:\d\d$/.test(p.time || '') ? p.time : '', note: str(mask(p.note), 160), open: p.open !== false, ts: str(p.ts, 30) };
+    for (const [cid, c] of Object.entries(v.cmts || {}).slice(0, 200)) if (c && typeof c.pid === 'string' && typeof c.t === 'string' && c.t.trim()) o.cmts[cid] = { pid: str(c.pid, 120), t: str(mask(c.t), 160), ts: str(c.ts, 30) };
+    for (const [pid, x] of Object.entries(v.hide || {})) if (x === true) o.hide[str(pid, 120)] = true;
+    for (const [pid, r] of Object.entries(v.flags || {})) if (typeof r === 'string') o.flags[str(pid, 120)] = str(r, 20);
     // 실제 조과 보고 { p: 배 id, d: 날짜, sp, n: 마릿수, max: 최대 cm, note, ts }
     for (const [cid, c] of Object.entries(v.catches || {})) if (c && typeof c.p === 'string' && /^\d{4}-\d\d-\d\d$/.test(c.d || '') && typeof c.sp === 'string' && c.sp.trim())
       o.catches[cid] = { p: str(c.p, 60), d: c.d, sp: str(c.sp, 10), n: Math.max(0, Math.min(999, Math.round(+c.n || 0))), max: +c.max > 0 && +c.max < 300 ? Math.round(+c.max) : null, note: str(c.note, 100), ts: str(c.ts, 30), lead: +c.lead > 0 && +c.lead < 400 ? +(+c.lead).toFixed(1) : null, egi: str(c.egi, 20), rig: str(c.rig, 20) };
@@ -183,6 +201,17 @@
   function aggregate(docs, me, aiList) {
     const A = { hearts: {}, hits: {}, reviews: {}, edits: {}, editTs: {}, added: [], mine: {}, photos: {}, qs: {}, myVotes: {}, catches: [], people: docs.length };
     for (const { uid, doc } of docs) for (const [cid, c] of Object.entries(doc.catches || {})) A.catches.push(Object.assign({ cid, who: uid, me: uid === me }, c));
+    // 함께 낚시: 글·댓글 모으기, 신고 3명 이상이면 모두에게 숨김(쓴 사람에게는 보임), 내가 숨긴 글은 나에게만 숨김
+    A.posts = []; const flagN = {}, cm = {}; let myHide = {};
+    for (const { uid, doc } of docs) { for (const pid of Object.keys(doc.flags || {})) flagN[pid] = (flagN[pid] || 0) + 1; if (uid === me) myHide = doc.hide || {}; }
+    for (const { uid, doc } of docs) for (const [cid, c] of Object.entries(doc.cmts || {})) (cm[c.pid] = cm[c.pid] || []).push(Object.assign({ cid, who: uid, me: uid === me }, c));
+    for (const { uid, doc } of docs) for (const [pid, p] of Object.entries(doc.posts || {})) {
+      const key = uid + ':' + pid, mine = uid === me, flags = flagN[key] || 0;
+      if (!mine && (flags >= 3 || myHide[key])) continue;
+      A.posts.push(Object.assign({ pid, key, who: uid, me: mine, flags, flagged: !!(docs.find(d => d.uid === me) || { doc: {} }).doc.flags?.[key], cmts: (cm[key] || []).sort((a, b) => a.ts.localeCompare(b.ts)) }, p));
+    }
+    A.posts.sort((a, b) => (b.open - a.open) || a.d.localeCompare(b.d) || b.ts.localeCompare(a.ts));
+    A.hiddenN = Object.keys(myHide).length;
     A.catches.sort((a, b) => b.d.localeCompare(a.d) || b.ts.localeCompare(a.ts));
     const cellTs = {}, qmap = {}, votes = {};
     for (const { uid, doc } of docs) {
@@ -229,6 +258,14 @@
       async ask(id, q) { m().qs[rid('q')] = { p: id, q: str(q, 140), ts: nowIso() }; return save(); },
       async answer(qid, t) { m().ans[rid('a')] = { qid, t: str(t, 240), ts: nowIso() }; return save(); },
       async vote(aid, n) { if (m().votes[aid] === n) delete m().votes[aid]; else m().votes[aid] = n; return save(); },
+      async matePost(o) { const all = Object.entries(m().posts); if (all.length >= 20) delete m().posts[all.sort((a, b) => a[1].ts.localeCompare(b[1].ts))[0][0]];
+        m().posts[rid('m')] = { kind: o.kind in MATE_KIND ? o.kind : 'trip', d: o.d, region: str(o.region, 20), meet: str(o.meet, 80), sp: str(mask(o.sp), 10), seats: Math.max(1, Math.min(9, Math.round(+o.seats || 1))), time: /^\d\d:\d\d$/.test(o.time || '') ? o.time : '', note: str(mask(o.note), 160), open: true, ts: nowIso() }; return save(); },
+      async mateClose(pid) { if (m().posts[pid]) m().posts[pid].open = !m().posts[pid].open; return save(); },
+      async mateDel(pid) { delete m().posts[pid]; return save(); },
+      async mateCmt(pid, t) { const all = Object.entries(m().cmts); if (all.length >= 150) delete m().cmts[all.sort((a, b) => a[1].ts.localeCompare(b[1].ts))[0][0]]; m().cmts[rid('k')] = { pid, t: str(mask(t), 160), ts: nowIso() }; return save(); },
+      async mateUncmt(cid) { delete m().cmts[cid]; return save(); },
+      async mateHide(pid) { if (m().hide[pid]) delete m().hide[pid]; else m().hide[pid] = true; return save(); },
+      async mateFlag(pid, why) { if (m().flags[pid]) delete m().flags[pid]; else m().flags[pid] = str(why || '부적절', 20); return save(); },
       myAdded: () => m().added,
       isMinePhoto: u => Object.values(m().photos).some(arr => arr.some(p => p.u === u)),
     };
@@ -293,14 +330,14 @@
     root.innerHTML = `<div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button><button class="tab" role="tab" data-tab="spot">🎣 낚시터·좌대</button>
         <button class="tab" role="tab" data-tab="tackle">🪝 오늘의 채비</button><button class="tab" role="tab" data-tab="find">🧭 내 배 찾기(초보)</button><button class="tab" role="tab" data-tab="catch">🎣 실제 조과</button>
-        <button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
+        <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
       <div data-r="filters" class="bar"></div><div class="status" data-r="status" role="status"></div><div data-r="view"></div><div class="dim small" data-r="foot"></div>`;
     const R = n => root.querySelector(`[data-r="${n}"]`);
     const $ = id => root.querySelector('#pl-' + id);
     let V = store.view(), editOpen = null, pick = null, aiAnswer = {};
     const st = { tab: 'shop', q: '', region: '전체', sea: '전체', sp: '전체', channel: '전체', sel: null, period: 'week', addKind: 'shop', need: false };
     try { Object.assign(st, JSON.parse(localStorage.getItem('places.ui') || '{}'), { sel: null, q: '' }); } catch (e) {}
-    if (!['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
+    if (!['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
     const saveUi = () => { try { localStorage.setItem('places.ui', JSON.stringify({ tab: st.tab, region: st.region, sea: st.sea, period: st.period })); } catch (e) {} };
     const say = msg => { R('status').textContent = msg || store.status || ''; };
     const run = (p, okMsg) => Promise.resolve(p).then(() => say(store.status || okMsg || ''), e => say(e && e.message === 'no-assets' ? '이 화면에서는 사진을 올릴 수 없습니다(권한 없음).' : '처리하지 못했습니다. 다시 해 주세요.'));
@@ -360,7 +397,7 @@
 
     function filters() {
       if (st.tab === 'rank') { R('filters').innerHTML = ['day', 'week', 'month', 'year'].map(p => `<button class="chip" data-period="${p}" aria-pressed="${st.period === p}">${{ day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[p]}</button>`).join(''); return; }
-      if (['add', 'qa', 'find', 'catch', 'tackle'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
+      if (['add', 'qa', 'find', 'catch', 'tackle', 'mate'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
       R('filters').innerHTML = `<input type="search" id="pl-q" placeholder="${st.tab === 'shop' ? '낚시점 이름·주소·대여 품목' : st.tab === 'spot' ? '낚시터 이름·주소·종류' : '배 이름·항구·어종'} 검색" value="${esc(st.q)}" aria-label="검색">
         <select id="pl-region" aria-label="지역">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select>
         ${['전체', '서해', '남해', '동해', '제주'].map(s => `<button class="chip" data-sea="${s}" aria-pressed="${st.sea === s}">${s}</button>`).join('')}
@@ -809,6 +846,70 @@
         if (sel) { const p = moorPt(sel.x) || sel.x; map.setView([p.lat, p.lon], 13); } else if (pts.length && st.region !== '전체') map.fitBounds(L.featureGroup(pts).getBounds().pad(.3)); }
     }
     function select(id) { st.sel = id; editOpen = null; pick = null; store.hit(id); body(); if (innerWidth < 860 && $('detail')) $('detail').scrollIntoView({ behavior: 'smooth' }); }
+    /* 🤝 함께 낚시 · 차 같이 타기 — 연락은 앱 안 댓글로만, 만나는 곳은 공개 장소(항구·낚시점·낚시터)만, 돈 주고받기 기능 없음 */
+    function meetOptions(region) {
+      const r = D.regions[region]; if (!r) return [];
+      const o = r[4] ? [{ k: 'port:' + region, n: `⚓ ${r[4]} (항구)` }] : [];
+      (D.shops || []).filter(x => x.region === region).slice(0, 40).forEach(x => o.push({ k: 'shop:' + x.id, n: '🏪 ' + x.name }));
+      (D.spots || []).filter(x => x.region === region).slice(0, 40).forEach(x => o.push({ k: 'spot:' + x.id, n: '🎣 ' + x.name }));
+      return o;
+    }
+    function meetName(k) {
+      const [t, id] = String(k).split(/:(.*)/s);
+      if (t === 'port') { const r = D.regions[id]; return r && r[4] ? { n: `⚓ ${r[4]} (항구)`, lat: r[2], lon: r[3] } : null; }
+      const x = (D[t === 'shop' ? 'shops' : t === 'spot' ? 'spots' : ''] || []).find(y => y.id === id); return x ? { n: (t === 'shop' ? '🏪 ' : '🎣 ') + x.name, lat: x.lat, lon: x.lon } : null;
+    }
+    const nick = uid => uid === 'me' ? '나' : '낚시인 #' + (Array.from(String(uid)).reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 9000 + 1000);
+    function mateView() {
+      st.mate = st.mate || { kind: 'trip', region: st.region !== '전체' ? st.region : Object.keys(D.regions)[0], show: '전체' };
+      const M = st.mate, today = todayStr(), opts = meetOptions(M.region);
+      const posts = (V.posts || []).filter(p => p.d >= today && (M.show === '전체' || p.region === M.show));
+      const card = p => { const where = meetName(p.meet), left = p.cmts.length;
+        return `<div class="card" style="${p.open ? '' : 'opacity:.6'}"><div><b>${MATE_KIND[p.kind]}</b> · ${esc(p.d)} (${DOW[new Date(p.d + 'T00:00').getDay()]})${p.time ? ' ' + esc(p.time) : ''} · ${esc(p.region)} ${p.open ? '<span class="shared">모집 중</span>' : '<span class="dim">마감</span>'}</div>
+          <div class="small">만나는 곳: ${where ? `<b>${esc(where.n)}</b>` : '<span class="dim">공개 장소를 확인할 수 없음</span>'} · ${p.kind === 'ride' ? '태울 자리' : '함께할 사람'} ${p.seats}명${p.sp ? ' · 어종 ' + esc(p.sp) : ''}</div>
+          ${p.note ? `<div style="margin:4px 0">${esc(p.note)}</div>` : ''}
+          <div class="small muted">${esc(nick(p.me ? 'me' : p.who))} · ${esc(p.ts.slice(0, 10))}${p.me && p.flags ? ` · <span style="color:var(--p-warn)">신고 ${p.flags}건</span>` : ''}</div>
+          <div style="margin:6px 0 0;border-left:3px solid var(--p-line,#334);padding-left:8px">${p.cmts.map(c => `<div class="small"><b>${esc(nick(c.me ? 'me' : c.who))}</b> ${esc(c.t)} <span class="dim">${esc(new Date(c.ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))}</span>${c.me ? ` <button class="chip" data-mucmt="${esc(c.cid)}">지우기</button>` : ''}</div>`).join('') || '<div class="small dim">아직 댓글이 없습니다.</div>'}
+            ${store.canWrite ? `<div class="bar" style="margin-top:4px"><input data-mtxt="${esc(p.key)}" maxlength="160" placeholder="댓글로 물어보세요 (연락처는 자동으로 가려져요)" style="flex:1"><button class="chip" data-mcmt="${esc(p.key)}">댓글</button></div>` : ''}</div>
+          <div class="bar" style="margin-top:6px">${p.me ? `<button class="chip" data-mclose="${esc(p.pid)}">${p.open ? '모집 마감' : '다시 열기'}</button><button class="chip" data-mdel="${esc(p.pid)}">글 지우기</button>`
+            : `<button class="chip" data-mhide="${esc(p.key)}">숨기기</button><button class="chip" data-mflag="${esc(p.key)}" aria-pressed="${p.flagged}">${p.flagged ? '신고 취소' : '🚩 신고'}</button>`}
+            <button class="chip" data-mfam="${esc(p.key)}">👪 가족에게 알릴 문구</button></div></div>`; };
+      R('view').innerHTML = `<div class="small ${store.shared ? 'shared' : 'dim'}" style="margin-bottom:8px">${store.shared ? '🌐 ' : '💾 '}${esc(store.label)}</div>
+        ${store.shared ? '' : '<div class="card small" style="border-color:var(--p-warn)">이 화면(PC·휴대폰 앱)에서 쓴 모집 글은 <b>이 기기에만</b> 보입니다. 다른 낚시인과 모집하려면 「바다 조황 수첩」(공유)에서 올려 주세요.</div>'}
+        <div class="card small"><b>🛟 안전하게 만나기</b><br>• 연락은 이 앱 댓글로만 하고, 전화번호·계좌·메신저 아이디·집 주소는 쓰지 마세요(써도 자동으로 가려져요).<br>• 만나는 곳은 항구·낚시점·낚시터 같은 <b>공개 장소</b>만 고를 수 있어요.<br>• 처음 만나는 사람이면 출발 전에 <b>가족에게 일정과 만나는 곳을 알려 두세요</b>(「👪 가족에게 알릴 문구」).<br>• 기름값·뱃삯 나누기는 만나서 직접 정하세요. 이 앱은 돈을 주고받는 기능이 없어요.<br>• 이상한 글은 🚩 신고 — 3명이 신고하면 모두에게 숨겨집니다.</div>
+        <div class="grid2"><div class="card"><h2>✍ 모집 글 쓰기</h2>
+          ${store.canWrite ? `<div class="bar">${Object.entries(MATE_KIND).map(([k, l]) => `<button class="chip" data-mkind="${k}" aria-pressed="${M.kind === k}">${l}</button>`).join('')}</div>
+          <div class="bar"><label>날짜 <input type="date" id="pl-md" min="${today}" value="${esc(M.d || today)}"></label><label>시간 <input type="time" id="pl-mt" value="${esc(M.time || '05:00')}"></label></div>
+          <div class="bar"><label>지역 <select id="pl-mreg">${Object.keys(D.regions).map(r => `<option ${r === M.region ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>
+            <label>${M.kind === 'ride' ? '태울 자리' : '함께할 사람'} <select id="pl-mseat">${[1, 2, 3, 4, 5, 6].map(n => `<option>${n}</option>`).join('')}</select></label></div>
+          <div class="bar"><label style="flex:1">만나는 곳 <select id="pl-mmeet" style="max-width:100%">${opts.map(o => `<option value="${esc(o.k)}">${esc(o.n)}</option>`).join('') || '<option value="">이 지역은 공개 장소 자료가 없습니다</option>'}</select></label></div>
+          <div class="bar"><input id="pl-msp" maxlength="10" placeholder="어종 (예: 주꾸미)" value="${esc(M.sp || '')}"></div>
+          <textarea id="pl-mnote" maxlength="160" rows="3" style="width:100%" placeholder="${M.kind === 'ride' ? '예: 새벽 4시 출발, 낚시 가방 실을 자리 있어요' : '예: 처음이라 같이 배 타실 분, 채비는 각자'}">${esc(M.note || '')}</textarea>
+          <div class="small muted" id="pl-mprev"></div>
+          <button class="chip" id="pl-mpost" style="margin-top:6px">올리기</button>` : '<div class="small dim">보기 전용입니다.</div>'}</div>
+        <div class="card"><h2>📋 모집 글 (${posts.length})</h2><div class="bar"><select id="pl-mshow">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === M.show ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>${V.hiddenN ? `<span class="small dim">내가 숨긴 글 ${V.hiddenN}개</span>` : ''}</div>
+          ${posts.length ? '' : '<div class="empty">오늘 이후 모집 글이 아직 없습니다. 첫 글을 올려 보세요.</div>'}</div></div>
+        ${posts.map(card).join('')}`;
+      const keepForm = () => { if (!$('md')) return; Object.assign(M, { d: $('md').value, time: $('mt').value, sp: $('msp').value, note: $('mnote').value }); };
+      root.querySelectorAll('[data-mkind]').forEach(b => b.onclick = () => { keepForm(); M.kind = b.dataset.mkind; mateView(); });
+      if ($('mreg')) $('mreg').onchange = e => { keepForm(); M.region = e.target.value; mateView(); };
+      $('mshow').onchange = e => { M.show = e.target.value; mateView(); };
+      const prev = () => { const raw = ($('msp').value + ' ' + $('mnote').value), mk = mask(raw); $('mprev').textContent = mk !== raw.replace(/\s+$/, '') && mk.includes(HIDE) ? '⚠ 연락처·주소로 보이는 부분은 〔가림〕으로 바뀌어 올라갑니다.' : ''; };
+      if ($('mnote')) { $('mnote').oninput = prev; $('msp').oninput = prev; }
+      if ($('mpost')) $('mpost').onclick = () => { keepForm(); const meet = $('mmeet').value;
+        if (!/^\d{4}-\d\d-\d\d$/.test(M.d) || M.d < today) { say('오늘 이후 날짜를 골라 주세요'); return; }
+        if (!meet || !meetName(meet)) { say('만나는 곳(공개 장소)을 골라 주세요'); return; }
+        run(store.matePost({ kind: M.kind, d: M.d, time: M.time, region: M.region, meet, sp: M.sp, seats: +$('mseat').value, note: M.note }), '모집 글을 올렸습니다').then(() => { M.note = ''; M.sp = ''; V = store.view(); mateView(); }); };
+      root.querySelectorAll('[data-mcmt]').forEach(b => b.onclick = () => { const inp = root.querySelector(`[data-mtxt="${window.CSS.escape(b.dataset.mcmt)}"]`); const t = inp && inp.value.trim(); if (!t) return; run(store.mateCmt(b.dataset.mcmt, t), '댓글을 달았습니다').then(() => { V = store.view(); mateView(); }); });
+      root.querySelectorAll('[data-mucmt]').forEach(b => b.onclick = () => run(store.mateUncmt(b.dataset.mucmt)).then(() => { V = store.view(); mateView(); }));
+      root.querySelectorAll('[data-mclose]').forEach(b => b.onclick = () => run(store.mateClose(b.dataset.mclose)).then(() => { V = store.view(); mateView(); }));
+      root.querySelectorAll('[data-mdel]').forEach(b => b.onclick = () => run(store.mateDel(b.dataset.mdel), '글을 지웠습니다').then(() => { V = store.view(); mateView(); }));
+      root.querySelectorAll('[data-mhide]').forEach(b => b.onclick = () => run(store.mateHide(b.dataset.mhide), '이 글을 숨겼습니다').then(() => { V = store.view(); mateView(); }));
+      root.querySelectorAll('[data-mflag]').forEach(b => b.onclick = () => run(store.mateFlag(b.dataset.mflag, '부적절'), '신고했습니다. 3명이 신고하면 모두에게 숨겨집니다').then(() => { V = store.view(); mateView(); }));
+      root.querySelectorAll('[data-mfam]').forEach(b => b.onclick = () => { const p = (V.posts || []).find(x => x.key === b.dataset.mfam); if (!p) return; const w = meetName(p.meet);
+        const txt = `[낚시 일정] ${p.d}${p.time ? ' ' + p.time : ''} · ${p.region} · 만나는 곳: ${w ? w.n.replace(/^\S+\s/, '') : '-'} · ${MATE_KIND[p.kind].replace(/^\S+\s/, '')}${p.sp ? ' · ' + p.sp : ''}. 처음 만나는 낚시인과 함께 가요. 도착하면 연락할게요.`;
+        (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => say('가족에게 보낼 문구를 복사했어요. 문자·메신저에 붙여넣어 보내세요.'), () => { window.prompt('아래 문구를 복사해 가족에게 보내세요', txt); }); });
+    }
     function qaView() {   // 모든 질문 모아 보기: 답 없는 질문 먼저
       const rows = Object.entries(V.qs).flatMap(([pid, arr]) => arr.map(q => ({ q, x: findPlace(pid) }))).filter(r => r.x)
         .sort((a, b) => (a.q.answers.length ? 1 : 0) - (b.q.answers.length ? 1 : 0) || b.q.ts.localeCompare(a.q.ts));
@@ -868,7 +969,7 @@
         if (!o.name) return; run(store.add(o), '등록했습니다').then(() => { if (k !== 'event') { st.tab = k; st.sel = o.id; render(); } }); };
     }
     function body() { if (st.tab !== 'find') stopFinder();
-      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
+      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
       root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); }); }
     function bindChips() {
       root.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { st.sea = b.dataset.sea; saveUi(); render(); });
@@ -887,7 +988,7 @@
     store.onChange(() => { V = store.view(); const ae = document.activeElement;
       if (ae && root.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.value && ae.type !== 'file') { say(); return; }   // 입력 중이면 화면을 다시 그리지 않음
       body(); say(); });
-    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
+    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
     render();
     return { setRegion(name, lat, lon) {   // 기준 지역(PC 운전 개요): 같은 이름이 없으면 가까운 지역(60km 안)
         let key = D.regions[name] ? name : null;
