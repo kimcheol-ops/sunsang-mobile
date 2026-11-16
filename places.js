@@ -152,6 +152,9 @@
   const YN = new Set(['yes', 'no', 'unk']), TOILET = new Set(['수세식', '간이', '없음', 'unk']);
   const okLat = n => typeof n === 'number' && n > 32 && n < 39.5, okLon = n => typeof n === 'number' && n > 123.5 && n < 132.5;
   const str = (s, n) => String(s ?? '').slice(0, n);
+  // ⛴ 출조표 연락처: 업체 전화번호 모양(지역번호·휴대폰·1588 등)만, 카카오톡 채널 주소(pf.kakao.com)만 — 그 밖은 버림
+  const cleanPhone = s => { const v = String(s ?? '').replace(/[^\d-]/g, ''); return /^(0\d{1,2}-?\d{3,4}-?\d{4}|1\d{3}-?\d{4})$/.test(v) ? v : ''; };
+  const cleanKakao = s => { const v = String(s ?? '').trim(); return /^https:\/\/pf\.kakao\.com\/_[A-Za-z0-9]{3,20}(\/chat)?$/.test(v) ? v : ''; };
   // 함께 낚시 글·댓글: 전화번호·계좌·이메일·메신저 아이디·자세한 주소는 자동으로 가림(쓸 때와 읽을 때 모두)
   const HIDE = '〔가림〕';
   const mask = s => String(s ?? '')
@@ -187,8 +190,10 @@
       o.posts[pid] = { kind: p.kind, d: p.d, region: str(p.region, 20), meet: str(p.meet, 80), sp: str(mask(p.sp), 10), seats: Math.max(1, Math.min(9, Math.round(+p.seats || 1))), time: /^\d\d:\d\d$/.test(p.time || '') ? p.time : '', note: str(mask(p.note), 160), open: p.open !== false, ts: str(p.ts, 30) };
     for (const [cid, c] of Object.entries(v.cmts || {}).slice(0, 200)) if (c && typeof c.pid === 'string' && typeof c.t === 'string' && c.t.trim()) o.cmts[cid] = { pid: str(c.pid, 120), t: str(mask(c.t), 160), ts: str(c.ts, 30) };
     // 🪑 빈자리(선장님·업체가 직접 올림, 본인 확인 안 됨) { p: 배 id, d, left, sp, time, note, ts } · 🧹 깨끗한 바다 { 지역: { 'YYYY-MM': 봉지 수 } }
-    for (const [sid, s] of Object.entries(v.seats || {}).slice(0, 30)) if (s && typeof s.p === 'string' && /^\d{4}-\d\d-\d\d$/.test(s.d || ''))
-      o.seats[sid] = { p: str(s.p, 60), d: s.d, left: Math.max(0, Math.min(40, Math.round(+s.left || 0))), sp: str(mask(s.sp), 10), time: /^\d\d:\d\d$/.test(s.time || '') ? s.time : '', note: str(mask(s.note), 120), ts: str(s.ts, 30) };
+    // ⛴ 주간 출조표(v7.1): + phone(선장님이 직접 넣은 업체 번호, 번호 모양만 허용) · kakao(카카오톡 채널 주소만) · cancel(취소석)
+    for (const [sid, s] of Object.entries(v.seats || {}).slice(0, 60)) if (s && typeof s.p === 'string' && /^\d{4}-\d\d-\d\d$/.test(s.d || ''))
+      o.seats[sid] = { p: str(s.p, 60), d: s.d, left: Math.max(0, Math.min(40, Math.round(+s.left || 0))), sp: str(mask(s.sp), 10), time: /^\d\d:\d\d$/.test(s.time || '') ? s.time : '', note: str(mask(s.note), 120), ts: str(s.ts, 30),
+        phone: cleanPhone(s.phone), kakao: cleanKakao(s.kakao), cancel: s.cancel === true };
     for (const [rg, m] of Object.entries(v.clean || {}).slice(0, 40)) if (m && typeof m === 'object') { const c = {}; for (const [ym, n] of Object.entries(m)) if (/^\d{4}-\d\d$/.test(ym) && +n > 0) c[ym] = Math.min(500, Math.round(+n)); if (Object.keys(c).length) o.clean[str(rg, 20)] = c; }
     // 👪 우리끼리 모임 { 초대 코드: 모임 이름 } · 모임 조황 { g: 코드, d, sp, n, where: 시·도 이름, note, ts } — 정확한 위치·사진·연락처는 없음
     for (const [code, nm] of Object.entries(v.groups || {}).slice(0, 5)) if (/^[A-Z0-9]{6}$/.test(code)) o.groups[code] = str(mask(nm), 20) || '우리 모임';
@@ -302,8 +307,12 @@
       async mateUncmt(cid) { delete m().cmts[cid]; return save(); },
       async mateHide(pid) { if (m().hide[pid]) delete m().hide[pid]; else m().hide[pid] = true; return save(); },
       async mateFlag(pid, why) { if (m().flags[pid]) delete m().flags[pid]; else m().flags[pid] = str(why || '부적절', 20); return save(); },
-      async seatPost(o) { const all = Object.entries(m().seats); if (all.length >= 20) delete m().seats[all.sort((a, b) => a[1].ts.localeCompare(b[1].ts))[0][0]];
-        m().seats[rid('s')] = { p: str(o.p, 60), d: o.d, left: Math.max(0, Math.min(40, Math.round(+o.left || 0))), sp: str(mask(o.sp), 10), time: /^\d\d:\d\d$/.test(o.time || '') ? o.time : '', note: str(mask(o.note), 120), ts: nowIso() }; return save(); },
+      async seatPost(o) { const t0 = new Date(), today = `${t0.getFullYear()}-${String(t0.getMonth() + 1).padStart(2, '0')}-${String(t0.getDate()).padStart(2, '0')}`; for (const [k, s] of Object.entries(m().seats)) if (s.d < today) delete m().seats[k];   // 지난 출조는 정리
+        for (const d of (o.days || [o.d])) { const all = Object.entries(m().seats); if (all.length >= 50) delete m().seats[all.sort((a, b) => a[1].ts.localeCompare(b[1].ts))[0][0]];
+          m().seats[rid('s')] = { p: str(o.p, 60), d, left: Math.max(0, Math.min(40, Math.round(+o.left || 0))), sp: str(mask(o.sp), 10), time: /^\d\d:\d\d$/.test(o.time || '') ? o.time : '', note: str(mask(o.note), 120), ts: nowIso(),
+            phone: cleanPhone(o.phone), kakao: cleanKakao(o.kakao), cancel: o.cancel === true }; }
+        return save(); },
+      async seatCancel(sid) { const s = m().seats[sid]; if (s) { s.cancel = !s.cancel; if (s.cancel && !s.left) s.left = 1; s.ts = nowIso(); } return save(); },
       async seatLeft(sid, n) { if (m().seats[sid]) { m().seats[sid].left = Math.max(0, Math.min(40, Math.round(+n || 0))); m().seats[sid].ts = nowIso(); } return save(); },
       async groupJoin(code, name) { const g = m().groups = m().groups || {}; if (!/^[A-Z0-9]{6}$/.test(code) || (!g[code] && Object.keys(g).length >= 5)) return; g[code] = str(mask(name), 20) || g[code] || '우리 모임'; return save(); },
       async groupLeave(code) { const g = m().groups || {}; delete g[code]; const gp = m().gposts || {}; for (const [k, p] of Object.entries(gp)) if (p.g === code) delete gp[k]; return save(); },
@@ -375,15 +384,15 @@
     root.classList.add('pl');
     root.innerHTML = `<div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button><button class="tab" role="tab" data-tab="spot">🎣 낚시터·좌대</button>
-        <button class="tab" role="tab" data-tab="tackle">🪝 오늘의 채비</button><button class="tab" role="tab" data-tab="find">🧭 내 배 찾기(초보)</button><button class="tab" role="tab" data-tab="catch">🎣 실제 조과</button>
-        <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="group">👪 우리 모임</button><button class="tab" role="tab" data-tab="seat">🪑 빈자리</button><button class="tab" role="tab" data-tab="clean">🧹 깨끗한 바다</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
+        <button class="tab" role="tab" data-tab="tackle">🪝 오늘의 채비</button><button class="tab" role="tab" data-tab="edu">📚 채비 교육</button><button class="tab" role="tab" data-tab="find">🧭 내 배 찾기(초보)</button><button class="tab" role="tab" data-tab="catch">🎣 실제 조과</button>
+        <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="group">👪 우리 모임</button><button class="tab" role="tab" data-tab="seat">⛴ 주간 출조표</button><button class="tab" role="tab" data-tab="clean">🧹 깨끗한 바다</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
       <div data-r="filters" class="bar"></div><div class="status" data-r="status" role="status"></div><div data-r="view"></div><div class="dim small" data-r="foot"></div>`;
     const R = n => root.querySelector(`[data-r="${n}"]`);
     const $ = id => root.querySelector('#pl-' + id);
     let V = store.view(), editOpen = null, pick = null, aiAnswer = {};
     const st = { tab: 'shop', q: '', region: '전체', sea: '전체', sp: '전체', channel: '전체', sel: null, period: 'week', addKind: 'shop', need: false };
     try { Object.assign(st, JSON.parse(localStorage.getItem('places.ui') || '{}'), { sel: null, q: '' }); } catch (e) {}
-    if (!['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
+    if (!['shop', 'boat', 'spot', 'tackle', 'edu', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
     const saveUi = () => { try { localStorage.setItem('places.ui', JSON.stringify({ tab: st.tab, region: st.region, sea: st.sea, period: st.period })); } catch (e) {} };
     const say = msg => { R('status').textContent = msg || store.status || ''; };
     const run = (p, okMsg) => Promise.resolve(p).then(() => say(store.status || okMsg || ''), e => say(e && e.message === 'no-assets' ? '이 화면에서는 사진을 올릴 수 없습니다(권한 없음).' : '처리하지 못했습니다. 다시 해 주세요.'));
@@ -443,7 +452,7 @@
 
     function filters() {
       if (st.tab === 'rank') { R('filters').innerHTML = ['day', 'week', 'month', 'year'].map(p => `<button class="chip" data-period="${p}" aria-pressed="${st.period === p}">${{ day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[p]}</button>`).join(''); return; }
-      if (['add', 'qa', 'find', 'catch', 'tackle', 'mate', 'group', 'seat', 'clean'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
+      if (['add', 'qa', 'find', 'catch', 'tackle', 'edu', 'mate', 'group', 'seat', 'clean'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
       R('filters').innerHTML = `<input type="search" id="pl-q" placeholder="${st.tab === 'shop' ? '낚시점 이름·주소·대여 품목' : st.tab === 'spot' ? '낚시터 이름·주소·종류' : '배 이름·항구·어종'} 검색" value="${esc(st.q)}" aria-label="검색">
         <select id="pl-region" aria-label="지역">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select>
         ${['전체', '서해', '남해', '동해', '제주'].map(s => `<button class="chip" data-sea="${s}" aria-pressed="${st.sea === s}">${s}</button>`).join('')}
@@ -1030,35 +1039,184 @@
       root.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => run(store.gdel(b.dataset.gdel), '지웠어요').then(after));
     }
     /* 🪑 선장님이 올리는 빈자리 — 본인 확인 안 된 정보, 예약·결제는 각 배로(자동 수집 없음) */
+    /* 📚 채비 교육 — 릴(기어비) · 낚싯대(휨새 9:1·8:2·7:3) · 에기 · 봉돌(수심·물때) · 낚싯줄(호수·단차). 일반 요령만, 상표·제품 이름 없음 */
+    const EDU = {
+      reel: { t: '🎣 릴 · 기어비', intro: '기어비는 「핸들 한 바퀴에 스풀이 몇 바퀴 도는가」예요. 숫자가 작으면(5~6) 힘이 세고 천천히, 크면(7~9) 빠르게 감겨요. 선상에서는 대부분 작은 베이트릴(장구통·베이트), 무거운 봉돌·깊은 곳은 전동릴도 써요.',
+        rows: [['저기어 5~6:1', '감는 힘이 셈 · 천천히 일정하게', '우럭·갈치 무거운 봉돌, 문어(바닥에서 끌어올리기), 타이라바 등속 감기(6 전후)'],
+          ['중기어 6~7:1', '힘과 속도의 균형 — 처음 한 대라면 이것', '쭈꾸미·갑오징어 에깅, 광어 다운샷, 한치'],
+          ['고기어 7~9:1', '빨리 감김 · 줄 회수·채비 다시 내리기가 빠름', '쭈꾸미(빠른 회수로 회전 수 늘리기), 무늬오징어 팁런, 지깅 빠른 액션'],
+          ['전동릴', '버튼으로 감기 · 수심 표시', '갈치(가지채비 5~8단), 깊은 우럭, 대구 — 배터리 확인']],
+        tips: ['한 바퀴에 감기는 줄 길이 = 기어비 × 스풀 둘레(cm). 아래 계산기로 비교해 보세요.', '드랙은 원줄 강도의 1/4~1/3 정도로 — 큰 고기가 갑자기 당겨도 줄이 끊기지 않게.', '바닷물에 쓴 뒤에는 민물로 가볍게 헹구고 그늘에 말려요(드랙은 풀어 두기).'] },
+      rod: { t: '🎋 낚싯대 · 휨새(9:1 · 8:2 · 7:3)', intro: '휨새(테이퍼)는 고기를 걸었을 때 대가 어디서부터 휘는지예요. 「9:1」은 끝 1할만 휘는 빳빳한 대(패스트), 「7:3」·「6:4」는 허리까지 휘는 부드러운 대(레귤러·슬로)예요. 1:9, 1:7처럼 거꾸로 적기도 해요. 길이·강도(UL·L·ML·M·MH·H)와 함께 봐요.',
+        rows: [['9:1 (패스트)', '끝만 휨 · 감도 좋고 챔질이 빠름', '쭈꾸미·갑오징어 에깅(바닥 감지), 한치 이카메탈, 광어 다운샷'],
+          ['8:2', '감도와 버팀의 중간', '쭈갑 겸용, 광어, 가벼운 우럭'],
+          ['7:3 (레귤러)', '허리까지 휘어 쿠션 · 바늘이 덜 빠짐', '참돔 타이라바, 우럭·갈치 선상대, 문어'],
+          ['6:4 (슬로)', '많이 휘어 큰 고기 버팀', '참돔 대물, 방어 지깅(라이트), 감성돔 찌낚시']],
+        types: [['선상 에깅대', '1.6~2.1m ML 내외, 9:1 — 쭈꾸미·갑오징어'], ['타이라바대', '1.9~2.3m L~ML, 7:3 — 참돔'], ['다운샷대', '1.9~2.2m ML, 8:2~9:1 — 광어'], ['우럭·갈치 선상대', '1.8~2.7m M~H, 7:3 — 무거운 봉돌'], ['지깅대', '1.8~2.1m M~H — 방어·부시리'], ['갯바위 찌낚싯대', '5.3m 내외 1~1.5호 — 감성돔·벵에돔'], ['원투대', '3.6~4.5m — 방파제 원투']],
+        tips: ['봉돌·지그 무게가 대에 적힌 「적정 무게」 안에 들어가야 대가 부러지지 않아요.', '처음에는 겸용대(쭈갑 겸용 1.9m ML 8:2 정도) 하나로 시작해 보세요.'] },
+      egi: { t: '🦐 에기', intro: '에기 크기는 「호」(약 3cm × 호수)로, 무게·가라앉는 빠르기(노멀·쉘로우·딥)가 함께 적혀 있어요. 어종·수심·물살에 따라 고르고, 색은 「오늘의 채비」의 색 요령을 보세요.',
+        rows: [['쭈꾸미', '2.0~2.5호 2~3개(애자 채비)', '봉돌로 바닥을 「툭툭」 — 30cm 안에서 흔들고 무게가 오면 천천히 감기'],
+          ['갑오징어', '2.5~3.0호(단차 채비)', '쭈꾸미보다 천천히, 멈춤(스테이)을 길게 — 위 에기에 잘 붙어요'],
+          ['문어', '문어 에기 3.5~4.0호 · 애자', '바닥을 끌듯이 · 무게가 실리면 한 번에 강하게 챔질 후 쉬지 않고 감기'],
+          ['낙지', '낙지 봉돌 + 칠게·비계 / 에기 2.5~3호', '바닥에 두고 살살 끌기 · 묵직하면 1초 쉬고 천천히'],
+          ['무늬오징어', '팁런 3.0~3.5호(30~40g)', '쳐 올린 뒤 가라앉힐 때(폴링) 안아요 — 줄의 변화를 봐요'],
+          ['한치', '이카메탈 + 드롭퍼 에기 2.0~2.5호', '집어등 그림자 경계, 층을 맞춰 살살 흔들기']],
+        tips: ['물살이 세면 더 무거운 에기·봉돌, 약하면 가벼운 것으로.', '에기 바늘(갈고리)은 녹슬기 쉬우니 쓰고 나서 민물에 헹궈요.'] },
+      lead: { t: '⚖ 봉돌', intro: '봉돌 「호」는 무게예요(1호 ≈ 3.75g). 수심이 깊을수록, 물살(사리 쪽)이 셀수록, 바람이 셀수록 무겁게 — 그래야 줄이 비스듬히 날리지 않고 바닥을 느낄 수 있어요. 같은 배에서는 옆 사람과 엉키지 않게 선장님이 정한 호수를 꼭 따라요.',
+        tips: ['조금(물살 약함) → 가볍게, 사리(물살 셈) → 무겁게.', '수심 40m가 넘으면 한 단계, 60m가 넘으면 두 단계 무겁게 생각해요.', '친환경(주석·텅스텐) 봉돌도 있어요 — 바다에 남는 납을 줄여요.'] },
+      line: { t: '🧵 낚싯줄 · 단차', intro: '원줄은 대부분 PE(합사) — 가늘고 늘어나지 않아 입질이 잘 전해져요. 끝에는 쇼크리더(카본·나일론)를 묶어 바위·이빨에 덜 끊기게 해요. 「호수」가 클수록 굵고 세요(대략, 제품마다 달라요).',
+        pe: [['0.6호', '약 12lb(5kg)'], ['0.8호', '약 16lb(7kg)'], ['1호', '약 20lb(9kg)'], ['1.5호', '약 25lb(11kg)'], ['2호', '약 30lb(14kg)'], ['3호', '약 40lb(18kg)'], ['4호', '약 50lb(23kg)']],
+        mono: [['2호', '약 8lb'], ['3호', '약 12lb'], ['4호', '약 16lb'], ['5호', '약 20lb'], ['8호', '약 30lb'], ['12호', '약 45lb']],
+        tips: ['단차 = 봉돌에서 에기·바늘까지의 거리와 간격이에요. 바닥에 사는 어종은 짧게, 바닥에서 떠 있는 어종은 길게.', '물살이 셀수록 목줄·단차를 짧게 하면 엉킴이 줄어요.', 'PE와 쇼크리더는 FG·전차 매듭처럼 가는 매듭으로 — 「낚시법 도장 깨기」의 매듭 연습도 해 보세요.'] }
+    };
+    // 단차 그림: 봉돌(아래) · 에기/바늘 위치(cm)
+    const RIGS = [['쭈꾸미 애자 채비', [[15, '에기'], [30, '에기']], '봉돌 위 10~20cm에 에기 2~3개(단차 거의 없음)'], ['갑오징어 단차', [[5, '에기'], [45, '가지 에기']], '봉돌 바로 위 에기 1개 + 30~50cm 위 가지 에기'],
+      ['광어 다운샷', [[45, '바늘(웜)']], '봉돌~바늘 30~60cm, 물살 셀수록 짧게'], ['우럭 편대·카드', [[60, '바늘'], [130, '바늘']], '가지 간격 60~80cm, 목줄 50~80cm'], ['갈치 가지채비', [[80, '바늘'], [170, '바늘'], [260, '바늘']], '가지 간격 70~100cm, 5~8단']];
+    function rigSvg(r) {
+      const H = 170, scale = 130 / Math.max(...r[1].map(x => x[0]), 50);
+      return `<svg viewBox="0 0 150 ${H}" width="150" height="${H}" role="img" aria-label="${esc(r[0])} 그림"><line x1="70" y1="6" x2="70" y2="${H - 22}" stroke="#9fb3c8" stroke-width="2"/>
+        <rect x="60" y="${H - 22}" width="20" height="16" rx="4" fill="#8a96a3"/><text x="86" y="${H - 9}" font-size="10" fill="currentColor">봉돌</text>
+        ${r[1].map(([cm, lab]) => { const y = H - 22 - cm * scale; return `<line x1="70" y1="${y}" x2="96" y2="${y + 6}" stroke="#9fb3c8"/><ellipse cx="104" cy="${y + 7}" rx="9" ry="4" fill="#F5C46B"/><text x="6" y="${y + 4}" font-size="10" fill="currentColor">${cm}cm</text><text x="116" y="${y + 10}" font-size="9" fill="currentColor">${esc(lab)}</text>`; }).join('')}</svg>`;
+    }
+    function eduView() {
+      const E = st.edu = st.edu || { sec: 'reel', gear: 6.3, spool: 3.6, sp: '쭈꾸미', sea: '서해', depth: 30, d: todayStr() };
+      const sec = EDU[E.sec] ? E.sec : 'reel', X = EDU[sec];
+      const table = rows => `<div style="overflow-x:auto"><table><thead><tr><th>구분</th><th>특징</th><th>어울리는 어종·채비</th></tr></thead><tbody>${rows.map(r => `<tr><td><b>${esc(r[0])}</b></td><td class="small">${esc(r[1])}</td><td class="small">${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>`;
+      const tips = X.tips ? `<ul class="small" style="margin:6px 0;padding-left:18px">${X.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : '';
+      const sps = Object.keys(TACKLE), t = TACKLE[E.sp] || TACKLE[sps[0]];
+      let body = '';
+      if (sec === 'reel') {
+        const cm = +(E.gear * Math.PI * E.spool).toFixed(0);
+        body = `${table(X.rows)}<div class="card" style="margin-top:8px"><h2>🧮 한 바퀴에 감기는 줄</h2><div class="bar"><label>기어비 <input type="number" id="pl-egear" step="0.1" min="3" max="10" value="${E.gear}" style="width:70px"></label><label>스풀 지름(cm) <input type="number" id="pl-espool" step="0.1" min="2" max="8" value="${E.spool}" style="width:70px"></label></div>
+          <div class="cap" style="font-size:20px">약 <b>${cm}cm</b> / 한 바퀴</div><div class="small muted">수심 30m를 감으려면 약 ${Math.ceil(3000 / Math.max(1, cm))}바퀴 · 쭈꾸미처럼 자주 올렸다 내리는 낚시는 한 바퀴 길이가 긴(고기어) 쪽이 편해요.</div></div>
+          <div class="card"><h2>📋 어종별 추천 릴</h2>${sps.map(k => `<div class="small"><b>${esc(k)}</b> — ${esc(TACKLE[k].reel || '')}</div>`).join('')}</div>`;
+      } else if (sec === 'rod') {
+        body = `${table(X.rows)}<div class="card" style="margin-top:8px"><h2>🎋 낚싯대 종류</h2>${X.types.map(r => `<div class="small"><b>${esc(r[0])}</b> — ${esc(r[1])}</div>`).join('')}</div>
+          <div class="card"><h2>📋 어종별 추천 낚싯대(스펙)</h2>${sps.map(k => `<div class="small"><b>${esc(k)}</b> — ${esc(TACKLE[k].rod || '')}</div>`).join('')}</div>`;
+      } else if (sec === 'egi') {
+        body = table(X.rows.map(r => [r[0], r[1], r[2]]));
+      } else if (sec === 'lead') {
+        const d = new Date((E.d || todayStr()) + 'T12:00'), l = leadFor(E.sp, E.sea, d), steps = E.depth > 60 ? 2 : E.depth > 40 ? 1 : 0;
+        const stepOf = (u, b) => u === '호' ? (b >= 30 ? 5 : b >= 12 ? 2 : 1) : u === 'g' ? 10 : 0.5;
+        const v = l ? Math.min(l.r[1], +(l.v + steps * stepOf(l.u, l.r[1])).toFixed(1)) : null, g = l && l.u === '호' ? Math.round(v * 3.75) : null;
+        body = `<div class="card"><h2>🧮 봉돌 계산기 <span class="small muted">물때 + 수심 + 해역</span></h2>
+          <div class="bar"><select id="pl-esp">${sps.map(k => `<option ${k === E.sp ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select><select id="pl-esea">${['서해', '남해', '동해', '제주'].map(s => `<option ${s === E.sea ? 'selected' : ''}>${s}</option>`).join('')}</select>
+            <label>날짜 <input type="date" id="pl-ed" value="${esc(E.d)}"></label><label>수심(m) <input type="number" id="pl-edepth" min="2" max="150" value="${E.depth}" style="width:70px"></label></div>
+          ${l ? `<div class="cap" style="font-size:22px">${esc(E.sp)} 봉돌·무게 <b>${v}${esc(l.u)}</b>${g ? ` <span class="small">(약 ${g}g)</span>` : ''}</div><div class="small muted">범위 ${l.r[0]}~${l.r[1]}${esc(l.u)} · 물살 ${strengthPct(d)}%${steps ? ` · 수심 ${E.depth}m라 ${steps}단계 무겁게` : ''} · ${esc(t.m || '')}</div>` : '<div class="small dim">이 어종은 봉돌 자료가 없어요.</div>'}</div>
+          <div class="card"><h2>📋 어종·해역별 봉돌 범위</h2><div style="overflow-x:auto"><table><thead><tr><th>어종</th><th>서해</th><th>남해</th><th>동해</th><th>제주</th></tr></thead><tbody>${sps.map(k => `<tr><td><b>${esc(k)}</b></td>${['서해', '남해', '동해', '제주'].map(s => { const r = TACKLE[k].lead[s] || TACKLE[k].lead['남해']; return `<td class="small">${r[0]}~${r[1]}${esc(TACKLE[k].u || '호')}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+      } else {
+        body = `<div class="grid2"><div class="card"><h2>PE(합사) 호수 → 강도</h2>${X.pe.map(r => `<div class="small"><b>${r[0]}</b> ${r[1]}</div>`).join('')}</div><div class="card"><h2>카본·나일론 호수 → 강도</h2>${X.mono.map(r => `<div class="small"><b>${r[0]}</b> ${r[1]}</div>`).join('')}<div class="small dim">대략 「호수 × 4」lb — 제품마다 달라요</div></div></div>
+          <div class="card"><h2>📋 어종별 원줄·목줄</h2>${sps.map(k => `<div class="small"><b>${esc(k)}</b> — ${esc(TACKLE[k].line || '')}</div>`).join('')}</div>
+          <div class="card"><h2>📐 단차(봉돌 + 에기·바늘) 그림</h2><div style="display:flex;flex-wrap:wrap;gap:10px">${RIGS.map(r => `<div style="text-align:center;max-width:170px">${rigSvg(r)}<div class="small"><b>${esc(r[0])}</b><br>${esc(r[2])}</div></div>`).join('')}</div></div>`;
+      }
+      R('view').innerHTML = `<div class="card"><h2>📚 채비 교육 · 설명 <span class="small muted">초보부터 매니아까지 — 일반 요령(상표·제품 순위 없음)</span></h2>
+          <div class="bar">${Object.entries(EDU).map(([k, v]) => `<button class="chip" data-esec="${k}" aria-pressed="${k === sec}">${esc(v.t)}</button>`).join('')}</div></div>
+        <div class="card"><h2>${esc(X.t)}</h2><div>${esc(X.intro)}</div>${tips}</div>${body}
+        <div class="small dim">오늘 바다에 맞춘 채비는 「🪝 오늘의 채비」, 실제로 해 보기는 게임 「🎓 낚시법 도장 깨기」에서.</div>`;
+      root.querySelectorAll('[data-esec]').forEach(b => b.onclick = () => { E.sec = b.dataset.esec; eduView(); });
+      const num = (id, k) => { if ($(id)) $(id).onchange = e => { const v = +e.target.value; if (v > 0) { E[k] = v; eduView(); } }; };
+      num('egear', 'gear'); num('espool', 'spool'); num('edepth', 'depth');
+      if ($('esp')) $('esp').onchange = e => { E.sp = e.target.value; eduView(); };
+      if ($('esea')) $('esea').onchange = e => { E.sea = e.target.value; eduView(); };
+      if ($('ed')) $('ed').onchange = e => { if (/^\d{4}-\d\d-\d\d$/.test(e.target.value)) { E.d = e.target.value; eduView(); } };
+    }
+    /* ⛴ 주간 출조표 — 선장님·업체가 직접 올린 출조 일정(확인 안 된 정보) · 어종·지역으로 배 찾기 · 남은 자리·취소석 · 관심 알림
+     *  📞 전화(배 정보의 공개 번호 또는 선장님이 넣은 번호) · 💬 카카오톡 채널 1:1 채팅 링크(무료) · 날짜별 채비 예측(물살·봉돌·원줄)
+     *  예약·결제는 각 배로 연결, 남의 예약 사이트를 자동으로 뒤지지 않음 */
+    const WATCH_KEY = 'places.watch.v1';
+    const watchGet = () => { try { const w = JSON.parse(localStorage.getItem(WATCH_KEY) || 'null'); return w && Array.isArray(w.list) ? w : { list: [], seen: '' }; } catch (e) { return { list: [], seen: '' }; } };
+    const watchSet = w => { try { localStorage.setItem(WATCH_KEY, JSON.stringify(w)); } catch (e) {} };
+    const tkey = sp => { sp = sp || ''; return Object.keys(TACKLE).find(k => sp.includes(k)) || (sp.includes('주꾸미') ? '쭈꾸미' : sp.includes('갑오') ? '갑오징어' : sp.includes('넙치') ? '광어' : sp.includes('조피') ? '우럭' : null); };
+    const ymdOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // 물살 세기(%): PC 운전 개요·해상 지도와 같은 식(음력 날짜 기준, 조금 30% ~ 사리 100%)
+    // 음력 날짜: 삭(합삭) 시각을 Meeus 식으로 구해 한국 시간 날짜로 셈(rigcast.js와 같은 식)
+    function newMoonMs(k) {
+      const T = k / 1236.85, r = Math.PI / 180, E = 1 - 0.002516 * T - 0.0000074 * T * T;
+      const M = (2.5534 + 29.1053567 * k - 0.0000014 * T * T) * r, Mp = (201.5643 + 385.81693528 * k + 0.0107582 * T * T) * r, F = (160.7108 + 390.67050284 * k - 0.0016118 * T * T) * r, Om = (124.7746 - 1.56375588 * k + 0.0020672 * T * T) * r;
+      let J = 2451550.09766 + 29.530588861 * k + 0.00015437 * T * T - 0.00000015 * T * T * T;
+      J += -0.40720 * Math.sin(Mp) + 0.17241 * E * Math.sin(M) + 0.01608 * Math.sin(2 * Mp) + 0.01039 * Math.sin(2 * F) + 0.00739 * E * Math.sin(Mp - M) - 0.00514 * E * Math.sin(Mp + M) + 0.00208 * E * E * Math.sin(2 * M)
+        - 0.00111 * Math.sin(Mp - 2 * F) - 0.00057 * Math.sin(Mp + 2 * F) + 0.00056 * E * Math.sin(2 * Mp + M) - 0.00042 * Math.sin(3 * Mp) + 0.00042 * E * Math.sin(M + 2 * F) + 0.00038 * E * Math.sin(M - 2 * F) - 0.00024 * E * Math.sin(2 * Mp - M) - 0.00017 * Math.sin(Om);
+      return (J - 2440587.5) * 864e5 - 69e3;
+    }
+    const kstDay = ms => Math.floor((ms + 9 * 3600e3) / 864e5);
+    const lunarDayOf = d => { const t = kstDay(d.getTime()); let k = Math.floor((d.getTime() / 864e5 / 365.25 + 1970 - 2000) * 12.3685) + 1; while (kstDay(newMoonMs(k)) > t) k--; return t - kstDay(newMoonMs(k)) + 1; };
+    const strengthPct = d => { const day = lunarDayOf(d); return Math.round(30 + 70 * (0.5 + 0.5 * Math.cos(2 * Math.PI * (day - 17.5) / 14.765294))); };
     function seatView() {
-      st.seat = st.seat || { region: st.region !== '전체' ? st.region : (Object.keys(D.regions).find(r => (D.boats || []).some(b => b.region === r)) || Object.keys(D.regions)[0]), show: '전체', sp: '' };
-      const S = st.seat, today = todayStr(), boats = (D.boats || []).filter(b => b.region === S.region && !b.sample).slice(0, 200);
-      const rows = (V.seats || []).filter(s => s.d >= today).map(s => ({ s, b: findPlace(s.p) })).filter(o => o.b && (S.show === '전체' || o.b.region === S.show) && (!S.sp || (o.s.sp || '').includes(S.sp) || (o.b.species || []).includes(S.sp)));
+      const firstReg = Object.keys(D.regions).find(r => (D.boats || []).some(b => b.region === r)) || Object.keys(D.regions)[0];
+      st.seat = st.seat || { region: st.region !== '전체' ? st.region : firstReg, show: st.region !== '전체' ? st.region : '전체', sp: '', only: false, cancel: false, pick: '', days: [], wsp: '' };
+      const S = st.seat, today = todayStr(), W = watchGet();
+      const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return ymdOf(d); });
+      if (!S.days.length) S.days = [week[0]];
+      const all = (V.seats || []).filter(s => s.d >= today && s.d <= week[6]).map(s => ({ s, b: findPlace(s.p) })).filter(o => o.b);
+      const rows = all.filter(o => (S.show === '전체' || o.b.region === S.show) && (!S.sp || (o.s.sp || '').includes(S.sp)) && (!S.only || o.s.left > 0) && (!S.cancel || o.s.cancel));
+      const byBoat = {}; rows.forEach(o => { const g = byBoat[o.b.id] = byBoat[o.b.id] || { b: o.b, cells: {}, left: 0, cancel: 0 }; (g.cells[o.s.d] = g.cells[o.s.d] || []).push(o.s); g.left += o.s.left; if (o.s.cancel) g.cancel++; });
+      const boats = Object.values(byBoat).sort((a, b) => b.cancel - a.cancel || b.left - a.left || a.b.name.localeCompare(b.b.name));
+      // 관심 알림: 등록한 어종·지역에 남은 자리·취소석이 새로 올라오면
+      const hits = all.filter(o => (o.s.left > 0 || o.s.cancel) && o.s.ts > (W.seen || '') && W.list.some(w => (w.region === '전체' || w.region === o.b.region) && (!w.sp || (o.s.sp || '').includes(w.sp))));
+      const seaOf = region => (regionInfo(region) || [])[1] || '서해';
+      const rigFor = (sp, region, d) => { const k = tkey(sp); if (!k) return null; const l = leadFor(k, seaOf(region), new Date(d + 'T12:00')); return l ? { k, l, t: TACKLE[k] } : null; };
+      const dayHead = d => { const dd = new Date(d + 'T12:00'), dow = dd.getDay(), rest = dow === 0 || dow === 6, s = strengthPct(dd), sps = rows.filter(o => o.s.d === d).map(o => o.s.sp).filter(Boolean);
+        const top = sps.sort((a, b) => sps.filter(x => x === b).length - sps.filter(x => x === a).length)[0], rg = top && rigFor(top, S.show !== '전체' ? S.show : (rows.find(o => o.s.d === d) || {}).b?.region, d);
+        return `<th style="min-width:92px;${rest ? 'color:var(--p-warn)' : ''}">${d === today ? '오늘' : `${+d.slice(5, 7)}/${+d.slice(8)}`}(${DOW[dow]})<br><span class="small">물살 ${s}%</span>${rg ? `<br><span class="small" title="${esc(rg.k)} 채비 예측">${esc(rg.k)} ${rg.l.v}${esc(rg.l.u === '호' ? '호' : rg.l.u)}</span>` : ''}</th>`; };
+      const cell = (g, d) => (g.cells[d] || []).map(s => `<button class="chip" data-pick="${esc(s.sid)}" style="display:block;width:100%;margin:2px 0;text-align:left;${s.cancel ? 'border-color:var(--p-bad);' : ''}${S.pick === s.sid ? 'outline:2px solid var(--p-acc,#4aa3ff);' : ''}">
+          ${s.cancel ? '<b style="color:var(--p-bad)">취소석</b> ' : ''}${esc(s.sp || '어종 미정')}${s.time ? ' ' + esc(s.time) : ''}<br>${s.left ? `<b style="color:var(--p-ok)">${s.left}자리</b>` : '<span class="dim">마감</span>'}</button>`).join('');
+      const pick = all.find(o => o.s.sid === S.pick);
+      const detail = pick ? (() => { const { s, b } = pick, phone = s.phone || b.phone || '', kakao = s.kakao || b.kakao || '', rg = rigFor(s.sp, b.region, s.d), dd = new Date(s.d + 'T12:00');
+        return `<div class="card" style="border-color:var(--p-acc,#4aa3ff)"><h2>🚤 ${esc(b.name)} <span class="small muted">${esc(b.region)}${b.port ? ' · ' + esc(b.port) : ''}</span></h2>
+          <div><b>${esc(s.d)} (${DOW[dd.getDay()]})${s.time ? ' ' + esc(s.time) + ' 출항' : ''}</b> · ${esc(s.sp || '어종 미정')} · ${s.left ? `남은 자리 <b style="color:var(--p-ok)">${s.left}자리</b>` : '<span class="dim">마감</span>'}${s.cancel ? ' · <b style="color:var(--p-bad)">취소석 생김</b>' : ''}</div>
+          ${s.note ? `<div class="small" style="margin:4px 0">${esc(s.note)}</div>` : ''}
+          <div class="bar" style="margin:6px 0">${phone ? `<a class="chip" href="tel:${esc(phone.replace(/-/g, ''))}">📞 전화 걸기 ${esc(phone)}</a>` : '<span class="small dim">등록된 전화번호 없음</span>'}${kakao ? `<a class="chip" href="${esc(kakao.endsWith('/chat') ? kakao : kakao + '/chat')}" target="_blank" rel="noopener">💬 카톡 채널로 문의</a>` : ''}<a class="chip" href="#" data-near="${esc(b.id)}">배 정보 보기</a></div>
+          ${rg ? `<div class="notice"><b>🪝 ${esc(rg.k)} 채비 예측 (${esc(s.d.slice(5))}, 물살 ${strengthPct(dd)}%)</b><br>${esc(rg.t.m)} · 봉돌·무게 <b>${rg.l.v}${esc(rg.l.u)}</b> (범위 ${rg.l.r[0]}~${rg.l.r[1]}) · ${esc(rg.t.line || '')}<br><span class="small">${esc(rg.t.egi || '')} · ${esc(rg.t.dan || '')}</span><br><span class="small dim">같은 배에서는 선장님이 정한 봉돌 호수를 따르세요.</span></div>` : ''}
+          <div class="small muted">올린 때 ${esc(new Date(s.ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))} · 확인 안 된 정보 · 예약·결제는 배로 직접</div></div>`; })() : '';
+      const mine = (V.seats || []).filter(s => s.me && s.d >= today).sort((a, b) => a.d.localeCompare(b.d));
+      const boatsOf = (D.boats || []).filter(b => b.region === S.region && !b.sample).slice(0, 300);
       R('view').innerHTML = `<div class="small ${store.shared ? 'shared' : 'dim'}" style="margin-bottom:8px">${store.shared ? '🌐 ' : '💾 '}${esc(store.label)}</div>
-        <div class="card small" style="border-color:var(--p-warn)">⚠ <b>확인 안 된 정보</b>예요. 선장님·업체가 직접 올린 빈자리이며, 이 앱은 올린 사람이 실제 선장님인지 확인하지 않습니다. <b>예약·결제는 이 앱에서 하지 않아요</b> — 반드시 배에 직접 전화하거나 배의 공식 예약 페이지에서 확인하세요.${store.shared ? '' : '<br>이 화면(PC·휴대폰 앱)에서 올린 빈자리는 이 기기에만 보입니다. 모두에게 알리려면 「바다 조황 수첩」에서 올려 주세요.'}</div>
-        <div class="grid2"><div class="card"><h2>🔍 빈자리 찾기</h2>
+        <div class="card small" style="border-color:var(--p-warn)">⚠ <b>확인 안 된 정보</b> — 선장님·업체가 직접 올린 출조표예요. 이 앱은 올린 사람이 실제 선장님인지 확인하지 않아요. 예약·결제는 각 배에 직접 하세요. 남의 예약 사이트를 자동으로 뒤지지 않아요.
+          <br>🔰 초보: 「남은 자리만」 + 날짜별 채비 예측 · 🎣 전문가·매니아: 🔔 관심 알림 · ⚓ 선장님: 아래 「출조표 올리기」(여러 날 한 번에, 취소석 표시)</div>
+        ${hits.length ? `<div class="card" style="border-color:var(--p-bad)"><h2>🔔 관심 알림 ${hits.length}건</h2>${hits.slice(0, 8).map(o => `<div class="small"><a href="#" data-pick="${esc(o.s.sid)}">${esc(o.s.d.slice(5))} ${esc(o.b.name)}(${esc(o.b.region)}) ${esc(o.s.sp || '')} — ${o.s.cancel ? '취소석' : o.s.left + '자리'}</a></div>`).join('')}<button class="chip" id="pl-wseen" style="margin-top:4px">확인했어요</button></div>` : ''}
+        <div class="card"><h2>⛴ 주간 출조표 <span class="small muted">${esc(week[0].slice(5))} ~ ${esc(week[6].slice(5))} · 배 ${boats.length}척 · 일정 ${rows.length}건</span></h2>
           <div class="bar"><select id="pl-sshow">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === S.show ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
-            <select id="pl-ssp"><option value="">모든 어종</option>${SPECIES.map(s => `<option ${s === S.sp ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div>
-          ${rows.length ? rows.map(({ s, b }) => `<div class="qa"><div><b>${esc(s.d)} (${DOW[new Date(s.d + 'T00:00').getDay()]})${s.time ? ' ' + esc(s.time) : ''}</b> · <a href="#" data-near="${esc(b.id)}">🚤 ${esc(b.name)}</a> · ${esc(b.region)}</div>
-              <div class="small">${s.left ? `남은 자리 <b style="color:var(--p-ok)">${s.left}자리</b>` : '<span class="dim">마감</span>'}${s.sp ? ' · ' + esc(s.sp) : ''}${s.note ? ' · ' + esc(s.note) : ''}</div>
-              <div class="small muted">올린 때 ${esc(new Date(s.ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))} · 확인 안 됨 ${b.kakao ? ` · <a href="${esc(b.kakao)}" target="_blank" rel="noopener">📍 카카오맵(전화·위치)</a>` : ''}${b.phone ? ` · ☎ ${esc(b.phone)}` : ''}</div>
-              ${s.me ? `<div class="bar"><label class="small">남은 자리 <input type="number" min="0" max="40" value="${s.left}" data-sleft="${esc(s.sid)}" style="width:60px"></label><button class="chip" data-sdel="${esc(s.sid)}">지우기</button></div>` : ''}</div>`).join('')
-            : '<div class="empty">오늘 이후 올라온 빈자리가 없습니다.</div>'}</div>
-        <div class="card"><h2>📣 선장님·업체: 빈자리 올리기</h2>
+            <select id="pl-ssp"><option value="">모든 어종</option>${SPECIES.map(s => `<option ${s === S.sp ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+            <label class="small"><input type="checkbox" id="pl-sonly" ${S.only ? 'checked' : ''}> 남은 자리만</label><label class="small"><input type="checkbox" id="pl-scancel" ${S.cancel ? 'checked' : ''}> 취소석만</label>
+            <button class="chip" id="pl-wadd" title="이 어종·지역에 남은 자리·취소석이 올라오면 이 화면 위에 알려 줘요">🔔 이 조건 관심 등록</button></div>
+          ${W.list.length ? `<div class="small">관심: ${W.list.map((w, i) => `<span class="chip">${esc(w.region)} ${esc(w.sp || '모든 어종')} <a href="#" data-wdel="${i}">✕</a></span>`).join(' ')}</div>` : ''}
+          ${boats.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;min-width:120px">배 · 항구</th>${week.map(dayHead).join('')}</tr></thead>
+            <tbody>${boats.map(g => `<tr style="border-top:1px solid var(--p-line,#334)"><td><b>${esc(g.b.name)}</b><br><span class="small muted">${esc(g.b.region)}${g.b.port ? ' · ' + esc(g.b.port) : ''}</span>${g.cancel ? '<br><span class="small" style="color:var(--p-bad)">취소석 ' + g.cancel + '</span>' : ''}</td>${week.map(d => `<td style="vertical-align:top">${cell(g, d)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+            : `<div class="empty">이번 주 이 조건으로 올라온 출조표가 없어요.${S.only || S.cancel || S.sp ? ' 조건을 풀어 보세요.' : ' 선장님께 「출조표 올리기」를 알려 주세요.'}</div>`}
+          <div class="small dim">날짜 칸 위 숫자 = 물살 세기(달 기준)와 그날 많이 나가는 어종의 봉돌 예측. 일정을 누르면 연락처와 자세한 채비가 나와요.</div></div>
+        ${detail}
+        <div class="grid2"><div class="card"><h2>📣 선장님·업체: 출조표 올리기</h2>
           ${store.canWrite ? `<div class="bar"><label>지역 <select id="pl-sreg">${Object.keys(D.regions).map(r => `<option ${r === S.region ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label></div>
-          <div class="bar"><label style="flex:1">배 <select id="pl-sboat" style="max-width:100%">${boats.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.port ? ' · ' + esc(b.port) : ''}</option>`).join('') || '<option value="">이 지역 배 자료가 없습니다</option>'}</select></label></div>
-          <div class="bar"><label>날짜 <input type="date" id="pl-sd" min="${today}" value="${today}"></label><label>출항 <input type="time" id="pl-st" value="05:00"></label><label>남은 자리 <input type="number" id="pl-sleft" min="1" max="40" value="3" style="width:60px"></label></div>
-          <div class="bar"><input id="pl-ssp2" maxlength="10" placeholder="어종 (예: 갑오징어)"><input id="pl-snote" maxlength="120" placeholder="한 줄 안내 (예: 채비 대여 가능)" style="flex:1"></div>
-          <button class="chip" id="pl-spost">올리기</button>
-          <div class="small dim">연락처·계좌는 쓰지 마세요(자동으로 가려져요). 전화번호는 배 정보에 등록된 번호만 보여 줍니다.</div>` : '<div class="small dim">보기 전용입니다.</div>'}</div></div>`;
-      $('sshow').onchange = e => { S.show = e.target.value; seatView(); };
+          <div class="bar"><label style="flex:1">배 <select id="pl-sboat" style="max-width:100%">${boatsOf.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.port ? ' · ' + esc(b.port) : ''}</option>`).join('') || '<option value="">이 지역은 등록된 배가 없어요</option>'}</select></label></div>
+          <div class="small">출조 날짜(여러 날 고르기)</div><div class="bar">${week.map(d => { const dd = new Date(d + 'T12:00'); return `<button class="chip" data-sday="${d}" aria-pressed="${S.days.includes(d)}">${+d.slice(5, 7)}/${+d.slice(8)}(${DOW[dd.getDay()]})</button>`; }).join('')}</div>
+          <div class="bar"><label>출항 <input type="time" id="pl-st" value="05:00"></label><label>남은 자리 <input type="number" id="pl-sleft" min="0" max="40" value="5" style="width:60px"></label>
+            <select id="pl-ssp2">${SPECIES.map(s => `<option>${esc(s)}</option>`).join('')}</select><label class="small"><input type="checkbox" id="pl-scx"> 취소석</label></div>
+          <div class="bar"><input id="pl-sphone" maxlength="14" placeholder="업체 전화 (예: 041-000-0000)" style="flex:1"><input id="pl-skakao" maxlength="60" placeholder="카톡 채널 주소 https://pf.kakao.com/_..." style="flex:1"></div>
+          <input id="pl-snote" maxlength="120" placeholder="한 줄 안내 (예: 채비 대여 가능, 점심 제공)" style="width:100%">
+          <button class="chip" id="pl-spost" style="margin-top:6px">올리기</button>
+          <div class="small dim">전화는 업체 번호 모양만, 카톡은 카카오톡 채널 주소만 받아요(다른 것은 버려요). 안내 글의 개인 연락처·계좌는 자동으로 가려져요. 카톡 알림톡처럼 돈이 드는 기능은 쓰지 않아요.</div>` : '<div class="small dim">보기 전용입니다.</div>'}</div>
+        <div class="card"><h2>🗂 내가 올린 출조표 (${mine.length})</h2>
+          ${mine.length ? mine.map(s => { const b = findPlace(s.p) || { name: s.p }; return `<div class="qa"><b>${esc(s.d.slice(5))}</b> ${esc(b.name)} · ${esc(s.sp || '')}${s.time ? ' ' + esc(s.time) : ''}
+            <div class="bar"><label class="small">남은 자리 <input type="number" min="0" max="40" value="${s.left}" data-sleft="${esc(s.sid)}" style="width:60px"></label><button class="chip" data-scx="${esc(s.sid)}" aria-pressed="${s.cancel}">${s.cancel ? '취소석 해제' : '🔔 취소석 생김'}</button><button class="chip" data-sdel="${esc(s.sid)}">지우기</button></div></div>`; }).join('') : '<div class="small dim">아직 올린 출조표가 없어요.</div>'}</div></div>`;
+      const re = () => { V = store.view(); seatView(); };
+      $('sshow').onchange = e => { S.show = e.target.value; S.pick = ''; seatView(); };
       $('ssp').onchange = e => { S.sp = e.target.value; seatView(); };
+      $('sonly').onchange = e => { S.only = e.target.checked; seatView(); };
+      $('scancel').onchange = e => { S.cancel = e.target.checked; seatView(); };
+      $('wadd').onclick = () => { const w = watchGet(); if (!w.list.some(x => x.region === S.show && x.sp === S.sp)) w.list.push({ region: S.show, sp: S.sp }); w.list = w.list.slice(-8); if (!w.seen) w.seen = new Date(Date.now() - 864e5).toISOString(); watchSet(w); say('관심 조건을 등록했어요. 남은 자리·취소석이 올라오면 이 화면 위에 알려 드려요'); seatView(); };
+      root.querySelectorAll('[data-wdel]').forEach(a => a.onclick = e => { e.preventDefault(); const w = watchGet(); w.list.splice(+a.dataset.wdel, 1); watchSet(w); seatView(); });
+      if ($('wseen')) $('wseen').onclick = () => { const w = watchGet(); w.seen = new Date().toISOString(); watchSet(w); seatView(); };
+      root.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => { e.preventDefault(); S.pick = S.pick === b.dataset.pick ? '' : b.dataset.pick; seatView(); });
+      root.querySelectorAll('[data-sday]').forEach(b => b.onclick = () => { const d = b.dataset.sday; S.days = S.days.includes(d) ? S.days.filter(x => x !== d) : [...S.days, d]; seatView(); });
       if ($('sreg')) $('sreg').onchange = e => { S.region = e.target.value; seatView(); };
-      if ($('spost')) $('spost').onclick = () => { const p = $('sboat').value, d = $('sd').value;
-        if (!p) { say('배를 골라 주세요'); return; } if (!/^\d{4}-\d\d-\d\d$/.test(d) || d < today) { say('오늘 이후 날짜를 골라 주세요'); return; }
-        run(store.seatPost({ p, d, time: $('st').value, left: +$('sleft').value, sp: $('ssp2').value, note: $('snote').value }), '빈자리를 올렸습니다').then(() => { V = store.view(); seatView(); }); };
-      root.querySelectorAll('[data-sleft]').forEach(i => i.onchange = () => run(store.seatLeft(i.dataset.sleft, +i.value), '남은 자리를 고쳤습니다').then(() => { V = store.view(); seatView(); }));
-      root.querySelectorAll('[data-sdel]').forEach(b => b.onclick = () => run(store.seatDel(b.dataset.sdel), '지웠습니다').then(() => { V = store.view(); seatView(); }));
+      if ($('spost')) $('spost').onclick = () => { const p = $('sboat').value, ph = $('sphone').value.trim(), kk = $('skakao').value.trim();
+        if (!p) { say('배를 골라 주세요'); return; } if (!S.days.length) { say('출조 날짜를 하나 이상 골라 주세요'); return; }
+        if (ph && !cleanPhone(ph)) { say('전화번호는 업체 번호 모양으로 적어 주세요 (예: 041-000-0000)'); return; }
+        if (kk && !cleanKakao(kk)) { say('카톡은 카카오톡 채널 주소만 받아요 (https://pf.kakao.com/_...)'); return; }
+        run(store.seatPost({ p, days: S.days.slice().sort(), time: $('st').value, left: +$('sleft').value, sp: $('ssp2').value, note: $('snote').value, phone: ph, kakao: kk, cancel: $('scx').checked }), `출조표 ${S.days.length}일을 올렸습니다`).then(() => { S.days = []; re(); }); };
+      root.querySelectorAll('[data-sleft]').forEach(i => i.onchange = () => run(store.seatLeft(i.dataset.sleft, +i.value), '남은 자리를 고쳤습니다').then(re));
+      root.querySelectorAll('[data-scx]').forEach(b => b.onclick = () => run(store.seatCancel(b.dataset.scx), '취소석 표시를 바꿨습니다').then(re));
+      root.querySelectorAll('[data-sdel]').forEach(b => b.onclick = () => run(store.seatDel(b.dataset.sdel), '지웠습니다').then(re));
       root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); });
     }
     /* 🧹 깨끗한 바다 도장 — 기록·사진은 이 기기에만, 공유는 지역 이름별 봉지 수만 */
@@ -1158,7 +1316,7 @@
         if (!o.name) return; run(store.add(o), '등록했습니다').then(() => { if (k !== 'event') { st.tab = k; st.sel = o.id; render(); } }); };
     }
     function body() { if (st.tab !== 'find') stopFinder();
-      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'group') groupView(); else if (st.tab === 'seat') seatView(); else if (st.tab === 'clean') cleanView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
+      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'edu') eduView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'group') groupView(); else if (st.tab === 'seat') seatView(); else if (st.tab === 'clean') cleanView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
       root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); }); }
     function bindChips() {
       root.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { st.sea = b.dataset.sea; saveUi(); render(); });
@@ -1177,7 +1335,7 @@
     store.onChange(() => { V = store.view(); const ae = document.activeElement;
       if (ae && root.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.value && ae.type !== 'file') { say(); return; }   // 입력 중이면 화면을 다시 그리지 않음
       body(); say(); });
-    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
+    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'edu', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
     render();
     return { setRegion(name, lat, lon) {   // 기준 지역(PC 운전 개요): 같은 이름이 없으면 가까운 지역(60km 안)
         let key = D.regions[name] ? name : null;
