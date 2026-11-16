@@ -41,6 +41,7 @@
 <body>
 <div id="map"></div>
 <aside>
+  <div id="rigcast" class="card" style="margin-bottom:10px"></div>
   <h2>🗺 배경 지도</h2>
   <label class="row"><input type="radio" name="base" value="dark" checked><span>어두운 지도<small>OpenStreetMap (어둡게 표시)</small></span></label>
   <label class="row"><input type="radio" name="base" value="osm"><span>일반 지도<small>OpenStreetMap</small></span></label>
@@ -81,6 +82,8 @@
 <script src="sea-data.js"></script>
 <script src="seamap-photos.js" onerror="window.SEAMAP_PHOTOS=null"></script>
 <script src="public-parking.js" onerror="window.PUBLIC_PARKING=null"></script>
+<script src="angler.js"></script>
+<script src="rigcast.js"></script>
 <script src="seamap-plus.js"></script>
 <script>
 const post = m => { try { window.chrome.webview.postMessage(m); } catch (e) {} };
@@ -235,8 +238,10 @@ window.seaApi = {
     if (first && data.center) map.setView([data.center.lat, data.center.lon], 9);
   },
   focus(lat, lon, z) { map.flyTo([lat, lon], z || 11); },
+  setRegion(name, lat, lon, sea) { if (window.rigcast) rigcast.setRegion(name, lat, lon, sea); },   // 기준 지역 → 수온·물때·주간 채비 예보
 };
 const inPC = !!(window.chrome && window.chrome.webview);
+window.rigcast = window.RigCast ? RigCast.attach(document.getElementById('rigcast'), { map }) : null;
 const plus = window.SeaMapPlus ? SeaMapPlus.attach(map, document.getElementById('plus'), { sea: window.SEA_DATA }) : null;
 if (inPC) document.addEventListener('click', e => { const a = e.target.closest('a[href^="https://"]'); if (a) { e.preventDefault(); post({ type: 'open', url: a.href }); } });
 else document.querySelectorAll('#bSim, #bClearSim, #bPhone, #bImport').forEach(b => b.parentNode.classList.add('pcOnly'));
