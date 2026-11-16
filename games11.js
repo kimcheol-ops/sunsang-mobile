@@ -1,4 +1,4 @@
-/* 🎓 낚시법 도장 깨기 — 낚시 방법 8가지를 손으로 익히는 게임(허락 3번: 여러 낚시 방법을 배우는 게임)
+/* 🎓 낚시법 도장 깨기 — 낚시 방법 8가지 + 매듭 묶기를 손으로 익히는 게임(허락 3번: 여러 낚시 방법을 배우는 게임)
  * (PC · 휴대폰 앱 · 조황 수첩 공용, games3.js(GameHub) 뒤에 로드. phone.js(PhoneKit)가 있으면 진동)
  * MethodGames.extra(onReward) → 게임 메뉴 항목. 끝나면 onReward({ game, score, coins })
  * 낚시법마다 내리기·감기·고패질·챔질 요령이 다름. 통과하면 도장 + 가상 장비(실제 상표·제품 이름 없음).
@@ -63,7 +63,19 @@
       bite: s => s.falling && s.jerks >= 2 && inR(s.since, .3, 4) ? .55 : 0,
       hook: { t: 'now', win: 1 },
       hint: s => s.reeling ? '손을 떼야 에기가 가라앉아요' : s.jerks < 2 && s.since > .8 ? '👉 「툭툭」 두 번 이상 쳐 올려요' : s.falling ? '… 가라앉는 중(폴링) — 여기서 안아요' : '👉 「툭툭」 쳐 올려요',
-      tip: '에깅은 「쳐 올리기 → 가라앉히기」의 반복. 입질은 대부분 가라앉을 때 와요.', item: '🦑 폴링 에기 상자(가상)' }
+      tip: '에깅은 「쳐 올리기 → 가라앉히기」의 반복. 입질은 대부분 가라앉을 때 와요.', item: '🦑 폴링 에기 상자(가상)' },
+    { id: 'knot', ic: '🪢', name: '매듭 묶기', sp: '채비 묶기 기본', fish: '🪢', unit: '개', knot: true, need: 3,
+      how: ['낚시에서 가장 많이 쓰는 매듭 4가지를 묶는 <b>순서</b>대로 눌러요.', '틀리면 하트가 하나씩 줄어요(매듭마다 3개).', '조이기 전에 <b>침이나 물로 적시기</b> — 마찰열로 줄이 약해지지 않게.', '4개 중 3개 이상 묶으면 통과!'],
+      tip: '매듭은 「통과 → 감기 → 넣기 → 적시기 → 천천히 조이기 → 자르기」가 기본 흐름이에요. 집에서 굵은 끈으로 먼저 연습해 보세요.', item: '🪢 매듭 연습 줄(가상)' }
+
+  ];
+
+  // 널리 알려진 낚시 매듭 4가지(일반적인 묶는 순서)
+  const KNOTS = [
+    { n: '클린치 매듭', use: '원줄을 도래·스냅·에기에 묶을 때', wraps: 6, steps: ['줄 끝을 도래 고리에 통과시켜요', '끝줄을 원줄에 5~7번 감아요', '끝줄을 고리 바로 위 첫 틈에 넣어요', '생긴 큰 고리로 끝줄을 한 번 더 통과시켜요(개량형)', '침이나 물로 적셔요', '원줄을 천천히 당겨 조여요', '남은 끝줄을 2~3mm 남기고 잘라요'] },
+    { n: '팔로마 매듭', use: '바늘·도래에 튼튼하게(다운샷 바늘)', wraps: 2, steps: ['줄을 반으로 접어 접힌 끝을 바늘 귀에 통과시켜요', '두 겹 줄로 느슨하게 옭매듭을 한 번 지어요', '접힌 고리 끝을 바늘 전체에 넘겨 씌워요', '침이나 물로 적셔요', '원줄과 끝줄을 함께 당겨 조여요', '남은 끝줄을 잘라요'] },
+    { n: '유니 매듭', use: '바늘·도래 어디든 쓰는 기본 매듭', wraps: 5, steps: ['줄을 바늘 귀에 통과시켜요', '끝줄을 접어 원줄 옆에 고리를 만들어요', '끝줄로 고리 안쪽에서 원줄과 함께 5~6번 감아요', '침이나 물로 적셔요', '끝줄을 당겨 감은 부분을 모아요', '원줄을 당겨 매듭을 바늘 쪽으로 밀어 조여요', '남은 끝줄을 잘라요'] },
+    { n: '8자 고리 매듭', use: '채비 끝에 고리를 만들 때(봉돌·가지줄 연결)', wraps: 2, steps: ['줄 끝을 접어 두 겹으로 만들어요', '두 겹 줄로 작은 고리를 만들어요', '고리 아래를 한 바퀴 꼬아 8자 모양을 만들어요', '두 겹 줄 끝을 처음 고리 안으로 통과시켜요', '침이나 물로 적셔요', '고리와 원줄을 당겨 조여요', '남은 끝을 잘라요'] }
   ];
 
   function shell(container) {
@@ -77,9 +89,9 @@
       stop(); sh.res.style.display = 'none';
       const st = LS.get(KEY, {}), done = M.filter(m => st[m.id] && st[m.id].done).length;
       sh.body.innerHTML = `<div style="line-height:1.6"><b style="font-size:16px">🎓 낚시법 도장 깨기</b> · 도장 <b>${done}/${M.length}</b>${done === M.length ? ' 🏅 <b>만능 낚시 박사!</b>' : ''}
-        <div style="font-size:13px;opacity:.85">낚시법마다 내리기·감기·챔질 요령이 달라요. 제한 시간 안에 3마리를 잡으면 도장과 가상 장비를 받아요.</div></div>
+        <div style="font-size:13px;opacity:.85">낚시법마다 내리기·감기·챔질 요령이 달라요. 제한 시간 안에 3마리(매듭은 3개)를 해내면 도장과 가상 장비를 받아요.</div></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px">${M.map(m => { const r = st[m.id] || {}; return `<button type="button" data-m="${m.id}" style="${SOFT};text-align:left;padding:10px;min-height:76px;touch-action:manipulation">
-          <span style="font-size:20px">${m.ic}</span> <b>${esc(m.name)}</b>${r.done ? ' <span style="color:#4BD08A">✔ 도장</span>' : ''}<br><span style="font-size:11.5px;opacity:.75">${esc(m.sp)}${r.best ? ' · 최고 ' + r.best + '마리' : ''}</span></button>`; }).join('')}</div>
+          <span style="font-size:20px">${m.ic}</span> <b>${esc(m.name)}</b>${r.done ? ' <span style="color:#4BD08A">✔ 도장</span>' : ''}<br><span style="font-size:11.5px;opacity:.75">${esc(m.sp)}${r.best ? ' · 최고 ' + r.best + (m.unit || '마리') : ''}</span></button>`; }).join('')}</div>
         ${done ? `<div style="font-size:12.5px;margin-top:8px;opacity:.85">받은 장비: ${M.filter(m => st[m.id] && st[m.id].done).map(m => esc(m.item)).join(' · ')}</div>` : ''}`;
       sh.body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => lesson(M.find(m => m.id === b.dataset.m)));
     }
@@ -87,7 +99,7 @@
       stop(); sh.res.style.display = 'none';
       sh.body.innerHTML = `<div style="display:grid;gap:8px;line-height:1.6"><b style="font-size:16px">${m.ic} ${esc(m.name)} <span style="font-size:12px;opacity:.75">(${esc(m.sp)})</span></b>
         <ol style="margin:0;padding-left:20px;font-size:14px">${m.how.map(h => `<li>${h}</li>`).join('')}</ol>
-        <div style="font-size:12.5px;opacity:.85">${m.float ? '조작: 찌 수심 고르기 · 🎣 챔질(스페이스)' : '조작: ⬆ 감기는 <b>누르고 있기</b>(↑·W 키) · 🎣 「툭·챔질」(스페이스). 손을 떼면 가라앉아요.'} · ${m.time}초 안에 ${m.need}마리</div>
+        <div style="font-size:12.5px;opacity:.85">${m.knot ? '조작: 다음 단계를 눌러요 · 매듭 4개 중 3개 이상' : (m.float ? '조작: 찌 수심 고르기 · 🎣 챔질(스페이스)' : '조작: ⬆ 감기는 <b>누르고 있기</b>(↑·W 키) · 🎣 「툭·챔질」(스페이스). 손을 떼면 가라앉아요.') + ` · ${m.time}초 안에 ${m.need}마리`}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button type="button" data-back style="${SOFT};touch-action:manipulation">← 목록</button><button type="button" data-go style="${PRIMARY};touch-action:manipulation">🎣 시작</button></div></div>`;
       sh.body.querySelector('[data-back]').onclick = menu; sh.body.querySelector('[data-go]').onclick = () => run(m);
     }
@@ -96,15 +108,57 @@
       st[m.id] = { done: r.done || pass, best: Math.max(r.best || 0, n) }; LS.set(KEY, st);
       const all = M.every(x => st[x.id] && st[x.id].done), score = n * 30 + (pass ? 60 : 0) + (first ? 60 : 0), coins = Math.floor(score / 10);
       sh.res.style.display = 'block';
-      sh.res.innerHTML = `<b style="font-size:18px">${pass ? '🎉 통과!' : '아쉬워요'}</b> ${m.fish} ${n}/${m.need}마리 · <b>${score}점</b> · 🪙 +${coins}
-        ${first ? `<br>🏅 도장 획득 · 장비 <b>${esc(m.item)}</b>` : ''}${first && all ? '<br>🎓 8가지 낚시법 모두 통과 — <b>만능 낚시 박사</b>!' : ''}
+      sh.res.innerHTML = `<b style="font-size:18px">${pass ? '🎉 통과!' : '아쉬워요'}</b> ${m.fish} ${n}/${m.knot ? KNOTS.length : m.need}${m.unit || '마리'} · <b>${score}점</b> · 🪙 +${coins}
+        ${first ? `<br>🏅 도장 획득 · 장비 <b>${esc(m.item)}</b>` : ''}${first && all ? `<br>🎓 ${M.length}가지 모두 통과 — <b>만능 낚시 박사</b>!` : ''}
         <br><span style="font-size:13px">💡 ${esc(m.tip)}</span>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button type="button" data-again style="${PRIMARY};touch-action:manipulation">↻ 다시</button><button type="button" data-list style="${SOFT};touch-action:manipulation">다른 낚시법</button></div>`;
       sh.res.querySelector('[data-again]').onclick = () => run(m); sh.res.querySelector('[data-list]').onclick = menu;
       sfx(pass ? 'win' : 'miss'); if (onReward) try { onReward({ game: 'methods', score, coins }); } catch (e) {}
     }
 
+    /* 🪢 매듭 묶기 — 순서대로 단계 누르기(널리 알려진 매듭만) */
+    function knotRun(m) {
+      stop(); sh.res.style.display = 'none';
+      const order = KNOTS.map((k, i) => i).sort(() => Math.random() - .5);
+      let ki = 0, ok = 0, alive = true;
+      stop = () => { alive = false; };
+      function knot() {
+        if (!alive) return;
+        if (ki >= order.length) { alive = false; result(m, ok); return; }
+        const K = KNOTS[order[ki]], idx = K.steps.map((s, i) => i).sort(() => Math.random() - .5); let done = 0, hearts = 3, msg = `「${K.use}」에 써요. 첫 단계는?`;
+        function draw() {
+          sh.body.innerHTML = `<div style="display:flex;justify-content:space-between;font-weight:700"><span>🪢 ${ki + 1}/${order.length}</span><span>${esc(K.n)}</span><span>${'❤'.repeat(hearts)}${'🤍'.repeat(3 - hearts)}</span></div>
+            <canvas style="width:100%;height:110px;border-radius:12px;display:block;background:#0E3347;margin:6px 0" aria-label="${esc(K.n)} 그림"></canvas>
+            <div data-msg style="min-height:40px;font-size:14px;line-height:1.45">${esc(msg)}</div>
+            ${done ? `<ol style="margin:4px 0 8px;padding-left:20px;font-size:13px;opacity:.9">${K.steps.slice(0, done).map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}
+            <div style="display:grid;gap:6px">${idx.filter(i => i >= done).map(i => `<button type="button" data-s="${i}" style="${SOFT};touch-action:manipulation;text-align:left;padding:8px 12px;min-height:44px;font-weight:600">${esc(K.steps[i])}</button>`).join('')}</div>`;
+          const cv = sh.body.querySelector('canvas'), g = cv.getContext('2d'), w = cv.getBoundingClientRect().width || 320, h = 110, k = Math.min(2, devicePixelRatio || 1);
+          cv.width = w * k; cv.height = h * k; g.setTransform(k, 0, 0, k, 0, 0);
+          const p = done / K.steps.length, cy = h / 2, rx = 40, tight = done >= K.steps.length - 1;
+          g.strokeStyle = '#C9D3DA'; g.lineWidth = 5; g.beginPath(); g.arc(rx, cy, 14, 0, 7); g.stroke();   // 도래·바늘 고리
+          g.strokeStyle = '#FFE27A'; g.lineWidth = 3; g.beginPath(); g.moveTo(w - 10, cy); g.lineTo(rx + 14, cy); g.stroke();
+          if (done >= 1) { g.beginPath(); g.moveTo(rx + 14, cy); g.quadraticCurveTo(rx - 22, cy, rx + 14, cy + 14); g.lineTo(rx + 40, cy + 14); g.stroke(); }
+          const coils = Math.round(Math.min(1, p * 1.6) * (K.wraps || 5)), gap = tight ? 5 : 11;
+          for (let i = 0; i < coils; i++) { g.beginPath(); g.ellipse(rx + 34 + i * gap, cy + 2, 4, 13, .35, 0, 7); g.stroke(); }
+          if (done >= K.steps.length) { g.fillStyle = '#4BD08A'; g.font = '700 15px sans-serif'; g.textAlign = 'right'; g.fillText('✔ 완성!', w - 12, 24); }
+          else if (tight) { g.fillStyle = '#FFE27A'; g.font = '13px sans-serif'; g.textAlign = 'right'; g.fillText('✂ 끝줄 정리', w - 12, 24); }
+          sh.body.querySelectorAll('[data-s]').forEach(b => b.onclick = () => pick(+b.dataset.s));
+        }
+        function pick(i) {
+          if (i === done) { done++; sfx('hit'); msg = done >= K.steps.length ? `🎉 ${K.n} 완성!` : `✓ 좋아요. 다음은?`; draw(); if (done >= K.steps.length) { ok++; buzz('win'); ki++; setTimeout(knot, 1100); } return; }
+          hearts--; sfx('miss'); buzz('miss');
+          const wet = K.steps.findIndex(s => /적셔/.test(s));
+          msg = /조여/.test(K.steps[i]) && wet >= done ? '😢 적시지 않고 조이면 마찰열로 줄이 약해져요. 먼저 적시기!' : /잘라/.test(K.steps[i]) ? '😢 자르기는 맨 마지막이에요.' : `😢 그 전에 할 일이 있어요.`;
+          if (hearts <= 0) { msg = `😢 ${K.n}: 하트를 다 썼어요. 순서 — ${K.steps.map((s, n) => `${n + 1}) ${s}`).join(' ')}`; draw(); sh.body.querySelectorAll('[data-s]').forEach(b => b.disabled = true); ki++; setTimeout(knot, 3800); return; }
+          draw();
+        }
+        draw();
+      }
+      knot();
+    }
+
     function run(m) {
+      if (m.knot) return knotRun(m);
       stop(); sh.res.style.display = 'none';
       sh.body.innerHTML = `<div style="display:flex;justify-content:space-between;font-weight:700"><span data-t></span><span>${m.ic} ${esc(m.name)}</span><span data-c></span></div>
         <canvas style="width:100%;aspect-ratio:1/1;max-width:min(100%,62vh);margin:0 auto;border-radius:14px;display:block;touch-action:none;background:#0B3B5A" aria-label="${esc(m.name)} 게임 화면"></canvas>
@@ -234,7 +288,7 @@
     menu();
   }
 
-  const LIST = [{ id: 'methods', ic: '🎓', name: '낚시법 도장 깨기', desc: '[배우는 게임] 쭈꾸미 에기·참돔 타이라바·광어 다운샷·우럭 카드채비·갈치 층·감성돔 찌·낙지 봉돌·무늬오징어 에깅 — 요령대로 잡고 도장 8개', goal: 200, mount: game }];
+  const LIST = [{ id: 'methods', ic: '🎓', name: '낚시법 도장 깨기', desc: '[배우는 게임] 쭈꾸미 에기·참돔 타이라바·광어 다운샷·우럭 카드채비·갈치 층·감성돔 찌·낙지 봉돌·무늬오징어 에깅·매듭 묶기 — 요령대로 해내고 도장 9개', goal: 200, mount: game }];
   if (window.GameHub) LIST.forEach(x => { if (GameHub.GNAME) GameHub.GNAME[x.id] = x.name; if (GameHub.GOAL) GameHub.GOAL[x.id] = x.goal; });
   window.MethodGames = { M, LIST, extra: onReward => LIST.map(x => ({ id: x.id, ic: x.ic, name: x.name, desc: x.desc, isNew: true, mount: el => x.mount(el, onReward) })) };
 })();

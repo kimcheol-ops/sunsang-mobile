@@ -96,7 +96,17 @@ window.SeaMapPlus = (function () {
       const t = p.t, extra = [t.opening_hours && '🕐 ' + t.opening_hours, t.fee && (t.fee === 'no' ? '요금 없음' : t.fee === 'yes' ? '요금 있음' : '요금 ' + t.fee), t.capacity && '주차 ' + t.capacity + '대', t.access === 'no' && '⛔ 출입 금지 표시', t.access === 'private' && '🔒 사유지', t.operator && '운영 ' + t.operator, t['seamark:restricted_area:category'] && '구역 ' + t['seamark:restricted_area:category']].filter(Boolean);
       return `<b>${esc(p.lab)}</b> ${esc(p.name)}<div class="muted small">${extra.map(esc).join(' · ') || '추가 정보 없음'}</div><div class="small" data-dep="${p.lat},${p.lon}">수심 확인 중…</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"><a href="${kakao(p.name || p.lab, p.lat, p.lon)}" target="_blank" rel="noopener">카카오맵</a><a href="https://www.openstreetmap.org/${p.id.replace(/^(node|way|relation)/, '$1/')}" target="_blank" rel="noopener">OSM 원본</a></div>
-        <div class="muted small">© OpenStreetMap 기여자 · 현장 안내판·통제가 우선이에요</div>`;
+        ${banLine(p)}<div class="muted small">© OpenStreetMap 기여자 · 현장 안내판·통제가 우선이에요</div>`;
+    }
+    /* 🚫 여기서 낚시해도 되나요? — 전국 바다 공식 자료가 없어서 OSM 표시 + 확인표, 나머지는 「확인 필요」 */
+    const BAN_CHECK = ['현장 안내판·출입 통제선(펜스)이 있으면 들어가지 않아요 — 출입을 막은 방파제가 많아요.', '시·군·구가 정한 「낚시 금지·제한구역」인지 시·군·구 누리집 고시로 확인해요(「낚시 관리 및 육성법」).', '항만 안 선박 통행로·여객선 부두, 군사시설 주변은 낚시가 막혀 있는 경우가 많아요.', '양식장·정치망 근처는 피하고 어업인 작업을 방해하지 않아요.', '해양보호구역·습지보호지역은 따로 규칙이 있을 수 있어요.', '풍랑·태풍 특보 때는 방파제·갯바위 출입이 통제될 수 있어요.', '모르면 관할 해양경찰서나 시·군·구 해양수산 담당 부서에 물어보세요.'];
+    const BAN_LINKS = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"><a href="https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%82%9A%EC%8B%9C%EA%B4%80%EB%A6%AC%EB%B0%8F%EC%9C%A1%EC%84%B1%EB%B2%95" target="_blank" rel="noopener">낚시 관리 및 육성법(국가법령정보센터)</a><a href="https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=%EB%82%9A%EC%8B%9C%EA%B8%88%EC%A7%80%EA%B5%AC%EC%97%AD" target="_blank" rel="noopener">지자체 낚시금지구역 자료(공공데이터포털)</a></div>`;
+    function banLine(p) {
+      if (p.k !== 'fish') return '';
+      const R = 6371000, rad = Math.PI / 180, dist = q => { const dl = (q.lat - p.lat) * rad, dn = (q.lon - p.lon) * rad, a = Math.sin(dl / 2) ** 2 + Math.cos(p.lat * rad) * Math.cos(q.lat * rad) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(a)); };
+      const near = (st.pois || []).filter(q => q.k === 'danger' && q.t && (q.t.fishing === 'no' || q.t['seamark:type'] === 'restricted_area') && dist(q) < 400).length, acc = p.t.access === 'no' || p.t.access === 'private';
+      return `<div class="small" style="margin-top:4px">${acc ? '⛔ <b>출입 금지 표시가 있는 곳</b>(OpenStreetMap)' : near ? `⛔ <b>근처 400m 안에 낚시 금지·제한 표시 ${near}곳</b>(OpenStreetMap) — 현장에서 꼭 확인` : '❔ <b>낚시 가능 여부: 확인 필요</b> — 이 곳의 공식 금지·제한 구역 자료가 아직 없어요'}</div>
+        <details class="small"><summary>🚫 여기서 낚시해도 되나요? 확인표</summary><ol style="margin:4px 0;padding-left:18px">${BAN_CHECK.map(t => `<li>${esc(t)}</li>`).join('')}</ol>${BAN_LINKS}</details>`;
     }
     function drawPois() {
       G.poi.clearLayers(); const shown = st.pois.filter(p => p.k !== '_hab' && st.kinds[p.k]);

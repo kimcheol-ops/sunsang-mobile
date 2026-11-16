@@ -123,6 +123,23 @@
     if (water === '맑음') return { c: '내추럴(갈색·올리브·새우색)', why: '맑은 물·밝은 날은 자연스러운 색이 경계심을 덜 줌' };
     return { c: '주황·핑크와 내추럴을 번갈아', why: '보통 물색 — 두 가지를 한 채비에 섞어 반응 보기' };
   }
+  // 어종별 색 요령(일반적인 요령만 · 상표·제품 이름 없음) — [맑은 물·밝은 낮, 탁한 물·흐린 날, 새벽·밤]
+  const LURE_COLOR = {
+    쭈꾸미: ['에기: 내추럴(새우색)·흰색', '에기: 주황·핑크 + 금테이프', '에기: 야광·케이무라(UV)', '봉돌·애자에 반짝이(케미·구슬)를 달면 탁한 날 효과'],
+    갑오징어: ['에기: 내추럴·올리브', '에기: 주황·핑크 + 금테이프', '에기: 야광·케이무라', '단차 채비라 위아래 에기를 다른 색으로 — 잘 되는 쪽을 따라가요'],
+    문어: ['에기·애자: 흰색·내추럴', '에기·애자: 주황·형광 + 반짝이', '에기: 야광', '문어는 색보다 바닥에 붙여 끄는 것이 먼저예요'],
+    낙지: ['미끼: 칠게(살아 있는 것)', '미끼: 흰 돼지비계를 크게(눈에 잘 띄게)', '미끼: 칠게 + 비계, 봉돌에 야광 구슬', '낙지는 색보다 냄새·바닥 끌기가 중요해요'],
+    우럭: ['카드채비: 은색 반짝이 · 미끼 오징어살 흰색', '카드채비: 금색·형광 반짝이', '카드채비: 야광 구슬·케미', '미끼(오징어살·미꾸라지)를 싱싱하게 바꿔 주는 것이 색보다 중요'],
+    광어: ['웜: 내추럴(펄 흰색·연한 갈색)', '웜: 형광 연두·핑크·진한 색', '웜: 야광 웜·흰색', '웜은 2~3색을 가지고 가서 반응 없으면 10분마다 바꿔요'],
+    참돔: ['헤드: 금·녹색 / 스커트: 주황·연두', '헤드: 빨강·주황 진한 색 + 금 / 스커트: 빨강', '헤드: 야광·흰색', '깊은 바다에서는 빨강이 먼저 어둡게 보여요 — 반응 없으면 금·녹색과 번갈아'],
+    갈치: ['미끼: 꽁치·전어 은색 살', '미끼: 은색 살 + 야광 튜브', '집어등 아래: 야광·축광 + 은색 미끼', '갈치는 밤 낚시라 야광이 기본, 집어등이 밝으면 덜 빛나는 것도 섞어요'],
+    한치: ['이카메탈·스테: 내추럴·흰색', '이카메탈·스테: 핑크·주황', '집어등 아래: 녹색·핑크 야광', '집어등 그림자 경계에서 잘 물어요 — 색보다 층(수심)'],
+    무늬오징어: ['에기: 내추럴·마블(무늬)', '에기: 주황·핑크 + 금테이프', '에기: 빨강 테이프·야광', '파도에 거품이 많으면 진한 색, 잔잔하고 맑으면 내추럴'],
+    방어: ['메탈지그: 은색·파랑', '메탈지그: 핑크·금색·글로우', '메탈지그: 글로우(야광)', '먹이 고기(멸치·전갱이)와 비슷한 길이·색이 기본이에요'],
+    감성돔: ['미끼: 크릴(밑밥과 같은 것)', '미끼: 냄새 강한 미끼·조금 큰 크릴', '미끼: 크릴·갯지렁이, 찌에 케미', '찌낚시는 색보다 밑밥과 미끼를 같이 흘리는 것이 중요해요']
+  };
+  const COLOR_RULES = ['맑은 물·밝은 낮 → 자연스러운 색(내추럴)이 경계심을 덜 줘요.', '탁한 물·흐린 날 → 진한 색(주황·빨강·핑크)과 반사 테이프(금·은)가 멀리 보여요.', '새벽·밤 → 스스로 빛나는 야광(축광)이나 자외선에 보이는 색.', '물이 깊을수록 빨강이 먼저 어둡게 보이고 파랑·녹색이 오래 보여요.', '두 가지 색을 번갈아 쓰거나 단차 채비에 다른 색을 달아 반응 좋은 쪽으로.', '같은 배에서 잘 잡는 사람의 색을 물어보는 것이 가장 빠른 방법이에요.'];
+  function lureTip(sp, water, sky) { const t = LURE_COLOR[sp]; if (!t) return null; return { c: sky === '새벽·밤' ? t[2] : (water === '탁함' || sky === '흐린 낮') ? t[1] : water === '맑음' ? t[0] : t[0] + ' 또는 ' + t[1].replace(/^[^:]+: /, ''), note: t[3] }; }
   // 물살 세기(%): 달 나이로 계산(사리 = 그믐·보름 1~2일 뒤 가장 셈)
   function moonAge(d) { const syn = 29.530588853, ref = Date.UTC(2000, 0, 6, 18, 14); return ((((d.getTime() - ref) / 864e5) % syn) + syn) % syn; }
   function tideStrength(d) { const a = moonAge(d), syn = 29.530588853; return Math.round((1 + Math.cos(2 * Math.PI * (a - 1.5) / (syn / 2))) / 2 * 100); }
@@ -164,7 +181,7 @@
   }
   function cleanAsp(a) { if (!a || typeof a !== 'object') return undefined; const o = {}; for (const k of ASPECT_KEYS) if (a[k] >= 1 && a[k] <= 5) o[k] = Math.round(a[k]); return Object.keys(o).length ? o : undefined; }
   function cleanDoc(v) {
-    const o = { hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], photos: {}, qs: {}, ans: {}, votes: {}, catches: {}, posts: {}, cmts: {}, hide: {}, flags: {}, seats: {}, clean: {}, updated: '' }; if (!v || typeof v !== 'object') return o;
+    const o = { hearts: {}, hits: {}, reviews: {}, edits: {}, added: [], photos: {}, qs: {}, ans: {}, votes: {}, catches: {}, posts: {}, cmts: {}, hide: {}, flags: {}, seats: {}, clean: {}, groups: {}, gposts: {}, updated: '' }; if (!v || typeof v !== 'object') return o;
     // 함께 낚시·카풀 모집 { kind, d: 날짜, region, meet: 공개 장소 키, sp, seats, note, open, ts } · 댓글 { pid, t, ts } · 숨김·신고는 내 문서에만
     for (const [pid, p] of Object.entries(v.posts || {}).slice(0, 40)) if (p && p.kind in MATE_KIND && /^\d{4}-\d\d-\d\d$/.test(p.d || '') && typeof p.meet === 'string')
       o.posts[pid] = { kind: p.kind, d: p.d, region: str(p.region, 20), meet: str(p.meet, 80), sp: str(mask(p.sp), 10), seats: Math.max(1, Math.min(9, Math.round(+p.seats || 1))), time: /^\d\d:\d\d$/.test(p.time || '') ? p.time : '', note: str(mask(p.note), 160), open: p.open !== false, ts: str(p.ts, 30) };
@@ -173,6 +190,10 @@
     for (const [sid, s] of Object.entries(v.seats || {}).slice(0, 30)) if (s && typeof s.p === 'string' && /^\d{4}-\d\d-\d\d$/.test(s.d || ''))
       o.seats[sid] = { p: str(s.p, 60), d: s.d, left: Math.max(0, Math.min(40, Math.round(+s.left || 0))), sp: str(mask(s.sp), 10), time: /^\d\d:\d\d$/.test(s.time || '') ? s.time : '', note: str(mask(s.note), 120), ts: str(s.ts, 30) };
     for (const [rg, m] of Object.entries(v.clean || {}).slice(0, 40)) if (m && typeof m === 'object') { const c = {}; for (const [ym, n] of Object.entries(m)) if (/^\d{4}-\d\d$/.test(ym) && +n > 0) c[ym] = Math.min(500, Math.round(+n)); if (Object.keys(c).length) o.clean[str(rg, 20)] = c; }
+    // 👪 우리끼리 모임 { 초대 코드: 모임 이름 } · 모임 조황 { g: 코드, d, sp, n, where: 시·도 이름, note, ts } — 정확한 위치·사진·연락처는 없음
+    for (const [code, nm] of Object.entries(v.groups || {}).slice(0, 5)) if (/^[A-Z0-9]{6}$/.test(code)) o.groups[code] = str(mask(nm), 20) || '우리 모임';
+    for (const [gid, p] of Object.entries(v.gposts || {}).slice(0, 60)) if (p && /^[A-Z0-9]{6}$/.test(p.g || '') && /^\d{4}-\d\d-\d\d$/.test(p.d || ''))
+      o.gposts[gid] = { g: p.g, d: p.d, sp: str(mask(p.sp), 10), n: Math.max(0, Math.min(999, Math.round(+p.n || 0))), where: str(p.where, 20), note: str(mask(p.note), 160), ts: str(p.ts, 30) };
     for (const [pid, x] of Object.entries(v.hide || {})) if (x === true) o.hide[str(pid, 120)] = true;
     for (const [pid, r] of Object.entries(v.flags || {})) if (typeof r === 'string') o.flags[str(pid, 120)] = str(r, 20);
     // 실제 조과 보고 { p: 배 id, d: 날짜, sp, n: 마릿수, max: 최대 cm, note, ts }
@@ -221,6 +242,11 @@
     for (const { uid, doc } of docs) { for (const [sid, s] of Object.entries(doc.seats || {})) A.seats.push(Object.assign({ sid, who: uid, me: uid === me }, s));
       let any = false; for (const [rg, mm] of Object.entries(doc.clean || {})) for (const [ym, n] of Object.entries(mm)) { any = true; const r = A.clean.byRegion[rg] = A.clean.byRegion[rg] || { all: 0, month: {} }; r.all += n; r.month[ym] = (r.month[ym] || 0) + n; if (uid === me) A.clean.mine[rg + '|' + ym] = n; }
       if (any) A.clean.people++; }
+    // 👪 모임: 내가 들어간 모임의 글만, 글쓴이도 그 모임에 들어가 있을 때만
+    const meDoc = docs.find(d => d.uid === me); A.myGroups = Object.assign({}, meDoc ? meDoc.doc.groups || {} : {}); A.groupN = {}; A.gposts = [];
+    for (const { doc } of docs) for (const code of Object.keys(doc.groups || {})) A.groupN[code] = (A.groupN[code] || 0) + 1;
+    for (const { uid, doc } of docs) for (const [gid, p] of Object.entries(doc.gposts || {})) if (A.myGroups[p.g] && (doc.groups || {})[p.g]) A.gposts.push(Object.assign({ gid, who: uid, me: uid === me }, p));
+    A.gposts.sort((a, b) => b.d.localeCompare(a.d) || b.ts.localeCompare(a.ts));
     A.seats.sort((a, b) => a.d.localeCompare(b.d) || b.left - a.left);
     A.catches.sort((a, b) => b.d.localeCompare(a.d) || b.ts.localeCompare(a.ts));
     const cellTs = {}, qmap = {}, votes = {};
@@ -279,6 +305,11 @@
       async seatPost(o) { const all = Object.entries(m().seats); if (all.length >= 20) delete m().seats[all.sort((a, b) => a[1].ts.localeCompare(b[1].ts))[0][0]];
         m().seats[rid('s')] = { p: str(o.p, 60), d: o.d, left: Math.max(0, Math.min(40, Math.round(+o.left || 0))), sp: str(mask(o.sp), 10), time: /^\d\d:\d\d$/.test(o.time || '') ? o.time : '', note: str(mask(o.note), 120), ts: nowIso() }; return save(); },
       async seatLeft(sid, n) { if (m().seats[sid]) { m().seats[sid].left = Math.max(0, Math.min(40, Math.round(+n || 0))); m().seats[sid].ts = nowIso(); } return save(); },
+      async groupJoin(code, name) { const g = m().groups = m().groups || {}; if (!/^[A-Z0-9]{6}$/.test(code) || (!g[code] && Object.keys(g).length >= 5)) return; g[code] = str(mask(name), 20) || g[code] || '우리 모임'; return save(); },
+      async groupLeave(code) { const g = m().groups || {}; delete g[code]; const gp = m().gposts || {}; for (const [k, p] of Object.entries(gp)) if (p.g === code) delete gp[k]; return save(); },
+      async gpost(o) { const gp = m().gposts = m().gposts || {}, all = Object.entries(gp); if (all.length >= 40) delete gp[all.sort((a, b) => a[1].ts.localeCompare(b[1].ts))[0][0]];
+        gp[rid('g')] = { g: o.g, d: o.d, sp: str(mask(o.sp), 10), n: Math.max(0, Math.min(999, Math.round(+o.n || 0))), where: str(o.where, 20), note: str(mask(o.note), 160), ts: nowIso() }; return save(); },
+      async gdel(gid) { delete (m().gposts || {})[gid]; return save(); },
       async seatDel(sid) { delete m().seats[sid]; return save(); },
       async cleanAdd(region, bags) { const ym = nowIso().slice(0, 7), r = str(region, 20), c = m().clean[r] = m().clean[r] || {}; c[ym] = Math.min(500, (c[ym] || 0) + Math.max(0, Math.round(+bags || 0))); return save(); },
       myAdded: () => m().added,
@@ -345,14 +376,14 @@
     root.innerHTML = `<div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button><button class="tab" role="tab" data-tab="spot">🎣 낚시터·좌대</button>
         <button class="tab" role="tab" data-tab="tackle">🪝 오늘의 채비</button><button class="tab" role="tab" data-tab="find">🧭 내 배 찾기(초보)</button><button class="tab" role="tab" data-tab="catch">🎣 실제 조과</button>
-        <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="seat">🪑 빈자리</button><button class="tab" role="tab" data-tab="clean">🧹 깨끗한 바다</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
+        <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="group">👪 우리 모임</button><button class="tab" role="tab" data-tab="seat">🪑 빈자리</button><button class="tab" role="tab" data-tab="clean">🧹 깨끗한 바다</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
       <div data-r="filters" class="bar"></div><div class="status" data-r="status" role="status"></div><div data-r="view"></div><div class="dim small" data-r="foot"></div>`;
     const R = n => root.querySelector(`[data-r="${n}"]`);
     const $ = id => root.querySelector('#pl-' + id);
     let V = store.view(), editOpen = null, pick = null, aiAnswer = {};
     const st = { tab: 'shop', q: '', region: '전체', sea: '전체', sp: '전체', channel: '전체', sel: null, period: 'week', addKind: 'shop', need: false };
     try { Object.assign(st, JSON.parse(localStorage.getItem('places.ui') || '{}'), { sel: null, q: '' }); } catch (e) {}
-    if (!['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'seat', 'clean', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
+    if (!['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
     const saveUi = () => { try { localStorage.setItem('places.ui', JSON.stringify({ tab: st.tab, region: st.region, sea: st.sea, period: st.period })); } catch (e) {} };
     const say = msg => { R('status').textContent = msg || store.status || ''; };
     const run = (p, okMsg) => Promise.resolve(p).then(() => say(store.status || okMsg || ''), e => say(e && e.message === 'no-assets' ? '이 화면에서는 사진을 올릴 수 없습니다(권한 없음).' : '처리하지 못했습니다. 다시 해 주세요.'));
@@ -412,7 +443,7 @@
 
     function filters() {
       if (st.tab === 'rank') { R('filters').innerHTML = ['day', 'week', 'month', 'year'].map(p => `<button class="chip" data-period="${p}" aria-pressed="${st.period === p}">${{ day: '오늘', week: '이번 주', month: '이번 달', year: '올해' }[p]}</button>`).join(''); return; }
-      if (['add', 'qa', 'find', 'catch', 'tackle', 'mate', 'seat', 'clean'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
+      if (['add', 'qa', 'find', 'catch', 'tackle', 'mate', 'group', 'seat', 'clean'].includes(st.tab)) { R('filters').innerHTML = ''; return; }
       R('filters').innerHTML = `<input type="search" id="pl-q" placeholder="${st.tab === 'shop' ? '낚시점 이름·주소·대여 품목' : st.tab === 'spot' ? '낚시터 이름·주소·종류' : '배 이름·항구·어종'} 검색" value="${esc(st.q)}" aria-label="검색">
         <select id="pl-region" aria-label="지역">${['전체', ...Object.keys(D.regions)].map(r => `<option ${r === st.region ? 'selected' : ''}>${r}</option>`).join('')}</select>
         ${['전체', '서해', '남해', '동해', '제주'].map(s => `<button class="chip" data-sea="${s}" aria-pressed="${st.sea === s}">${s}</button>`).join('')}
@@ -738,6 +769,8 @@
           <div class="card"><h2>🪢 채비 구성</h2><div class="row3"><span>단차</span><span>${esc(t.dan)}</span><span>가지채비</span><span><b>${esc(t.br)}</b></span><span>에기·미끼</span><span>${esc(t.egi)}</span><span>원줄·목줄</span><span>${esc(t.line)}</span></div>
             <div class="small muted">💡 ${esc(t.tip)}</div></div>
           <div class="card"><h2>🎨 오늘의 에기·미끼 색</h2><div class="cap" style="font-size:18px">${esc(col.c)}</div><div class="small muted">${esc(col.why)} (물색 ${esc(water)} · ${esc(sky)})</div>
+            ${(() => { const lt = lureTip(sp, water, sky); return lt ? `<div class="notice" style="margin-top:6px"><b>📌 ${esc(sp)} 색 요령</b><br>${esc(lt.c)}<br><span class="small muted">💡 ${esc(lt.note)}</span></div>` : ''; })()}
+            <details style="margin-top:6px"><summary class="small"><b>🎨 색 고르는 기본 요령 6가지</b></summary><ol class="small" style="margin:4px 0;padding-left:18px">${COLOR_RULES.map(r => `<li>${esc(r)}</li>`).join('')}</ol><div class="small dim">일반적인 요령이에요. 특정 상표·제품을 추천하지 않아요.</div></details>
             ${topEgi.length ? `<div class="notice"><b>실제로 잘 된 색(최근 7일 보고)</b><br>${topEgi.map((o, i) => `${i + 1}. ${esc(o.k)} — 보고 ${o.n}건 · 평균 ${(o.fish / o.n).toFixed(0)}마리`).join('<br>')}</div>` : '<div class="small dim">아직 실제 보고가 없어 조건으로 추천합니다. 조과를 올릴 때 「잘 된 에기·미끼 색」을 적어 주시면 진짜 「오늘의 에기」가 됩니다.</div>'}</div>
           <div class="card"><h2>🎣 로드·릴 추천 <span class="small muted">스펙 기준(특정 상표 순위 아님)</span></h2><div class="row3"><span>로드</span><span>${esc(t.rod)}</span><span>릴</span><span>${esc(t.reel)}</span><span>줄</span><span>${esc(t.line)}</span></div>
             <div class="bar">${shop(sp + ' 로드')}${shop(sp + ' 릴')}${t.egi ? shop(sp + ' ' + (t.u === 'g' ? '채비' : '에기')) : ''}</div><div class="small dim">구매는 판매처에서 직접 — 이 앱은 결제하지 않습니다. 처음이면 낚시점·선상 대여를 먼저 써 보세요.</div></div>
@@ -960,6 +993,42 @@
         const txt = `[낚시 일정] ${p.d}${p.time ? ' ' + p.time : ''} · ${p.region} · 만나는 곳: ${w ? w.n.replace(/^\S+\s/, '') : '-'} · ${MATE_KIND[p.kind].replace(/^\S+\s/, '')}${p.sp ? ' · ' + p.sp : ''}. 처음 만나는 낚시인과 함께 가요. 도착하면 연락할게요.`;
         (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => say('가족에게 보낼 문구를 복사했어요. 문자·메신저에 붙여넣어 보내세요.'), () => { window.prompt('아래 문구를 복사해 가족에게 보내세요', txt); }); });
     }
+    /* 👪 우리끼리 조황 모임 — 초대 코드로 가족·친구끼리만 보는 조황(시·도 이름만, 사진·연락처 없음) */
+    function groupView() {
+      const G = st.grp = st.grp || { region: st.region !== '전체' ? st.region : Object.keys(D.regions)[0], sp: '', n: '', note: '' };
+      const mine = V.myGroups || {}, codes = Object.keys(mine); if (!codes.includes(G.cur)) G.cur = codes[0];
+      const today = todayStr(), posts = (V.gposts || []).filter(p => p.g === G.cur);
+      const sum = {}; posts.filter(p => p.d >= daysAgo(30)).forEach(p => { const o = sum[p.sp || '기타'] = sum[p.sp || '기타'] || { n: 0, c: 0 }; o.n += p.n; o.c++; });
+      R('view').innerHTML = `<div class="small ${store.shared ? 'shared' : 'dim'}" style="margin-bottom:8px">${store.shared ? '🌐 ' : '💾 '}${esc(store.label)}</div>
+        ${store.shared ? '' : '<div class="card small" style="border-color:var(--p-warn)">이 화면(PC·휴대폰 앱)에서는 모임 글이 <b>이 기기에만</b> 저장됩니다. 가족·친구와 함께 보려면 「바다 조황 수첩」에서 쓰세요(조황 수첩을 그분들께 공유해야 해요).</div>'}
+        <div class="card small"><b>👪 우리끼리 조황 모임</b><br>• 초대 코드를 아는 사람끼리 조황을 나눠요. 위치는 <b>시·도 이름만</b>, 사진·연락처는 올리지 않아요(써도 자동으로 가려져요).<br>• 초대 코드는 <b>비밀번호가 아니에요</b> — 조황 수첩을 볼 수 있는 사람은 기술적으로 볼 수 있으니, 숨기고 싶은 포인트는 쓰지 마세요.</div>
+        <div class="grid2"><div class="card"><h2>🔑 내 모임 (${codes.length}/5)</h2>
+          ${codes.length ? `<div class="bar">${codes.map(c => `<button class="chip" data-gcur="${c}" aria-pressed="${c === G.cur}">${esc(mine[c])} · ${(V.groupN || {})[c] || 1}명</button>`).join('')}</div>` : '<div class="empty">아직 들어간 모임이 없어요. 새로 만들거나 초대 코드로 들어가세요.</div>'}
+          ${store.canWrite ? `<div class="bar" style="margin-top:6px"><input id="pl-gname" maxlength="20" placeholder="새 모임 이름 (예: 우리 가족)" style="flex:1"><button class="chip" id="pl-gnew">＋ 만들기</button></div>
+            <div class="bar"><input id="pl-gcode" maxlength="6" placeholder="초대 코드 6자리" style="flex:1;text-transform:uppercase"><button class="chip" id="pl-gjoin">들어가기</button></div>` : '<div class="small dim">보기 전용입니다.</div>'}
+          ${G.cur ? `<div class="notice" style="margin-top:6px">초대 코드 <b style="font-size:18px;letter-spacing:2px">${G.cur}</b> <button class="chip" id="pl-gcopy">초대 문구 복사</button>${store.canWrite ? ` <button class="chip" id="pl-gleave">모임 나가기</button>` : ''}</div>` : ''}</div>
+        ${G.cur && store.canWrite ? `<div class="card"><h2>✍ 「${esc(mine[G.cur])}」에 조황 올리기</h2>
+          <div class="bar"><label>날짜 <input type="date" id="pl-gd" max="${today}" value="${esc(G.d || today)}"></label><label>지역 <select id="pl-greg">${Object.keys(D.regions).map(r => `<option ${r === G.region ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label></div>
+          <div class="bar"><select id="pl-gsp">${['', ...SPECIES].map(s => `<option value="${esc(s)}" ${s === G.sp ? 'selected' : ''}>${s || '어종 고르기'}</option>`).join('')}</select><label>마릿수 <input type="number" id="pl-gn" min="0" max="999" value="${esc(G.n)}" style="width:80px"></label></div>
+          <textarea id="pl-gnote" maxlength="160" rows="2" style="width:100%" placeholder="한마디 (예: 물때 좋았어요, 에기는 주황)">${esc(G.note)}</textarea>
+          <button class="chip" id="pl-gpost" style="margin-top:6px">올리기</button></div>` : ''}</div>
+        ${G.cur ? `<div class="card"><h2>📊 최근 30일 모임 조황</h2>${Object.keys(sum).length ? `<div class="bar">${Object.entries(sum).sort((a, b) => b[1].n - a[1].n).map(([k, o]) => `<span class="chip">${esc(k)} ${o.n}마리 · ${o.c}번</span>`).join('')}</div>` : '<div class="small dim">아직 올린 조황이 없어요.</div>'}</div>
+          ${posts.map(p => `<div class="card"><b>${esc(p.sp || '어종 없음')}</b> ${p.n}마리 · ${esc(p.d)} · ${esc(p.where)}${p.note ? `<div style="margin:4px 0">${esc(p.note)}</div>` : ''}
+            <div class="small muted">${esc(nick(p.me ? 'me' : p.who))}${p.me ? ` · <button class="chip" data-gdel="${esc(p.gid)}">지우기</button>` : ''}</div></div>`).join('')}` : ''}`;
+      const keep = () => { if (!$('gsp')) return; Object.assign(G, { d: $('gd').value, region: $('greg').value, sp: $('gsp').value, n: $('gn').value, note: $('gnote').value }); };
+      root.querySelectorAll('[data-gcur]').forEach(b => b.onclick = () => { keep(); G.cur = b.dataset.gcur; groupView(); });
+      const after = () => { V = store.view(); groupView(); };
+      if ($('gnew')) $('gnew').onclick = () => { if (codes.length >= 5) { say('모임은 5개까지 들어갈 수 있어요'); return; } const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', code = Array.from({ length: 6 }, () => A[Math.floor(Math.random() * A.length)]).join('');
+        G.cur = code; run(store.groupJoin(code, $('gname').value.trim() || '우리 모임'), '모임을 만들었어요. 초대 코드를 가족·친구에게 알려 주세요').then(after); };
+      if ($('gjoin')) $('gjoin').onclick = () => { const code = $('gcode').value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!/^[A-Z0-9]{6}$/.test(code)) { say('초대 코드는 영문·숫자 6자리예요'); return; } if (!mine[code] && codes.length >= 5) { say('모임은 5개까지 들어갈 수 있어요'); return; }
+        G.cur = code; run(store.groupJoin(code, '초대받은 모임'), '모임에 들어갔어요').then(after); };
+      if ($('gleave')) $('gleave').onclick = () => { if (!confirm('이 모임에서 나갈까요? 내가 이 모임에 올린 글도 지워져요.')) return; run(store.groupLeave(G.cur), '모임에서 나왔어요').then(() => { G.cur = ''; after(); }); };
+      if ($('gcopy')) $('gcopy').onclick = () => { const txt = `[출조 관제 우주 프로] 「${mine[G.cur]}」 조황 모임에 들어와요! 바다 조황 수첩 → 낚시점·선상 → 👪 우리 모임 → 초대 코드 ${G.cur}`;
+        (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => say('초대 문구를 복사했어요. 문자·메신저에 붙여넣으세요.'), () => window.prompt('아래 문구를 복사하세요', txt)); };
+      if ($('gpost')) $('gpost').onclick = () => { keep(); if (!/^\d{4}-\d\d-\d\d$/.test(G.d) || G.d > today) { say('오늘이나 지난 날짜를 골라 주세요'); return; } if (!G.sp) { say('어종을 골라 주세요'); return; }
+        run(store.gpost({ g: G.cur, d: G.d, sp: G.sp, n: G.n, where: G.region, note: G.note }), '모임에 조황을 올렸어요').then(() => { G.note = ''; G.n = ''; after(); }); };
+      root.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => run(store.gdel(b.dataset.gdel), '지웠어요').then(after));
+    }
     /* 🪑 선장님이 올리는 빈자리 — 본인 확인 안 된 정보, 예약·결제는 각 배로(자동 수집 없음) */
     function seatView() {
       st.seat = st.seat || { region: st.region !== '전체' ? st.region : (Object.keys(D.regions).find(r => (D.boats || []).some(b => b.region === r)) || Object.keys(D.regions)[0]), show: '전체', sp: '' };
@@ -1089,7 +1158,7 @@
         if (!o.name) return; run(store.add(o), '등록했습니다').then(() => { if (k !== 'event') { st.tab = k; st.sel = o.id; render(); } }); };
     }
     function body() { if (st.tab !== 'find') stopFinder();
-      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'seat') seatView(); else if (st.tab === 'clean') cleanView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
+      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'group') groupView(); else if (st.tab === 'seat') seatView(); else if (st.tab === 'clean') cleanView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
       root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); }); }
     function bindChips() {
       root.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { st.sea = b.dataset.sea; saveUi(); render(); });
@@ -1108,7 +1177,7 @@
     store.onChange(() => { V = store.view(); const ae = document.activeElement;
       if (ae && root.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.value && ae.type !== 'file') { say(); return; }   // 입력 중이면 화면을 다시 그리지 않음
       body(); say(); });
-    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'seat', 'clean', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
+    const h = location.hash.slice(1); if (['shop', 'boat', 'spot', 'tackle', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(h)) st.tab = h;
     render();
     return { setRegion(name, lat, lon) {   // 기준 지역(PC 운전 개요): 같은 이름이 없으면 가까운 지역(60km 안)
         let key = D.regions[name] ? name : null;
