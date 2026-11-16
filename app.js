@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '6.4-mobile';
+const VERSION = '6.5-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -186,6 +186,7 @@ function initGames() {
     ...(window.SeaHome ? SeaHome.extra(r => { addCoins(r.coins); hub.record(r); }, { store }) : []),   // 아라의 바다 고향 10경
     ...(window.SeaGames ? SeaGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🤿 바다 속 탐험
     ...(window.TrendGames ? TrendGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 요즘 유행 장르 5종
+    ...(window.MethodGames ? MethodGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎓 낚시법 도장 깨기
   ];
   hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
     onUnlock: key => { const w = wallet.get(); return wallet.set({ owned: AnglerDress.unlock(w.owned, key) }); } });
