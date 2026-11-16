@@ -101,12 +101,21 @@ window.SeaMapPlus = (function () {
     /* 🚫 여기서 낚시해도 되나요? — 전국 바다 공식 자료가 없어서 OSM 표시 + 확인표, 나머지는 「확인 필요」 */
     const BAN_CHECK = ['현장 안내판·출입 통제선(펜스)이 있으면 들어가지 않아요 — 출입을 막은 방파제가 많아요.', '시·군·구가 정한 「낚시 금지·제한구역」인지 시·군·구 누리집 고시로 확인해요(「낚시 관리 및 육성법」).', '항만 안 선박 통행로·여객선 부두, 군사시설 주변은 낚시가 막혀 있는 경우가 많아요.', '양식장·정치망 근처는 피하고 어업인 작업을 방해하지 않아요.', '해양보호구역·습지보호지역은 따로 규칙이 있을 수 있어요.', '풍랑·태풍 특보 때는 방파제·갯바위 출입이 통제될 수 있어요.', '모르면 관할 해양경찰서나 시·군·구 해양수산 담당 부서에 물어보세요.'];
     const BAN_LINKS = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"><a href="https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%82%9A%EC%8B%9C%EA%B4%80%EB%A6%AC%EB%B0%8F%EC%9C%A1%EC%84%B1%EB%B2%95" target="_blank" rel="noopener">낚시 관리 및 육성법(국가법령정보센터)</a><a href="https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=%EB%82%9A%EC%8B%9C%EA%B8%88%EC%A7%80%EA%B5%AC%EC%97%AD" target="_blank" rel="noopener">지자체 낚시금지구역 자료(공공데이터포털)</a></div>`;
+    // 지자체 공식 자료(좌표 없이 구간 이름만 있어 목록으로 보여 줌) — 공공데이터포털, 이용허락범위 제한 없음
+    const BAN_OFFICIAL = [{ area: '인천', box: [37.30, 126.30, 37.70, 126.85], src: '인천광역시_낚시금지 및 제한구역 현황(2024-08-26 기준)', url: 'https://www.data.go.kr/data/15119608/fileData.do',
+      rows: [['아라천', '낚시', '양안', '주운수로와 굴포천 연결수로', '33.8km'], ['굴포천', '낚시·야영·취사', '양안', '갈산동 404-12 ⇔ 삼산동 106-24', '6.8km'], ['굴포천', '낚시·야영·취사', '좌안', '삼산동 302 ⇔ 삼산동 325-312', '0.7km'],
+        ['굴포천', '낚시·야영·취사', '우안', '삼산동 301-1 ⇔ 삼산동 325-446', '0.4km'], ['굴포천', '낚시·야영·취사', '양안', '당미1교 ⇔ 귤현보', '2.6km'], ['굴포천', '낚시', '양안', '체절수문 ⇔ 상야교', '3.0km'], ['굴포천', '낚시', '좌안', '중앙교 ⇔ 천상교', '1.2km'],
+        ['공촌천', '낚시·야영·취사', '양안', '공촌2교 ⇔ 공촌천교', '5.4km'], ['공촌천', '낚시·야영·취사', '좌안', '공촌천교 ⇔ 서해수문', '1.6km'], ['심곡천', '낚시·야영·취사', '양안', '청중로 봉수교 ⇔ 보존지역 일대', '9.6km'], ['심곡천', '낚시·야영·취사', '우안', '보존지역 일대 ⇔ 서해수문', '0.9km']] }];
+    function officialList(p) {
+      const o = BAN_OFFICIAL.find(a => p.lat >= a.box[0] && p.lat <= a.box[2] && p.lon >= a.box[1] && p.lon <= a.box[3]); if (!o) return '';
+      return `<div style="margin-top:6px"><b>📋 ${esc(o.area)} 공식 금지 구간(하천)</b> — 바다 구역은 이 자료에 없어요<ul style="margin:2px 0;padding-left:18px">${o.rows.map(r => `<li>${esc(r[0])} ${esc(r[2])}: ${esc(r[3])} (${esc(r[4])}, ${esc(r[1])} 금지)</li>`).join('')}</ul><a href="${o.url}" target="_blank" rel="noopener">출처: ${esc(o.src)}</a></div>`;
+    }
     function banLine(p) {
       if (p.k !== 'fish') return '';
       const R = 6371000, rad = Math.PI / 180, dist = q => { const dl = (q.lat - p.lat) * rad, dn = (q.lon - p.lon) * rad, a = Math.sin(dl / 2) ** 2 + Math.cos(p.lat * rad) * Math.cos(q.lat * rad) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(a)); };
       const near = (st.pois || []).filter(q => q.k === 'danger' && q.t && (q.t.fishing === 'no' || q.t['seamark:type'] === 'restricted_area') && dist(q) < 400).length, acc = p.t.access === 'no' || p.t.access === 'private';
       return `<div class="small" style="margin-top:4px">${acc ? '⛔ <b>출입 금지 표시가 있는 곳</b>(OpenStreetMap)' : near ? `⛔ <b>근처 400m 안에 낚시 금지·제한 표시 ${near}곳</b>(OpenStreetMap) — 현장에서 꼭 확인` : '❔ <b>낚시 가능 여부: 확인 필요</b> — 이 곳의 공식 금지·제한 구역 자료가 아직 없어요'}</div>
-        <details class="small"><summary>🚫 여기서 낚시해도 되나요? 확인표</summary><ol style="margin:4px 0;padding-left:18px">${BAN_CHECK.map(t => `<li>${esc(t)}</li>`).join('')}</ol>${BAN_LINKS}</details>`;
+        <details class="small"><summary>🚫 여기서 낚시해도 되나요? 확인표</summary><ol style="margin:4px 0;padding-left:18px">${BAN_CHECK.map(t => `<li>${esc(t)}</li>`).join('')}</ol>${officialList(p)}${BAN_LINKS}</details>`;
     }
     function drawPois() {
       G.poi.clearLayers(); const shown = st.pois.filter(p => p.k !== '_hab' && st.kinds[p.k]);
