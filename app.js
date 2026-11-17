@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '7.1-mobile';
+const VERSION = '7.2-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -187,6 +187,8 @@ function initGames() {
     ...(window.SeaGames ? SeaGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🤿 바다 속 탐험
     ...(window.TrendGames ? TrendGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 요즘 유행 장르 5종
     ...(window.MethodGames ? MethodGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎓 낚시법 도장 깨기
+    ...(window.PlayGames ? PlayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎮 놀이 4종
+    ...(window.DayGames ? DayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🚢 선상 하루 4종
   ];
   hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
     onUnlock: key => { const w = wallet.get(); return wallet.set({ owned: AnglerDress.unlock(w.owned, key) }); } });
