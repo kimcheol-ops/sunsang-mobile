@@ -363,6 +363,7 @@
       const cv = sh.body.querySelector('canvas'), C = square(cv), g = C.g, q = s => sh.body.querySelector(s);
       const others = [{ x: 100, y: 900, v: 45 }, { x: 480, y: 460, v: -40 }];
       const s = { x: 300, y: 1445, h: -Math.PI / 2, v: 0, eng: 0, rud: 0, hp: 100, t: 0, phase: 0, gate: 0, stopT: 0, dockT: 0, hitCd: 0, pen: 0, msg: '', msgT: 0, wind: 0, gatesOk: 0, back: 0 };
+      cv._s = s; // 시험용(읽기 전용 확인)
       let alive = true, raf = 0, last = 0, keyL = false, keyR = false;
       const say = (t, sec) => { s.msg = t; s.msgT = sec || 2; };
       const ENG = ['⏪ 후진', '⏸ 정지', '① 미속', '② 저속', '③ 중속', '④ 전속'];

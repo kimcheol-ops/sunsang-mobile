@@ -142,11 +142,11 @@
     const today = dayKey(), R = rng(today);
     if (ctx.inPC) root.addEventListener('click', e => { const a = e.target.closest('a[href^="https://"]'); if (a) { e.preventDefault(); try { window.chrome.webview.postMessage({ type: 'open', url: a.href }); } catch (x) {} } });
 
-    root.innerHTML = `<h2 class="fh">🎡 오늘의 바다 놀이터 <small>조황 대신 쓸 수 있는 예보·달력 + 쇼츠·운세·만화</small></h2>
+    root.innerHTML = `<h2 class="fh">🎡 오늘의 바다 놀이터 <small>조황 대신 쓸 수 있는 예보·달력 + 쇼츠·홍보 영상·운세·만화</small></h2>
       <div class="fgrid">
         <div class="fc" id="f-tide" style="grid-column:1/-1"></div>
         <div class="fc" id="f-bite"></div><div class="fc" id="f-cal"></div><div class="fc" id="f-rep"></div><div class="fc" id="f-crowd"></div>
-        <div class="fc" id="f-short"></div><div class="fc" id="f-luck"></div><div class="fc" id="f-prev"></div><div class="fc" id="f-toon"></div>
+        <div class="fc" id="f-short"></div><div class="fc" id="f-promo"></div><div class="fc" id="f-luck"></div><div class="fc" id="f-prev"></div><div class="fc" id="f-toon"></div>
       </div>`;
     const $ = id => root.querySelector('#' + id);
 
@@ -366,7 +366,7 @@
         <div class="small muted">출처: 국립해양조사원 조석예보·조위관측소 실측·편차계산표, 한국천문연구원 출몰시각 (공공데이터포털, 공공누리 제1유형). 항해용 아님.</div>`;
     }
 
-    tide(); bite(); cal(); reports(); crowd(); short.el(); luck(); prev(); toon(); loadWx();
+    tide(); bite(); cal(); reports(); crowd(); short.el(); try { if (window.PromoMaker) PromoMaker.mount($('f-promo'), { download: ctx.download }); else $('f-promo').remove(); } catch (e) {} luck(); prev(); toon(); loadWx();
     return { setRegion(name, lat, lon) { if (!name || name === region.name) return; region = { name, lat, lon }; tide(); bite(); reports(); short.prep(); loadWx(); } };
   }
   window.FunBoard = { mount, QUIZ, TOON };
