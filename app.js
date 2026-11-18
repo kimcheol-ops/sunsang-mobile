@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '7.6-mobile';
+const VERSION = '7.8-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -138,7 +138,7 @@ let map = null, pins = null; const ovs = {};
 function initMap() {
   if (map || !window.L) return;
   map = L.map('map', { zoomControl: true }).setView([35.9, 127.8], 6);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
+  if (window.MapStyle) MapStyle.attach(map); else L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
   ovs.seamark = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom: 18, attribution: 'OpenSeaMap' }).addTo(map);
   ovs.depth = L.tileLayer.wms('https://wms.gebco.net/mapserv?', { layers: 'GEBCO_LATEST', format: 'image/png', transparent: true, opacity: .45, attribution: 'GEBCO' });
   const d = new Date(Date.now() - 20 * 86400000);   // MUR 합성 수온은 며칠 늦게 올라와 20일 전 날짜를 씀

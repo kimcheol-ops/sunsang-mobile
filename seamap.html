@@ -132,7 +132,7 @@ const STYLES = [
   { id: 'osm', ic: '🗺', name: '일반 지도', note: '길·마을 이름이 자세함', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', o: { maxZoom: 18, attribution: OSMC } },
   { id: 'light', ic: '⬜', name: '밝고 깔끔', note: '회색 바탕 · 표시물이 잘 보임', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', o: { maxZoom: 18, className: 'lightTiles', attribution: OSMC } },
   { id: 'night', ic: '🌌', name: '야간 관제', note: '검은 바탕 · 화면 꺼진 듯 조용', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', o: { maxZoom: 18, className: 'nightTiles', attribution: OSMC } },
-  { id: 'voyager', ic: '🧭', name: '여행 지도', note: '선명한 색 · 항구·시설 강조', url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', o: { maxZoom: 19, subdomains: 'abc', attribution: `${OSMC} · 스타일 <a href="https://www.hotosm.org">HOT</a> · <a href="https://openstreetmap.fr">OSM France</a>` } },
+  { id: 'hot', ic: '🧭', name: '여행 지도', note: '선명한 색 · 항구·시설 강조', url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', o: { maxZoom: 19, subdomains: 'abc', attribution: `${OSMC} · 스타일 <a href="https://www.hotosm.org">HOT</a> · <a href="https://openstreetmap.fr">OSM France</a>` } },
   { id: 'topo', ic: '⛰', name: '지형·등고선', note: '산·해안 절벽 높낮이', url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', o: { maxZoom: 17, subdomains: 'abc', attribution: `${OSMC} · SRTM · © <a href="https://opentopomap.org">OpenTopoMap</a>` } },
   { id: 'relief', ic: '🌊', name: '바다 지형', note: '바다 깊이를 색으로(위성 합성)', url: GIBS('BlueMarble_ShadedRelief_Bathymetry', '2004-08-01', 'jpeg', 8), o: { maxNativeZoom: 8, maxZoom: 14, attribution: `${NASA} Blue Marble` } },
   { id: 'gebco', ic: '📏', name: '수심 지도', note: 'GEBCO 국제 수심도 · 항해용 아님', wms: true, o: { layers: 'GEBCO_LATEST', format: 'image/png', transparent: false, attribution: '<a href="https://www.gebco.net">GEBCO</a>' } },
@@ -210,13 +210,13 @@ async function useStyle(id, quiet) {
   const next = await baseLayer(st);
   if (!next) return;
   if (base) map.removeLayer(base);
-  base = next.addTo(map); base.bringToBack(); baseId = st.id; lsSet('seamap.style', st.id);
+  base = next.addTo(map); base.bringToBack(); baseId = st.id; lsSet('mapstyle.v1', st.id);
   document.querySelectorAll('.styleCard').forEach(b => b.setAttribute('aria-pressed', b.dataset.st === st.id));
   if (!quiet) showSatInfo();
 }
 document.getElementById('styleGrid').addEventListener('click', e => { const b = e.target.closest('[data-st]'); if (b) useStyle(b.dataset.st); });
 drawStyles();
-useStyle(lsGet('seamap.style', 'dark'), true);
+useStyle(lsGet('mapstyle.v1', 'dark'), true);
 // 위성 미리보기는 최신 날짜를 찾은 뒤 채움(백그라운드)
 (async () => { for (const k of ['true', 'lights']) { await latestDate(SAT[k]); } drawStyles(); })();
 

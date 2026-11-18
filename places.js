@@ -698,7 +698,7 @@
         body(); });
       // 지도
       if (useMap && $('mini')) { const m = moorPt(x) || x; const map = L.map($('mini'), { zoomControl: true, attributionControl: false }).setView([m.lat, m.lon], m === x && x.approx ? 15 : 17);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { className: 'darkTiles', maxZoom: 19 }).addTo(map);
+        if (window.MapStyle) MapStyle.base(map); else L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { className: 'darkTiles', maxZoom: 19 }).addTo(map);
         L.marker([m.lat, m.lon]).bindTooltip(moorPt(x) ? '승선 위치' : '대략 위치').addTo(map);
         if (x.parking && x.parking.lat) L.circleMarker([x.parking.lat, x.parking.lon], { radius: 8, color: '#fff', weight: 2, fillColor: '#3D8BFF', fillOpacity: 1 }).bindTooltip('주차').addTo(map);
         if (pick) map.on('click', e => { const v = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`; if (pick === 'moor' && $('moorLL')) $('moorLL').value = v; if (pick === 'park' && $('pLL')) $('pLL').value = v; say(`${pick === 'moor' ? '승선' : '주차'} 위치를 찍었습니다. 저장을 누르세요.`); pick = null; $('mini').classList.remove('pick'); }); }
@@ -932,7 +932,7 @@
       if ($('more')) $('more').onclick = () => { st.more = (st.more || 120) + 200; body(); };
       bindDetail(sel && sel.x);
       if (useMap && $('map')) { const map = L.map($('map')).setView([35.9, 127.8], 6);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
+        if (window.MapStyle) MapStyle.attach(map); else L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
         const pts = rows.map(({ x, s }) => { const p = moorPt(x) || x; return L.circleMarker([p.lat, p.lon], { radius: x.id === st.sel ? 9 : 6, color: '#0B1A1F', weight: 1.5, fillColor: x.kind === 'shop' ? '#8CC8F2' : x.kind === 'spot' ? '#6FD3A4' : '#F5C46B', fillOpacity: .95 })
           .bindTooltip(`${x.name} · ${s.total}`).on('click', () => select(x.id)).addTo(map); });
         if (sel) { const p = moorPt(sel.x) || sel.x; map.setView([p.lat, p.lon], 13); } else if (pts.length && st.region !== '전체') map.fitBounds(L.featureGroup(pts).getBounds().pad(.3)); }
