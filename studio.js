@@ -191,7 +191,10 @@
     { id: 'shade', name: '명암 3단계', guide: 'sphere', steps: ['빛이 오는 쪽(왼쪽 위 화살표)을 정해요.', '밝은 면: 빛 쪽은 가장 연한 색으로 칠해요.', '중간 면: 가운데는 원래 색.', '그림자 면: 빛 반대쪽은 같은 색에 남색을 조금 섞어 진하게.', '바닥 그림자: 물체 아래 바닥에 타원 그림자를 놓으면 떠 있지 않아요.'] },
     { id: 'persp', name: '원근: 멀고 가까움', guide: 'persp', steps: ['수평선(가로 점선)을 그어요. 바다와 하늘이 만나는 곳.', '소실점(가운데 점)으로 모이는 선을 따라 배·방파제를 그려요.', '가까운 물고기는 크게, 먼 물고기는 작게.', '먼 곳은 흐리고 파랗게, 가까운 곳은 진하고 또렷하게(공기 원근).'] },
     { id: 'temp', name: '색의 온도', guide: 'none', palette: 'temp', steps: ['따뜻한 색(빨강·주황·노랑)은 가까이·햇빛 느낌.', '차가운 색(파랑·남색·청록)은 멀리·물속 느낌.', '노을 바다: 하늘은 따뜻하게, 바다는 차갑게 칠해 보세요.', '보색(주황↔파랑)을 나란히 두면 서로 더 또렷해져요.'] },
-    { id: 'under', name: '물속 표현', guide: 'under', steps: ['위는 밝은 청록, 아래로 갈수록 진한 남색(수채 붓 추천).', '빛줄기: 위에서 비스듬히 내려오는 연한 줄을 빛 붓으로.', '물방울: 작은 동그라미 + 왼쪽 위에 흰 점.', '바닥: 모래·바위·해초는 흐리게, 물고기는 또렷하게.'] }
+    { id: 'under', name: '물속 표현', guide: 'under', steps: ['위는 밝은 청록, 아래로 갈수록 진한 남색(수채 붓 추천).', '빛줄기: 위에서 비스듬히 내려오는 연한 줄을 빛 붓으로.', '물방울: 작은 동그라미 + 왼쪽 위에 흰 점.', '바닥: 모래·바위·해초는 흐리게, 물고기는 또렷하게.'] },
+    { id: 'third', name: '구도: 3분할', guide: 'third', steps: ['화면을 가로·세로 3칸씩 나눈 점선을 봐요.', '주인공 물고기는 선이 만나는 빨간 점 4곳 중 한 곳에 둬요(가운데보다 자연스러워요).', '수평선은 위나 아래 가로선에 맞춰요 — 하늘이 주인공이면 아래, 바다가 주인공이면 위.', '물고기가 바라보는 쪽에 빈 공간을 남기면 답답하지 않아요.'] },
+    { id: 'motion', name: '움직임 표현', guide: 'none', steps: ['빠르게 헤엄치는 물고기 뒤에 짧은 가로줄(속도선) 3~4개를 그어요.', '꼬리를 한쪽으로 휘게 그리면 방향을 바꾸는 느낌이 나요.', '물방울은 물고기 뒤쪽으로 갈수록 작고 흐리게.', '낚싯줄이 팽팽하면 곧게, 느슨하면 살짝 휘게 그려요.', '4D 플립북에서 한 장씩 꼬리 각도를 바꿔 직접 움직여 보세요.'] },
+    { id: 'mix', name: '바다 색 섞기', guide: 'none', palette: 'temp', steps: ['맑은 날 바다: 파랑에 청록을 조금 섞어요.', '흐린 날 바다: 파랑에 남색과 흰색을 섞어 차분하게.', '얕은 모래 바다: 청록에 노랑을 아주 조금.', '노을 물결: 바다색 위에 주황을 가로로 짧게 얹어요.', '같은 색도 위는 연하게, 아래는 진하게 칠하면 깊어 보여요.'] }
   ];
   const TEMP_PAL = ['#E0504F', '#F27A3A', '#F29A38', '#F5C547', '#F5D547', '#3FB4E0', '#2E9E8F', '#1F6C8A', '#3F4FB0', '#22305E'];
 
@@ -347,6 +350,8 @@
           svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><marker id="a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#E0A020"/></marker></defs><line x1="18" y1="18" x2="62" y2="62" stroke="#E0A020" stroke-width="3" marker-end="url(#a)"/><text x="14" y="14" font-size="10" fill="#E0A020">☀ 빛</text><circle cx="105" cy="100" r="50" fill="none" stroke="#5A6470" stroke-dasharray="4 3"/><path d="M75 75 A40 40 0 0 1 120 62" fill="none" stroke="#ccc" stroke-width="2"/><text x="78" y="78" font-size="8" fill="#888">밝은 면</text><text x="125" y="128" font-size="8" fill="#555">그림자 면</text><ellipse cx="118" cy="160" rx="44" ry="8" fill="none" stroke="#5A6470" stroke-dasharray="3 3"/><text x="96" y="176" font-size="8" fill="#555">바닥 그림자</text></svg>`;
         } else if (lesson.guide === 'persp') {
           svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><line x1="0" y1="80" x2="200" y2="80" stroke="#3F7FB0" stroke-dasharray="5 4"/><text x="4" y="76" font-size="8" fill="#3F7FB0">수평선</text><circle cx="100" cy="80" r="2.5" fill="#C0392B"/><text x="104" y="76" font-size="8" fill="#C0392B">소실점</text>${[-60, -20, 20, 60, 140, 260, -160].map(x => `<line x1="100" y1="80" x2="${x}" y2="200" stroke="#5A6470" stroke-width=".8" stroke-dasharray="3 3"/>`).join('')}</svg>`;
+        } else if (lesson.guide === 'third') {
+          svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><g stroke="#3F7FB0" stroke-dasharray="5 4" stroke-width="1.2"><line x1="66.7" y1="0" x2="66.7" y2="200"/><line x1="133.3" y1="0" x2="133.3" y2="200"/><line x1="0" y1="66.7" x2="200" y2="66.7"/><line x1="0" y1="133.3" x2="200" y2="133.3"/></g>${[[66.7, 66.7], [133.3, 66.7], [66.7, 133.3], [133.3, 133.3]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="none" stroke="#C0392B" stroke-width="2"/>`).join('')}<text x="70" y="62" font-size="8" fill="#C0392B">주인공 자리</text></svg>`;
         } else if (lesson.guide === 'under') {
           svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="u" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FE0E8" stop-opacity=".5"/><stop offset="1" stop-color="#0D2A55" stop-opacity=".5"/></linearGradient></defs><rect width="200" height="200" fill="url(#u)"/>${[30, 70, 120, 160].map(x => `<path d="M${x} 0 L${x - 30} 200 L${x - 18} 200 L${x + 10} 0 Z" fill="#fff" opacity=".12"/>`).join('')}<text x="6" y="12" font-size="8" fill="#08313A">밝게</text><text x="6" y="194" font-size="8" fill="#fff">진하게</text></svg>`;
         }
@@ -543,11 +548,12 @@
       body.innerHTML = `<div class="wrap"><div><div class="cvbox dark" id="a4-box"><canvas id="a4"></canvas></div></div>
         <div class="side"><div class="row"><button class="bt" data-m="swim" aria-pressed="${st.mode === 'swim'}">🐟 헤엄치는 그림</button><button class="bt" data-m="flip" aria-pressed="${st.mode === 'flip'}">📒 플립북</button></div>
           <div id="a4-opt"></div><div class="meter"><i id="a4-bar"></i></div>
-          <div class="row"><button class="bt pri" data-rec>🎥 영상 저장(5초)</button></div>
+          <div class="row"><button class="bt pri" data-rec>🎥 영상 저장</button></div>
           <div class="tip" id="a4-tip"></div></div></div>`;
       const box = body.querySelector('#a4-box'), cv = body.querySelector('#a4'), g = cv.getContext('2d'), q = s => body.querySelector(s);
       let raf = 0, t0 = performance.now(), sub = subject(512), bubbles = [];
       const frames = [mk(512)]; let fi = 0, playing = false, fdraw = null;
+      const FMAX = 48; let fdir = 1;
       function size() { const r = box.getBoundingClientRect(); cv.width = 720; cv.height = Math.round(720 * r.height / Math.max(1, r.width)); }
       function sea(t) {
         if (st.bg === 'sea') { const gr = g.createLinearGradient(0, 0, 0, cv.height); gr.addColorStop(0, '#2C8CB0'); gr.addColorStop(1, '#06223F'); g.fillStyle = gr; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = 'rgba(255,255,255,.07)'; for (let i = 0; i < 5; i++) { const x = (i * 170 + t * 20) % (cv.width + 200) - 100; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 60, 0); g.lineTo(x - 80, cv.height); g.lineTo(x - 140, cv.height); g.fill(); } g.fillStyle = '#C9B48A'; g.beginPath(); g.moveTo(0, cv.height); for (let x = 0; x <= cv.width; x += 40) g.lineTo(x, cv.height - 30 - Math.sin(x * 0.02) * 12); g.lineTo(cv.width, cv.height); g.fill(); }
@@ -572,7 +578,7 @@
       function loop(now) {
         const t = (now - t0) / 1000;
         if (st.mode === 'swim') swim(t);
-        else { if (playing && now - lastF > 1000 / st.fps) { fi = (fi + 1) % frames.length; lastF = now; } flip(); }
+        else { if (playing && now - lastF > 1000 / st.fps) { if (st.pp && frames.length > 1) { if (fi + fdir < 0 || fi + fdir >= frames.length) fdir = -fdir; fi += fdir; } else fi = (fi + 1) % frames.length; lastF = now; } flip(); }
         raf = requestAnimationFrame(loop);
       }
       function opt() {
@@ -584,15 +590,16 @@
           body.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => { st.bg = b.dataset.bg; lsSet('stu.4d', st); opt(); });
           q('[data-re]').onclick = () => { sub = subject(512); opt(); };
         } else {
-          q('#a4-opt').innerHTML = `<div class="row"><button class="bt" data-fp>◀</button><button class="bt" data-fn>▶</button><button class="bt" data-fadd>＋ 장 추가</button><button class="bt" data-fcopy>⧉ 복사해 추가</button><button class="bt" data-fdel>－</button></div><div class="row"><button class="bt pri" data-play>${playing ? '⏸ 멈춤' : '▶ 재생'}</button><label class="row">빠르기 <input type="range" id="a4-f" min="2" max="24" value="${st.fps}"></label></div><div class="row">${PAL.slice(0, 10).map(c => `<button class="sw" data-c="${c}" style="background:${c}" aria-pressed="${ui.color === c}"></button>`).join('')}<button class="bt" data-er aria-pressed="${ui.brush === 'eraser'}">🧽</button></div>`;
-          q('#a4-tip').textContent = '한 장씩 조금씩 바꿔 그리면 움직이는 그림이 돼요. 앞 장이 흐리게 비쳐 보여요(어니언 스킨). 최대 24장.';
+          q('#a4-opt').innerHTML = `<div class="row"><button class="bt" data-fp>◀</button><button class="bt" data-fn>▶</button><button class="bt" data-fadd>＋ 장 추가</button><button class="bt" data-fcopy>⧉ 복사해 추가</button><button class="bt" data-fdel>－</button></div><div class="row"><button class="bt pri" data-play>${playing ? '⏸ 멈춤' : '▶ 재생'}</button><label class="row">빠르기 <input type="range" id="a4-f" min="2" max="24" value="${st.fps}"></label><button class="bt" data-pp aria-pressed="${!!st.pp}">🔁 왕복</button></div><div class="row">${PAL.slice(0, 10).map(c => `<button class="sw" data-c="${c}" style="background:${c}" aria-pressed="${ui.color === c}"></button>`).join('')}<button class="bt" data-er aria-pressed="${ui.brush === 'eraser'}">🧽</button></div>`;
+          q('#a4-tip').textContent = `한 장씩 조금씩 바꿔 그리면 움직이는 그림이 돼요. 앞 장이 흐리게 비쳐 보여요(어니언 스킨). 최대 ${FMAX}장 · 🔁 왕복은 끝까지 갔다가 거꾸로 돌아와요. 영상은 플립북을 두 바퀴 도는 길이(3~12초)로 저장돼요.`;
           const on = (s, f) => q(s).onclick = f;
           on('[data-fp]', () => { playing = false; fi = Math.max(0, fi - 1); opt(); });
           on('[data-fn]', () => { playing = false; fi = Math.min(frames.length - 1, fi + 1); opt(); });
-          on('[data-fadd]', () => { if (frames.length >= 24) return; frames.splice(fi + 1, 0, mk(512)); fi++; opt(); });
-          on('[data-fcopy]', () => { if (frames.length >= 24) return; const c = mk(512); c.getContext('2d').drawImage(frames[fi], 0, 0); frames.splice(fi + 1, 0, c); fi++; opt(); });
+          on('[data-fadd]', () => { if (frames.length >= FMAX) return; frames.splice(fi + 1, 0, mk(512)); fi++; opt(); });
+          on('[data-fcopy]', () => { if (frames.length >= FMAX) return; const c = mk(512); c.getContext('2d').drawImage(frames[fi], 0, 0); frames.splice(fi + 1, 0, c); fi++; opt(); });
           on('[data-fdel]', () => { if (frames.length <= 1) { frames[0] = mk(512); return; } frames.splice(fi, 1); fi = Math.min(fi, frames.length - 1); opt(); });
           on('[data-play]', () => { playing = !playing; opt(); });
+          on('[data-pp]', () => { st.pp = !st.pp; fdir = 1; lsSet('stu.4d', st); opt(); });
           q('#a4-f').oninput = e => { st.fps = +e.target.value; lsSet('stu.4d', st); };
           body.querySelectorAll('#a4-opt [data-c]').forEach(b => b.onclick = () => { ui.color = b.dataset.c; if (ui.brush === 'eraser') ui.brush = 'pen'; save(); opt(); });
           on('[data-er]', () => { ui.brush = ui.brush === 'eraser' ? 'pen' : 'eraser'; save(); opt(); });
@@ -603,7 +610,7 @@
       cv.onpointermove = e => { if (!fdraw) return; const p = fpt(e); seg(frames[fi].getContext('2d'), ui.brush === 'eraser' ? 'eraser' : 'pen', ui.color, Math.max(4, ui.size / 2), fdraw, p); fdraw = p; };
       cv.onpointerup = cv.onpointercancel = () => { fdraw = null; };
       body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { st.mode = b.dataset.m; lsSet('stu.4d', st); body.querySelectorAll('[data-m]').forEach(x => x.setAttribute('aria-pressed', x === b)); playing = false; opt(); });
-      q('[data-rec]').onclick = async () => { if (st.mode === 'flip') { playing = true; opt(); } try { const b = await record(cv, 5000, k => { q('#a4-bar').style.width = (k * 100) + '%'; }); dl(b, `moving-art-${day()}.${extOf(b)}`); say('🎥 움직이는 그림 영상을 저장했어요. 쇼츠·SNS에 직접 올릴 수 있어요.'); } catch (e) { say(esc(e.message)); } };
+      q('[data-rec]').onclick = async () => { if (st.mode === 'flip') { playing = true; opt(); } try { const ms = st.mode === 'flip' ? Math.round(clamp(frames.length * (st.pp ? 2 : 1) * 2000 / st.fps, 3000, 12000)) : 5000; const b = await record(cv, ms, k => { q('#a4-bar').style.width = (k * 100) + '%'; }); dl(b, `moving-art-${day()}.${extOf(b)}`); say('🎥 움직이는 그림 영상을 저장했어요. 쇼츠·SNS에 직접 올릴 수 있어요.'); } catch (e) { say(esc(e.message)); } };
       const ro = new ResizeObserver(size); ro.observe(box); size(); opt(); raf = requestAnimationFrame(loop);
       stopNow = () => { ro.disconnect(); cancelAnimationFrame(raf); };
     }
