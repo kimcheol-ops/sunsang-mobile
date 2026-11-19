@@ -1,8 +1,9 @@
-/* 🗺 바다 나들이 게임 2종 — 허락 3번(게임·이야기 매일) 2026-11-19
+/* 🗺 바다 나들이 게임 3종 — 허락 3번(게임·이야기 매일) 2026-11-19
  * (PC · 휴대폰 앱 · 조황 수첩 공용, games3.js(GameHub) 뒤에 로드)
  * TripGames.extra(onReward) → 게임 메뉴 항목. 끝나면 onReward({ game, score, coins })
  * ① 🗺 출조+나들이 하루 계획 — 오늘의 바다 소식(today-data.js)의 실제 출조 지수·지역 행사로 코스 짜기(1판은 오늘 실제 자료, 2·3판은 연습용 가상의 날)
  * ② ⚓ 출항 전 안전 점검 — 챙길 것·할 일 / 하면 안 되는 것 빠르게 고르기, 틀리면 이유 설명
+ * ③ 🎆 밤바다 불빛 쇼 — 드론 불빛을 순서대로 눌러 그림 완성(허락 2026-11-19)
  * 기록은 이 기기 localStorage에만. 결제·광고 없음, 실제 업체·제품 이름 없음.
  */
 (function () {
@@ -219,9 +220,116 @@
     return { destroy: stop };
   }
 
+  /* ───────────── 🎆 밤바다 불빛 쇼 ─────────────
+   * 바다 위 드론 불빛을 번호 순서대로 눌러 그림 완성(물고기·배·등대·오징어·하트·별·갈매기)
+   * 4판부터는 「기억 모드」: 잠깐 보여 준 그림을 번호 없이 이어요. 15초 · 하트 3개 */
+  const star = () => { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .16 : .36; p.push([.5 + r * Math.cos(a), .48 + r * Math.sin(a)]); } return p; };
+  const SHOW = [
+    { n: '🐟 물고기', c: '#4FC3F7', p: [[.12, .36], [.22, .5], [.12, .64], [.3, .6], [.48, .7], [.68, .66], [.84, .5], [.68, .34], [.48, .3], [.3, .4]], close: true },
+    { n: '⛵ 낚싯배', c: '#FFD54F', p: [[.12, .64], [.44, .64], [.44, .16], [.8, .5], [.56, .5], [.56, .64], [.88, .64], [.76, .8], [.24, .8]], close: true },
+    { n: '🗼 등대', c: '#FF8A65', p: [[.36, .82], [.42, .38], [.33, .3], [.5, .12], [.67, .3], [.58, .38], [.64, .82]], close: true },
+    { n: '🦑 오징어', c: '#CE93D8', p: [[.5, .1], [.68, .34], [.64, .54], [.76, .86], [.56, .66], [.5, .9], [.44, .66], [.24, .86], [.36, .54], [.32, .34]], close: true },
+    { n: '💖 하트', c: '#F06292', p: [[.5, .35], [.62, .22], [.78, .25], [.85, .4], [.76, .56], [.5, .82], [.24, .56], [.15, .4], [.22, .25], [.38, .22]], close: true },
+    { n: '⭐ 별', c: '#FFF176', p: star(), close: true },
+    { n: '🕊 갈매기', c: '#E0F7FA', p: [[.1, .52], [.22, .38], [.36, .38], [.5, .52], [.64, .38], [.78, .38], [.9, .52]], close: false },
+  ];
+  function lightGame(container, onReward) {
+    const sh = shell(container);
+    let raf = 0, cv = null, g = null, W = 320, H = 320, list = [], lv = 0, cur = null, got = 0, score = 0, hearts = 3, t0 = 0, left = 15, mem = false, showUntil = 0, sparks = [], msg = '', msgT = 0, done = false, ro = null;
+    function stop() { cancelAnimationFrame(raf); raf = 0; if (ro) ro.disconnect(); ro = null; }
+    function intro() {
+      stop(); sh.res.style.display = 'none';
+      const best = LS.get('game.lights', 0);
+      sh.body.innerHTML = `<div style="${CARD}"><b style="font-size:16px">🎆 밤바다 불빛 쇼</b>${best ? ` · 최고 <b>${best}점</b>` : ''}
+        <ul style="margin:6px 0 0;padding-left:20px;font-size:13.5px"><li>바다 위 드론 불빛을 <b>번호 순서대로</b> 눌러 그림을 완성해요.</li>
+        <li>4판부터는 <b>기억 모드</b> — 그림을 잠깐 보여 준 뒤 번호 없이 이어요.</li><li>한 그림에 15초 · 다른 불빛을 누르면 하트가 줄어요(하트 3개).</li>
+        <li>이번 주 포항 불빛축제·광안리 드론쇼처럼 멋진 쇼를 만들어 보세요!</li></ul></div>
+        <button type="button" data-go style="${PRIMARY};width:100%;margin-top:8px">🎆 쇼 시작</button>`;
+      sh.body.querySelector('[data-go]').onclick = start;
+    }
+    function size() { const r = cv.getBoundingClientRect(), k = Math.min(2, devicePixelRatio || 1); W = r.width || 320; H = W; cv.width = W * k; cv.height = H * k; g.setTransform(k, 0, 0, k, 0, 0); }
+    const pos = (p, i, t) => [W * (.06 + p[0] * .88), H * (.04 + p[1] * .74) + Math.sin(t / 600 + i) * 2.5];
+    function start() {
+      list = shuffle(SHOW).slice(0, 6); lv = 0; score = 0; hearts = 3; done = false;
+      sh.body.innerHTML = `<div style="${CARD};display:flex;justify-content:space-between;font-size:13.5px"><span data-hud></span><span data-t></span></div>
+        <canvas style="width:100%;aspect-ratio:1;border-radius:14px;touch-action:none;display:block;background:#050B18"></canvas>`;
+      cv = sh.body.querySelector('canvas'); g = cv.getContext('2d'); size();
+      ro = window.ResizeObserver ? new ResizeObserver(size) : null; if (ro) ro.observe(cv);
+      cv.addEventListener('pointerdown', tap);
+      cv._s = () => ({ cur, got, score, hearts, lv, W, H, showUntil, pos });   // 시험용 상태 보기
+      nextShape(); raf = requestAnimationFrame(loop);
+    }
+    function nextShape() {
+      if (lv >= list.length) return finish();
+      cur = list[lv++]; got = 0; left = 15; t0 = performance.now(); mem = lv >= 4; showUntil = mem ? t0 + 2500 : 0; if (mem) t0 += 2500;
+      msg = mem ? `${cur.n} — 잘 기억하세요!` : cur.n; msgT = performance.now() + 1500;
+    }
+    function hud() {
+      const h = sh.body.querySelector('[data-hud]'), tt = sh.body.querySelector('[data-t]');
+      if (h) h.textContent = `${lv}/6 ${mem ? '🧠 기억 모드' : ''} · 점수 ${score} · ${'❤'.repeat(Math.max(0, hearts))}${'🤍'.repeat(3 - Math.max(0, hearts))}`;
+      if (tt) tt.textContent = `⏱ ${Math.max(0, Math.ceil(left))}초`;
+    }
+    function burst(x, y, c, n) { for (let i = 0; i < n; i++) { const a = rnd(0, Math.PI * 2), s = rnd(1, 4); sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: rnd(40, 80), c }); } }
+    function tap(e) {
+      if (done || !cur || performance.now() < showUntil) return;
+      const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, t = performance.now();
+      let hit = -1, bd = 26; cur.p.forEach((p, i) => { const [px, py] = pos(p, i, t), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; hit = i; } });
+      if (hit < 0) return;
+      if (hit === got) {
+        got++; score += 10; sfx('ok'); buzz('tap'); const [px, py] = pos(cur.p[hit], hit, t); burst(px, py, cur.c, 8);
+        if (got >= cur.p.length) { const bonus = Math.max(0, Math.round(left * 3)); score += bonus + (mem ? 30 : 0); msg = `${cur.n} 완성! +${bonus + (mem ? 30 : 0)}`; msgT = t + 1400; sfx('win');
+          for (let k = 0; k < 4; k++) burst(rnd(W * .2, W * .8), rnd(H * .1, H * .4), pick(['#FFD54F', '#F06292', '#4FC3F7', '#AED581', cur.c]), 40);
+          cur = null; setTimeout(() => { if (!done) nextShape(); }, 1300); }
+      } else if (hit < got) { /* 이미 켠 불빛은 괜찮아요 */ } else {
+        hearts--; sfx('lose'); buzz('bad'); msg = '앗, 그 불빛이 아니에요!'; msgT = t + 900;
+        if (hearts <= 0) setTimeout(finish, 600);
+      }
+      hud();
+    }
+    function loop(t) {
+      if (!raf) return;
+      if (cur && t > t0) { left = 15 - (t - t0) / 1000; if (left <= 0) { msg = `⏱ 시간 끝 — ${cur.n}`; msgT = t + 1200; cur = null; setTimeout(() => { if (!done) nextShape(); }, 1200); } }
+      // 밤하늘 · 도시 불빛 · 바다
+      g.fillStyle = '#050B18'; g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 40; i++) { const sx = (i * 97) % W, sy = (i * 53) % (H * .7); g.fillStyle = `rgba(255,255,255,${.25 + .25 * Math.sin(t / 900 + i)})`; g.fillRect(sx, sy, 1.5, 1.5); }
+      g.fillStyle = '#0B1630'; for (let i = 0; i < 14; i++) { const bw = W / 14, bh = H * (.04 + ((i * 37) % 7) / 100); g.fillRect(i * bw, H * .82 - bh, bw - 2, bh); }
+      g.fillStyle = '#08243A'; g.fillRect(0, H * .82, W, H * .18);
+      for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(120,200,255,.12)'; g.beginPath(); g.moveTo(0, H * (.85 + i * .025)); for (let x = 0; x <= W; x += 16) g.lineTo(x, H * (.85 + i * .025) + Math.sin(x / 30 + t / 500 + i) * 1.5); g.stroke(); }
+      if (cur) {
+        const P = cur.p.map((p, i) => pos(p, i, t)), preview = t < showUntil;
+        g.lineWidth = 3; g.lineCap = 'round'; g.shadowColor = cur.c; g.shadowBlur = 12; g.strokeStyle = cur.c;
+        if (preview) { g.globalAlpha = .8; g.beginPath(); P.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); if (cur.close) g.closePath(); g.stroke(); g.globalAlpha = 1; }
+        else if (got > 1) { g.beginPath(); P.slice(0, got).forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); }
+        g.shadowBlur = 0;
+        P.forEach(([x, y], i) => {
+          const on = i < got || preview, nxt = i === got && !preview;
+          g.beginPath(); g.arc(x, y, on ? 7 : nxt ? 7 + Math.sin(t / 150) * 2 : 5.5, 0, Math.PI * 2);
+          g.fillStyle = on ? cur.c : nxt && mem ? '#FFFFFF' : 'rgba(200,220,255,.45)'; g.shadowColor = g.fillStyle; g.shadowBlur = on ? 16 : 6; g.fill(); g.shadowBlur = 0;
+          if (!mem && !on) { g.fillStyle = '#E3EEF0'; g.font = '700 12px sans-serif'; g.textAlign = 'center'; g.fillText(String(i + 1), x, y - 11); }
+        });
+        // 바다에 비친 불빛
+        g.globalAlpha = .18; P.slice(0, preview ? P.length : got).forEach(([x, y]) => { g.fillStyle = cur.c; g.fillRect(x - 2, H * .84 + (H * .78 - y) * .12, 4, 10); }); g.globalAlpha = 1;
+      }
+      sparks = sparks.filter(s => (s.life -= 1) > 0); sparks.forEach(s => { s.x += s.vx; s.y += s.vy; s.vy += .05; g.globalAlpha = Math.min(1, s.life / 40); g.fillStyle = s.c; g.fillRect(s.x, s.y, 2.5, 2.5); }); g.globalAlpha = 1;
+      if (t < msgT && msg) { g.font = '700 17px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#FFFFFF'; g.shadowColor = '#000'; g.shadowBlur = 6; g.fillText(msg, W / 2, H * .93); g.shadowBlur = 0; }
+      hud(); raf = requestAnimationFrame(loop);
+    }
+    function finish() {
+      if (done) return; done = true; stop();
+      const best = LS.get('game.lights', 0); if (score > best) LS.set('game.lights', score);
+      const coins = Math.round(score / 60);
+      sh.body.innerHTML = '';
+      endBox(sh, `<b style="font-size:16px">🎆 불빛 쇼 ${score}점</b>${score > best ? ' · 🏆 새 최고!' : ''} · 🪙 +${coins}<br><span style="font-size:13px">진짜 드론쇼는 수백 대의 드론이 미리 짠 순서대로 날아요. 이번 주 바닷가 불빛 행사는 휴대폰 앱 관제 탭 「이번 주 지역 행사」에서 볼 수 있어요.</span>`,
+        intro, onReward, { game: 'lightshow', score, coins });
+    }
+    intro();
+    return { destroy: () => { done = true; stop(); } };
+  }
+
   const LIST = [
     { id: 'tripplan', ic: '🗺', name: '출조+나들이 하루 계획', desc: '오늘 실제 출조 지수·지역 행사로 바다 → 출항 시간 → 행사 코스 짜기', goal: 200, mount: planGame },
     { id: 'safecheck', ic: '⚓', name: '출항 전 안전 점검', desc: '해야 할 일 / 하면 안 되는 일 빠르게 고르기 · 틀리면 이유 설명', goal: 250, mount: safeGame },
+    { id: 'lightshow', ic: '🎆', name: '밤바다 불빛 쇼', desc: '드론 불빛을 번호 순서대로 눌러 물고기·배·등대 그림 완성 · 4판부터 기억 모드', goal: 300, mount: lightGame },
   ];
   if (window.GameHub) LIST.forEach(x => { if (GameHub.GNAME) GameHub.GNAME[x.id] = x.name; if (GameHub.GOAL) GameHub.GOAL[x.id] = x.goal; });
   window.TripGames = { LIST, SAFE, extra: onReward => LIST.map(x => ({ id: x.id, ic: x.ic, name: x.name, desc: x.desc, isNew: true, mount: el => x.mount(el, onReward) })) };

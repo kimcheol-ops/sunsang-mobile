@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '7.9-mobile';
+const VERSION = '8.0-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -199,7 +199,7 @@ function initGames() {
 function renderMore() {
   $('watch').innerHTML = REGIONS.map(r => `<button class="chip" data-w="${esc(r.name)}" aria-pressed="${watched.includes(r.name)}">${esc(r.name)}</button>`).join('');
   document.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { const n = b.dataset.w;
-    watched = watched.includes(n) ? watched.filter(x => x !== n) : watched.concat(n); ls.set('m.watch', watched); b.setAttribute('aria-pressed', watched.includes(n)); results = null; });
+    watched = watched.includes(n) ? watched.filter(x => x !== n) : watched.concat(n); ls.set('m.watch', watched); b.setAttribute('aria-pressed', watched.includes(n)); results = null; renderEvents(); });
   $('about').innerHTML = `출조 관제 우주 프로 모바일 ${VERSION}<br>예보: Open-Meteo(풍속·강수·파고·수온) · 지도: OpenStreetMap, OpenSeaMap, GEBCO, NASA GIBS<br>물때: 한국 음력 표(PC 프로그램과 같은 표) · 게임 기록은 이 기기에만 저장`;
 }
 
@@ -307,6 +307,45 @@ function renderSpots() {
   el.querySelectorAll('[data-spot]').forEach(r => r.onclick = e => { if (e.target.closest('[data-delspot]')) return; const s = spots().find(o => o.id === +r.dataset.spot); if (s && map) map.setView([s.lat, s.lon], 12); });
   el.querySelectorAll('[data-delspot]').forEach(b => b.onclick = () => { if (confirm('이 포인트를 지울까요?')) { ls.set('m.spots', spots().filter(o => o.id !== +b.dataset.delspot)); drawSpots(); renderSpots(); } });
 }
+// 📥📤 내 포인트 GPX·KML 가져오기·내보내기 — 파일은 이 기기에서만 읽고 만듦(어디에도 올리지 않음)
+function spotFile(kind) {
+  const list = spots(); if (!list.length) { alert('내보낼 포인트가 없어요.'); return; }
+  const x = s => esc(s), t = new Date().toISOString();
+  const body = kind === 'kml'
+    ? `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>내 포인트</name>\n${list.map(s => `<Placemark><name>${x(s.name)}</name><TimeStamp><when>${x(s.at)}</when></TimeStamp><Point><coordinates>${s.lon},${s.lat},0</coordinates></Point></Placemark>`).join('\n')}\n</Document></kml>\n`
+    : `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="출조 관제 우주 프로" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>내 포인트</name><time>${t}</time></metadata>\n${list.map(s => `<wpt lat="${s.lat}" lon="${s.lon}"><time>${x(s.at)}</time><name>${x(s.name)}</name></wpt>`).join('\n')}\n</gpx>\n`;
+  const blob = new Blob([body], { type: kind === 'kml' ? 'application/vnd.google-earth.kml+xml' : 'application/gpx+xml' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `내포인트-${t.slice(0, 10)}.${kind}`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+function parseSpotFile(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml'); if (doc.querySelector('parsererror')) return null;
+  const out = [], nm = (el, i) => ((el.getElementsByTagName('name')[0] || {}).textContent || '').trim() || `가져온 포인트 ${i + 1}`;
+  [...doc.getElementsByTagName('wpt'), ...doc.getElementsByTagName('rtept')].forEach((w, i) => out.push({ name: nm(w, i), lat: +w.getAttribute('lat'), lon: +w.getAttribute('lon') }));
+  [...doc.getElementsByTagName('Placemark')].forEach((p, i) => { const pt = p.getElementsByTagName('Point')[0], c = pt && pt.getElementsByTagName('coordinates')[0]; if (!c) return; const [lo, la] = c.textContent.trim().split(/[\s,]+/).map(Number); out.push({ name: nm(p, i), lat: la, lon: lo }); });
+  return out.filter(s => isFinite(s.lat) && isFinite(s.lon) && Math.abs(s.lat) <= 90 && Math.abs(s.lon) <= 180);
+}
+function importSpots(file) {
+  if (!file) return;
+  if (/\.kmz$/i.test(file.name)) { alert('KMZ는 압축 파일이라 바로 읽을 수 없어요. 만든 앱에서 KML이나 GPX로 내보내 주세요.'); return; }
+  if (file.size > 5e6) { alert('파일이 너무 커요(5MB까지).'); return; }
+  const fr = new FileReader();
+  fr.onload = () => {
+    const got = parseSpotFile(String(fr.result));
+    if (!got) { alert('GPX·KML 파일이 아니거나 읽을 수 없어요.'); return; }
+    if (!got.length) { alert('파일에 포인트(지점)가 없어요. 이동 경로(트랙)는 가져오지 않아요.'); return; }
+    const have = spots(), near = (a, b) => Math.abs(a.lat - b.lat) < 5e-5 && Math.abs(a.lon - b.lon) < 5e-5;
+    const add = []; got.forEach(s => { if (!have.concat(add).some(h => near(h, s))) add.push(s); });
+    const room = Math.max(0, 500 - have.length), take = add.slice(0, room), now = Date.now(), at = new Date().toISOString();
+    if (!take.length) { alert(`새 포인트가 없어요(이미 있는 자리 ${got.length - add.length}곳${room ? '' : ' · 500곳까지 저장'}).`); return; }
+    if (!confirm(`${take.length}곳을 내 포인트에 더할까요?${got.length - add.length ? ` (이미 있는 자리 ${got.length - add.length}곳은 빼요)` : ''}${add.length > take.length ? ` (500곳까지만 저장돼서 ${add.length - take.length}곳은 빠져요)` : ''}`)) return;
+    ls.set('m.spots', have.concat(take.map((s, i) => ({ id: now + i, name: String(s.name).slice(0, 40), lat: +s.lat.toFixed(6), lon: +s.lon.toFixed(6), at }))));
+    drawSpots(); renderSpots();
+  };
+  fr.readAsText(file);
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-spotfile]'); if (!b) return; const k = b.dataset.spotfile; if (k === 'in') $('spotIn').click(); else spotFile(k); });
+document.addEventListener('change', e => { if (e.target.id === 'spotIn') { importSpots(e.target.files[0]); e.target.value = ''; } });
 function locateMe(save) {
   if (!navigator.geolocation) { $('mapInfo').textContent = '이 브라우저는 위치를 지원하지 않습니다'; return; }
   $('mapInfo').textContent = '위치 확인 중… (권한을 허용해 주세요)';
@@ -535,10 +574,26 @@ function renderEvents() {
   const day = s => Math.round((new Date(s + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
   const md = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
   // 순서: 이번에 열리는 행사(진행 중) → 곧 시작 → 오래 하는 상설 행사, 같은 묶음 안에서는 가까운 순(위치 모르면 날짜 순)
-  const evs = (T.events || []).filter(e => e.end >= today).map(e => { const live = e.start <= today, long = day(e.end) - day(e.start) > 45; return { e, live, long, rank: long ? 2 : live ? 0 : 1, km: dist(e), pick: (T.picks || []).find(p => p.event === e.id) }; })
+  // 거르기: 전체 · ⭐ 내 감시 지역 근처(60km) · 🗓 이번 주말(토·일에 열리는 행사 + 주말 추천 코스)
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const sat = new Date(d0); sat.setDate(d0.getDate() + (d0.getDay() === 0 ? -1 : 6 - d0.getDay())); const sun = new Date(sat); sun.setDate(sat.getDate() + 1);
+  const wkS = ymd(sat) < today ? today : ymd(sat), wkE = ymd(sun);
+  const watchR = REGIONS.filter(r => watched.includes(r.name));
+  const nearWatch = e => watchR.find(r => K.distance(r, { lat: e.lat, lon: e.lon }).km < 60);
+  const mode = ls.get('m.evf', 'all');
+  const all = (T.events || []).filter(e => e.end >= today).map(e => { const live = e.start <= today, long = day(e.end) - day(e.start) > 45; return { e, live, long, rank: long ? 2 : live ? 0 : 1, km: dist(e), near: nearWatch(e), pick: (T.picks || []).find(p => p.event === e.id) }; });
+  const evs = all.filter(x => mode === 'watch' ? x.near : mode === 'weekend' ? x.e.start <= wkE && x.e.end >= wkS : true)
     .sort((a, b) => (a.rank - b.rank) || (a.km != null && b.km != null ? a.km - b.km : a.e.start.localeCompare(b.e.start) || a.e.end.localeCompare(b.e.end))).slice(0, 10);
-  card.hidden = !evs.length; if (!evs.length) return;
+  card.hidden = !all.length; if (!all.length) return;
+  const nW = all.filter(x => x.near).length, nK = all.filter(x => x.e.start <= wkE && x.e.end >= wkS).length;
+  $('evFilter').innerHTML = [['all', `전체 ${all.length}`], ['watch', `⭐ 내 감시 지역 근처 ${nW}`], ['weekend', `🗓 이번 주말(${md(wkS)}~${md(wkE)}) ${nK}`]]
+    .map(([k, n]) => `<button class="chip" data-evf="${k}" aria-pressed="${k === mode}">${n}</button>`).join('');
   $('evSub').textContent = `${T.date} 기준 · ${myPos ? '가까운 순' : '진행 중 먼저'} · ${evs.length}곳`;
+  // 주말 추천 코스: 오늘의 바다 소식의 코스 중 주말에 열리는 행사와 엮인 것(출조 지수는 오늘 계산값 — 주말 당일 예보를 다시 확인)
+  const wk = mode === 'weekend' ? (T.picks || []).map(p => ({ p, x: all.find(x => x.e.id === p.event) })).filter(o => o.x && o.x.e.start <= wkE && o.x.e.end >= wkS) : [];
+  $('evCourse').hidden = !wk.length;
+  $('evCourse').innerHTML = wk.length ? `<b>🗓 이번 주말 코스</b>${wk.map(({ p }) => { const s = T.scores && T.scores[p.region]; return `<div class="rrow" style="display:block"><b>🎣 ${esc(p.title)}</b>${s ? ` <span class="small">지수 ${s[0]} ${esc(s[1])}</span>` : ''}<div class="small muted">${esc(p.why)}</div></div>`; }).join('')}<div class="small muted">지수는 ${esc(T.scoreDay || T.date)} 계산값이에요. 주말 아침 예보와 기상특보를 다시 확인하세요.</div>` : '';
+  if (!evs.length) { $('evRow').innerHTML = `<div class="small muted">${mode === 'watch' ? '감시 지역 60km 안에 이번 행사가 없어요. 「더보기 → 감시 지역」에서 지역을 바꿀 수 있어요.' : '이번 주말에 열리는 행사가 없어요.'}</div>`; return; }
   $('evRow').innerHTML = evs.map(({ e, live, long, km, pick }) => {
     const tag = live ? (long ? '상설' : '진행 중') : `D-${day(e.start)}`;
     const when = long ? `~${md(e.end)}` : e.start === e.end ? md(e.start) : `${md(e.start)}~${md(e.end)}`;
@@ -548,6 +603,7 @@ function renderEvents() {
       + `${pick ? `<span class="pk">🎣 ${esc(pick.title)}</span>` : ''}<span class="small">${(e.tags || []).map(t => '#' + esc(t)).join(' ')}</span></div></a>`;
   }).join('');
 }
+document.addEventListener('click', e => { const b = e.target.closest('[data-evf]'); if (b) { ls.set('m.evf', b.dataset.evf); renderEvents(); } });
 renderEvents();
 
 // ── 🎡 오늘의 바다 놀이터(관제 화면 하단): 입질 예보·제철 달력·공개 조황·쇼츠·운세·만화·우주 웹툰 (fun.js, PC·조황 수첩과 같은 화면) ──

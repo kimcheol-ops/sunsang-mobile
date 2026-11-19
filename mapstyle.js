@@ -41,6 +41,7 @@
   .msCard .th img { position: absolute; top: 0; width: 50%; height: 100%; object-fit: cover; } .msCard .th img + img { left: 50%; }
   .msCard .th .ph { display: grid; place-items: center; height: 100%; font-size: 22px; }
   .msCard b { font-size: 11.5px; } .msCard small { font-size: 10px; color: #93A8B0; line-height: 1.3; }
+  .msRain { grid-column: 1 / -1; display: grid; gap: 1px; text-align: left; padding: 7px 9px; border-radius: 8px; border: 2px solid transparent; background: #212C37; color: inherit; font: 700 12px inherit; cursor: pointer; } .msRain small { font-weight: 400; font-size: 10px; color: #93A8B0; } .msRain[aria-pressed="true"] { border-color: #6FA8FF; background: #1E3350; }
   .msPop .msFoot { grid-column: 1 / -1; font-size: 10.5px; color: #93A8B0; }
   `;
   function css() { if (document.getElementById('mapstyle-css')) return; const s = document.createElement('style'); s.id = 'mapstyle-css'; s.textContent = CSS; document.head.appendChild(s); }
@@ -74,6 +75,12 @@
     return PREV.map(([z, x, y]) => `<img alt="" loading="lazy" src="${prevUrl(st, z, x, y)}"${st.o && st.o.className ? ` class="${st.o.className}"` : ''}>`).join('');
   }
 
+  // 🌧 비구름 겹쳐 보기: NASA GIBS IMERG 30분 강수(키 없음). 위성으로 계산해 몇 시간 늦게 올라오는 자료 — 실시간 레이더 아님
+  const RAIN_KEY = 'mapstyle.rain';
+  const rainOn = () => { try { return localStorage.getItem(RAIN_KEY) === '1'; } catch (e) { return false; } };
+  function rainLayer() { return L.tileLayer(GIBS('IMERG_Precipitation_Rate_30min', 'default', 'png', 6), { maxNativeZoom: 6, maxZoom: 18, opacity: 0.75, zIndex: 350, attribution: `${NASA} IMERG 강수(늦은 자료)` }); }
+  function applyRain(map, on) { if (map._msRain) { map.removeLayer(map._msRain); map._msRain = null; } if (on) map._msRain = rainLayer().addTo(map); }
+  function setRain(on) { try { localStorage.setItem(RAIN_KEY, on ? '1' : '0'); } catch (e) {} maps.forEach(m => { if (m._container && m._container.isConnected) applyRain(m, on); }); document.querySelectorAll('.msRain').forEach(b => b.setAttribute('aria-pressed', on)); }
   const maps = [];
   async function apply(map, id) {
     const st = STYLES.find(s => s.id === id) || STYLES[0];
@@ -88,7 +95,7 @@
     for (const m of maps.slice()) { if (!m._container || !m._container.isConnected) { maps.splice(maps.indexOf(m), 1); continue; } await apply(m, id); }
     document.querySelectorAll('.msCard').forEach(b => b.setAttribute('aria-pressed', b.dataset.ms === id));
   }
-  function base(map) { css(); maps.push(map); apply(map, get()).then(ok => { if (!ok) apply(map, 'dark'); }); return map; }
+  function base(map) { css(); maps.push(map); if (rainOn()) applyRain(map, true); apply(map, get()).then(ok => { if (!ok) apply(map, 'dark'); }); return map; }
   function attach(map) {
     base(map);
     const Ctl = L.Control.extend({
@@ -99,12 +106,12 @@
         wrap.innerHTML = `<button type="button" class="msBtn" title="지도 스타일 바꾸기" aria-label="지도 스타일 바꾸기">🗺</button>`;
         L.DomEvent.disableClickPropagation(wrap); L.DomEvent.disableScrollPropagation(wrap);
         let pop = null, lastT = 0;
-        const draw = () => { pop.innerHTML = `<div class="msHead">🗺 지도 스타일<button type="button" data-x aria-label="닫기">✕</button></div>` + STYLES.map(st => `<button type="button" class="msCard" data-ms="${st.id}" aria-pressed="${st.id === (map._msId || get())}"><div class="th">${thumb(st)}</div><b>${st.ic} ${st.name}</b><small>${st.note}</small></button>`).join('') + `<div class="msFoot">고른 스타일은 이 기기에 기억되고 다른 지도에도 같이 적용돼요. 모두 무료 지도예요.</div>`; };
+        const draw = () => { pop.innerHTML = `<div class="msHead">🗺 지도 스타일<button type="button" data-x aria-label="닫기">✕</button></div>` + `<button type="button" class="msRain" data-rain aria-pressed="${rainOn()}">🌧 비구름 겹쳐 보기 <small>NASA 위성 강수 · 몇 시간 늦은 자료(실시간 레이더 아님)</small></button>` + STYLES.map(st => `<button type="button" class="msCard" data-ms="${st.id}" aria-pressed="${st.id === (map._msId || get())}"><div class="th">${thumb(st)}</div><b>${st.ic} ${st.name}</b><small>${st.note}</small></button>`).join('') + `<div class="msFoot">고른 스타일은 이 기기에 기억되고 다른 지도에도 같이 적용돼요. 모두 무료 지도예요.</div>`; };
         wrap.firstChild.onclick = () => {
           const now = Date.now(); if (now - lastT < 450) return; lastT = now; // 터치 화면에서 한 번 눌렀는데 두 번 들어오는 것 막기
           if (pop) { pop.remove(); pop = null; return; }
           pop = document.createElement('div'); pop.className = 'msPop'; pop.style.maxHeight = Math.max(160, map.getSize().y - 52) + 'px'; wrap.appendChild(pop); draw();
-          pop.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.hasAttribute('data-x')) { pop.remove(); pop = null; return; } if (b.dataset.ms) setAll(b.dataset.ms); };
+          pop.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.hasAttribute('data-x')) { pop.remove(); pop = null; return; } if (b.hasAttribute('data-rain')) { setRain(!rainOn()); return; } if (b.dataset.ms) setAll(b.dataset.ms); };
           Promise.all(Object.keys(SAT).map(latest)).then(() => { if (pop) draw(); });
         };
         return wrap;
@@ -113,5 +120,5 @@
     map.addControl(new Ctl());
     return map;
   }
-  window.MapStyle = { attach, base, STYLES, set: setAll, get };
+  window.MapStyle = { attach, base, STYLES, set: setAll, get, rain: setRain };
 })();

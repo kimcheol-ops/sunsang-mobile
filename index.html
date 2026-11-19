@@ -112,7 +112,9 @@
       <div class="small" id="hazard" role="status"></div>
     </section>
     <section class="card" id="evCard" hidden><h2>🎪 이번 주 지역 행사 <small id="evSub"></small></h2>
+      <div class="chips" id="evFilter"></div>
       <div class="evrow" id="evRow"></div>
+      <div id="evCourse" class="rgrid" hidden></div>
       <div class="chips"><button class="chip" data-goto="news" style="flex:1">📰 오늘의 바다 소식 — 추천 코스·행사 모두 보기</button></div>
       <div class="small muted">행사 정보·사진: 한국관광공사 TourAPI(공공누리). 일정은 주최 측 사정으로 바뀔 수 있으니 가기 전에 확인하세요.</div></section>
     <section class="card" id="sstCard"><h2>🌡 내 위치 바다 수온 <small>GPS → 해양 예보 모델 · 키 불필요</small></h2>
@@ -155,7 +157,9 @@
         <button class="chip" id="trkGpx">⬇ GPX</button><button class="chip" id="trkClear">🗑 지우기</button></div>
       <div id="trkBox" class="small"></div>
       <div class="small muted">기록 중에는 화면이 꺼지지 않게 잡아 둡니다. 휴대폰 웹앱은 화면이 꺼지거나 다른 앱으로 가면 위치를 받을 수 없으니, 기록할 때는 이 화면을 켜 두세요. 조과를 기록하면 마지막 위치가 자동으로 붙습니다.</div></section>
-    <section class="card"><h2>📍 내 포인트 <small>이 기기에만 저장 · 가까운 순</small></h2><div class="rgrid" id="spotList"></div></section>
+    <section class="card"><h2>📍 내 포인트 <small>이 기기에만 저장 · 가까운 순</small></h2><div class="rgrid" id="spotList"></div>
+      <div class="chips"><button class="chip" data-spotfile="gpx">📤 GPX로 내보내기</button><button class="chip" data-spotfile="kml">📤 KML로 내보내기</button><button class="chip" data-spotfile="in">📥 GPX·KML 가져오기</button><input type="file" id="spotIn" accept=".gpx,.kml,.kmz,.xml,application/gpx+xml,application/vnd.google-earth.kml+xml" hidden></div>
+      <div class="small muted">다른 낚시 앱·GPS·지도 앱의 포인트(지점)를 옮길 수 있어요. 파일은 이 기기 안에서만 읽고 만들어요. 이동 경로(트랙)는 가져오지 않아요.</div></section>
   </div>
   <!-- 수첩(조과 일지) -->
   <div data-view="log" hidden>
