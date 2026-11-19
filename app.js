@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '7.8-mobile';
+const VERSION = '7.9-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -189,6 +189,7 @@ function initGames() {
     ...(window.MethodGames ? MethodGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎓 낚시법 도장 깨기
     ...(window.PlayGames ? PlayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎮 놀이 4종
     ...(window.DayGames ? DayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🚢 선상 하루 4종
+    ...(window.TripGames ? TripGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🗺 출조+나들이 계획 · ⚓ 안전 점검
   ];
   hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
     onUnlock: key => { const w = wallet.get(); return wallet.set({ owned: AnglerDress.unlock(w.owned, key) }); } });
@@ -310,7 +311,7 @@ function locateMe(save) {
   if (!navigator.geolocation) { $('mapInfo').textContent = '이 브라우저는 위치를 지원하지 않습니다'; return; }
   $('mapInfo').textContent = '위치 확인 중… (권한을 허용해 주세요)';
   navigator.geolocation.getCurrentPosition(p => {
-    myPos = { lat: p.coords.latitude, lon: p.coords.longitude };
+    myPos = { lat: p.coords.latitude, lon: p.coords.longitude }; renderEvents();
     const r = nearestRegion(myPos.lat, myPos.lon), d = K.distance(myPos, r);
     $('mapInfo').textContent = `내 위치 ±${Math.round(p.coords.accuracy)}m · 가까운 지역 ${r.name} ${d.km.toFixed(1)}km`;
     if (map) { if (myMarker) map.removeLayer(myMarker); myMarker = L.circleMarker([myPos.lat, myPos.lon], { radius: 8, color: '#fff', weight: 3, fillColor: '#3D8BFF', fillOpacity: 1 }).bindTooltip('내 위치').addTo(map); map.setView([myPos.lat, myPos.lon], 11); }
@@ -525,6 +526,29 @@ setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 30
 const TABS = ['hmi', 'tide', 'map', 'log', 'game', 'more', 'news', 'places', 'sea', 'globe', 'seamap'];
 { const h = location.hash.slice(1); go(TABS.includes(h) ? h : ls.get('m.tab', 'hmi')); }
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.includes(h)) go(h); });   // 앱 바로가기(#game 등)
+
+// ── 🎪 이번 주 지역 행사(관제 화면 위): today-data.js(한국관광공사 TourAPI)의 행사 — 진행 중 먼저, 위치를 알면 가까운 순 ──
+function renderEvents() {
+  const T = window.TODAY_DATA, card = $('evCard'); if (!T || !card) return;
+  const pad = n => String(n).padStart(2, '0'), d0 = new Date(), today = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}`;
+  const dist = e => myPos ? K.distance(myPos, { lat: e.lat, lon: e.lon }).km : null;
+  const day = s => Math.round((new Date(s + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+  const md = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
+  // 순서: 이번에 열리는 행사(진행 중) → 곧 시작 → 오래 하는 상설 행사, 같은 묶음 안에서는 가까운 순(위치 모르면 날짜 순)
+  const evs = (T.events || []).filter(e => e.end >= today).map(e => { const live = e.start <= today, long = day(e.end) - day(e.start) > 45; return { e, live, long, rank: long ? 2 : live ? 0 : 1, km: dist(e), pick: (T.picks || []).find(p => p.event === e.id) }; })
+    .sort((a, b) => (a.rank - b.rank) || (a.km != null && b.km != null ? a.km - b.km : a.e.start.localeCompare(b.e.start) || a.e.end.localeCompare(b.e.end))).slice(0, 10);
+  card.hidden = !evs.length; if (!evs.length) return;
+  $('evSub').textContent = `${T.date} 기준 · ${myPos ? '가까운 순' : '진행 중 먼저'} · ${evs.length}곳`;
+  $('evRow').innerHTML = evs.map(({ e, live, long, km, pick }) => {
+    const tag = live ? (long ? '상설' : '진행 중') : `D-${day(e.start)}`;
+    const when = long ? `~${md(e.end)}` : e.start === e.end ? md(e.start) : `${md(e.start)}~${md(e.end)}`;
+    const url = `https://map.kakao.com/link/map/${encodeURIComponent(e.title)},${e.lat},${e.lon}`;
+    return `<a class="ev" href="${url}" target="_blank" rel="noopener"><div class="im">${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="tag${live ? '' : ' up'}">${tag}</span></div>`
+      + `<div class="bd"><b>${esc(e.title)}</b><span class="small muted">📅 ${when}${km != null ? ` · 📍 ${km < 10 ? km.toFixed(1) : Math.round(km)}km` : ''}</span><span class="small muted">${esc(e.addr)}</span>`
+      + `${pick ? `<span class="pk">🎣 ${esc(pick.title)}</span>` : ''}<span class="small">${(e.tags || []).map(t => '#' + esc(t)).join(' ')}</span></div></a>`;
+  }).join('');
+}
+renderEvents();
 
 // ── 🎡 오늘의 바다 놀이터(관제 화면 하단): 입질 예보·제철 달력·공개 조황·쇼츠·운세·만화·우주 웹툰 (fun.js, PC·조황 수첩과 같은 화면) ──
 var funApi = null;   // var: go()가 이 줄보다 먼저 불릴 수 있음

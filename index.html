@@ -26,6 +26,11 @@
   nav.tabbar button b { font-size: 21px; font-weight: 400; line-height: 1.1; }
   nav.tabbar button[aria-current="page"] { color: var(--fg); background: var(--panel2); }
   section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+  .evrow { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+  .ev { flex: 0 0 74%; max-width: 270px; scroll-snap-align: start; background: var(--chart); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; color: inherit; text-decoration: none; display: block; }
+  .ev .im { position: relative; height: 112px; background: #0E1216; } .ev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ev .tag { position: absolute; left: 6px; top: 6px; font: 700 11px inherit; padding: 2px 7px; border-radius: 999px; background: #E8590C; color: #fff; } .ev .tag.up { background: #4FC3D9; color: #0D2433; }
+  .ev .bd { padding: 8px 10px; display: grid; gap: 3px; } .ev b { font-size: 14px; line-height: 1.3; } .ev .pk { font-size: 12px; color: #7FD6E8; }
   h2 { font-size: 16px; margin: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   h2 small { color: var(--muted); font-weight: 400; font-size: 12.5px; }
   .muted { color: var(--muted); } .small { font-size: 12.5px; }
@@ -106,6 +111,10 @@
       <div class="small muted" id="dayText"></div>
       <div class="small" id="hazard" role="status"></div>
     </section>
+    <section class="card" id="evCard" hidden><h2>🎪 이번 주 지역 행사 <small id="evSub"></small></h2>
+      <div class="evrow" id="evRow"></div>
+      <div class="chips"><button class="chip" data-goto="news" style="flex:1">📰 오늘의 바다 소식 — 추천 코스·행사 모두 보기</button></div>
+      <div class="small muted">행사 정보·사진: 한국관광공사 TourAPI(공공누리). 일정은 주최 측 사정으로 바뀔 수 있으니 가기 전에 확인하세요.</div></section>
     <section class="card" id="sstCard"><h2>🌡 내 위치 바다 수온 <small>GPS → 해양 예보 모델 · 키 불필요</small></h2>
       <div class="chips"><button class="chip" id="sstBtn">🌡 지금 내 위치 수온 확인</button><select class="sel" id="sstSp" aria-label="노리는 어종" style="width:auto"></select></div>
       <div id="sstBox" class="small muted">버튼을 누르면 지금 있는 자리(바다 위 또는 가까운 바다)의 표층 수온과 그 수온에 잘 무는 어종을 알려 드립니다.</div></section>
@@ -218,6 +227,7 @@
 <script src="games11.js"></script>
 <script src="games12.js"></script>
 <script src="games13.js"></script>
+<script src="games14.js"></script>
 <script src="story.js"></script>
 <script src="angler.js"></script>
 <script src="public-data.js" onerror="window.PUBLIC_DATA=null"></script>
