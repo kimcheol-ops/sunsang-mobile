@@ -242,6 +242,7 @@ window.SeaMapPlus = (function () {
       panel.className = tall ? 'tall' : ''; panel.innerHTML = html; panel.hidden = false;
       const c = panel.querySelector('[data-close]'); if (c) c.onclick = () => { panel.hidden = true; panel.innerHTML = ''; if (cube) { cube.stop(); cube = null; } G.prof.clearLayers(); };
     }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && panel && !panel.hidden) { const c = panel.querySelector('[data-close]'); if (c) c.click(); else panel.hidden = true; } });
     let cube = null;
     function loadThree() { return window.THREE ? Promise.resolve() : new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
     $('#smpCube').onclick = async () => {
