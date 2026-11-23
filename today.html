@@ -207,7 +207,8 @@ render();
   $('ytSub').textContent = `${Y.at} 모음 · 최근 ${Y.days}일 · ${items.length}개`;
   $('ytList').innerHTML = items.slice(0, 18).map(x => `<a class="ytv" href="${esc(x.url)}" target="_blank" rel="noopener" style="display:grid;gap:3px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:inherit;text-decoration:none">
     <b style="font-size:13.5px;line-height:1.35">▶ ${esc(x.title)}</b><span class="muted" style="font-size:12px">${esc(x.day)} · ${esc(x.ch)}${x.region ? ' · 📍 ' + esc(x.region) : ''}${(x.sp || []).length ? ' · ' + x.sp.map(s => '#' + esc(s)).join(' ') : ''}${x.zero ? ' · <b style="color:var(--warn,#F5C46B)">꽝·철수 언급</b>' : ''}</span></a>`).join('');
-  $('ytNote').innerHTML = `⚠ ${esc(Y.note)} 잘 잡힌 날 위주로 올라올 수 있으니 내 기록·선장님 공지와 함께 보세요. 채널: ${(Y.channels || []).map(c => `<a class="ytv" href="${esc(c.url)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(c.name)}</a>`).join(' · ')} (목록은 tools\\youtube-channels.txt)`;
+  const real = (D.catches || []).filter(c => c.real && items.some(x => x.region === c.region));
+  $('ytNote').innerHTML = (real.length ? `<div style="margin-bottom:6px;color:var(--fg)"><b>📝 같은 지역 실제 기록:</b> ${real.map(c => `${esc(c.day)} ${esc(c.region)} ${esc(c.port)} · ${esc(c.count)} · ${esc(c.size)} (${esc(c.source)})`).join(' / ')}</div>` : '') + `⚠ ${esc(Y.note)} 잘 잡힌 날 위주로 올라올 수 있으니 내 기록·선장님 공지와 함께 보세요. 채널: ${(Y.channels || []).map(c => `<a class="ytv" href="${esc(c.url)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(c.name)}</a>`).join(' · ')} (목록은 tools\\youtube-channels.txt)`;
   document.querySelectorAll('.ytv').forEach(a => a.addEventListener('click', ev => { if (window.chrome && window.chrome.webview) { ev.preventDefault(); post({ type: 'open', url: a.href }); } }));
 })();
 post({ type: 'ready' });

@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '8.3-mobile';
+const VERSION = '8.4-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -620,7 +620,8 @@ function renderYT() {
   $('ytSub').textContent = `${Y.at} 모음 · 최근 ${Y.days}일`;
   $('ytList').innerHTML = list.map(x => `<a class="yt" href="${esc(x.url)}" target="_blank" rel="noopener"><div class="d">▶<small>${esc(ago(x.day))}</small></div><div><b>${esc(x.title)}</b><span class="m">${esc(x.ch)}${x.region ? ' · 📍 ' + esc(x.region) : ''}${(x.sp || []).length ? ' · ' + x.sp.map(s => '#' + esc(s)).join(' ') : ''} · ${esc(x.day.slice(5).replace('-', '/'))}</span>${x.zero ? ' <span class="m z">꽝·철수 언급</span>' : ''}</div></a>`).join('')
     || '<div class="small muted">이 지역 영상 제목이 아직 없어요.</div>';
-  $('ytNote').innerHTML = `⚠ ${esc(Y.note)} 잘 잡힌 날 위주로 올라올 수 있으니, 내 기록·선장님 공지와 함께 보세요.<br>채널: ${(Y.channels || []).map(c => `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>`).join(' · ')} — 영상은 유튜브에서 열려요.`;
+  const real = ((window.TODAY_DATA || {}).catches || []).filter(c => c.real && list.some(x => x.region === c.region));
+  $('ytNote').innerHTML = (real.length ? `<div class="rrow" style="display:block;margin-bottom:6px"><b>📝 같은 지역 실제 기록</b>${real.map(c => `<div class="small">${esc(c.day.slice(5).replace('-', '/'))} · ${esc(c.region)} ${esc(c.port)} · ${esc(c.count)} · ${esc(c.size)} <span class="muted">(${esc(c.source)})</span></div>`).join('')}</div>` : '') + `⚠ ${esc(Y.note)} 잘 잡힌 날 위주로 올라올 수 있으니, 내 기록·선장님 공지와 함께 보세요.<br>채널: ${(Y.channels || []).map(c => `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>`).join(' · ')} — 영상은 유튜브에서 열려요.`;
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-ytf]'); if (b) { ls.set('m.ytf', b.dataset.ytf); renderYT(); } });
 renderYT();

@@ -15,6 +15,8 @@ window.TODAY_DATA = {
   reports: [],
 
   catches: [
+    // 실제 기록(사용자 직접 알림 2026-11-23): 주말 군산 비응항 선상 — 날씨 때문에 점심 전 귀항, 0마리. 영상 제목 조황과 비교용
+    { day: '2026-11-22', region: '군산', port: '비응항', sp: '선상낚시', size: '날씨로 점심 전 귀항', count: '0마리 (주말 출조)', source: '사용자 직접', real: true },
     { day: '2026-11-05', region: '여수', port: '국동항', sp: '갑오징어', size: '최대 28cm', count: '1인 12수', source: '선장 등록', sample: true },
     { day: '2026-11-04', region: '보령', port: '오천항', sp: '쭈꾸미', size: '', count: '1인 60수', source: '휴대폰 수첩', sample: true },
     { day: '2026-11-03', region: '통영', port: '도남항', sp: '참돔', size: '52cm', count: '배 전체 9수', source: '선장 등록', sample: true },
