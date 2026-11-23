@@ -31,7 +31,7 @@
   .fun .cal i { display: block; height: 12px; border-radius: 3px; background: #1A2A33; }
   .fun .cal i.on { background: #2F9A7A; } .fun .cal i.ban { background: #9A3A3D; } .fun .cal i.now { outline: 2px solid #FFD27A; outline-offset: -1px; }
   .fun .short { display: grid; justify-items: center; gap: 6px; }
-  .fun .short canvas { width: min(100%, 270px); aspect-ratio: 9 / 16; border-radius: 14px; background: #000; display: block; box-shadow: 0 4px 18px rgba(0,0,0,.5); }
+  .fun .short canvas { width: min(100%, 330px); aspect-ratio: 9 / 16; border-radius: 14px; background: #000; display: block; box-shadow: 0 4px 18px rgba(0,0,0,.5); }
   .fun .quiz button.opt { text-align: left; width: 100%; }
   .fun .quiz button.opt.right { border-color: var(--f-ok); color: var(--f-ok); } .fun .quiz button.opt.wrong { border-color: var(--f-bad); color: var(--f-bad); }
   .fun .vs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; }
@@ -75,8 +75,8 @@
   const LUCK_RIG = ['가벼운 봉돌', '한 호수 무거운 봉돌', '야광 에기', '빨간 바늘', '긴 목줄', '짧은 목줄', '새 미끼로 자주 교체', '천천히 고패질'];
   const LUCK_SAY = ['오늘은 첫 입질을 놓쳐도 두 번째가 진짜예요.', '배 앞쪽이 행운의 자리예요.', '옆 사람에게 채비를 빌려주면 복이 돌아와요.', '조급하면 놓쳐요. 커피 한 잔 여유를!', '작은 물고기는 돌려보내면 큰 행운이 와요.', '쓰레기 하나 줍기가 오늘의 행운 열쇠예요.', '물때가 바뀌는 시간에 집중하세요.', '사진은 놓아주기 전에 빨리 한 장!'];
 
-  // ── ⑧ 우주 낚시 연재 웹툰 「별빛 낚시단」 — 매주 월요일 한 화씩 열림(첫 화 2026-11-09) ──
-  const TOON_START = '2026-11-09';
+  // ── ⑧ 우주 낚시 연재 웹툰 「별빛 낚시단」 — 1~3화 매주, 2026-11-23 4화부터 매일 한 화씩 열림 ──
+  const TOON_START = '2026-11-09', TOON_DAILY = '2026-11-23';   // 1~3화는 매주, 4화(11-23)부터 매일 한 화
   const TOON = [
     { t: '1화 · 달에서 낚싯대를 펴다', p: [
       ['moon', 'rocket', '별이: 착륙 완료! 여기가 달 「고요의 바다」 둘레길이구나.'],
@@ -101,16 +101,99 @@
       ['saturn', 'cast', '물결이: 메탄 호수 낚시터. 안개가 짙으니 서로 줄을 확인하자.'],
       ['saturn', 'fish', '별이: 히트! 「메탄 호수 장어」다, 힘이 엄청나!'],
       ['saturn', 'duo', '물결이: 쓰레기는 우주선에 다시 싣고 가자. 고리를 깨끗하게!'],
-      ['earth', 'duo', '별이: 다음 화는 해왕성… 하프 마라톤 거리야. 우리 같이 걸을래?']] }
+      ['earth', 'duo', '별이: 다음 화는 해왕성… 하프 마라톤 거리야. 우리 같이 걸을래?']] },
+    { t: '5화 · 해왕성의 푸른 폭풍', p: [
+      ['neptune', 'rocket', '물결이: 온통 파래! 바다 색깔 행성이라 고향 같아.'],
+      ['neptune', 'storm', '별이: 바람 경보! 여긴 바람이 태양계에서 제일 세대.'],
+      ['neptune', 'duo', '물결이: 바다에서도 풍속 10m/s가 넘으면 출항을 미뤄. 오늘은 기지에서 채비 정리하자.'],
+      ['neptune', 'cast', '별이: 바람이 잦아들었다! 짧게, 안전하게 한 번만.'],
+      ['neptune', 'fish', '물결이: 「푸른 폭풍 전갱이」! 기다린 보람이 있네.']] },
+    { t: '6화 · 옆으로 누운 천왕성', p: [
+      ['uranus', 'rocket', '별이: 이 행성은 옆으로 누워서 돌아. 낮이 42년이나 계속된대!'],
+      ['uranus', 'duo', '물결이: 그럼 물때 표는 어떻게 봐? 지구에선 하루 두 번 들고 나는데.'],
+      ['uranus', 'cast', '별이: 그래서 출발 전에 꼭 시간표를 확인하지. 지구에서도 물때 확인이 첫째!'],
+      ['uranus', 'fish', '물결이: 얼음 결정처럼 반짝이는 「누운별 가자미」야. 눈이 한쪽에 몰려 있어!'],
+      ['uranus', 'sunset', '별이: 청록색 노을… 다음은 태양계 끝, 명왕성!']] },
+    { t: '7화 · 명왕성의 하트 평원', p: [
+      ['pluto', 'rocket', '물결이: 와, 땅에 커다란 하트 무늬가 있어!'],
+      ['pluto', 'cast', '별이: 하트 평원 얼음 호수. 여긴 「알 낳는 철」이라 낚시 쉬는 구역이 있대.'],
+      ['pluto', 'duo', '물결이: 지구의 금어기랑 똑같네. 표지판 잘 보고 허용 구역에서만!'],
+      ['pluto', 'fish', '별이: 허용 구역에서 「하트 무늬 망둥어」 한 마리. 크기 재 보고… 작으니 놓아주자.'],
+      ['pluto', 'duo', '물결이: 규칙을 지키면 내년에도 만날 수 있어. 안녕, 꼬마야!']] },
+    { t: '8화 · 혜성 꼬리 타기', p: [
+      ['comet', 'rocket', '별이: 혜성 꼬리를 따라 날아가는 중! 얼음 가루가 반짝반짝.'],
+      ['comet', 'duo', '물결이: 잠깐, 우주복 점검했어? 끈·헬멧·산소 다 확인!'],
+      ['comet', 'duo', '별이: 배에 타기 전 구명조끼 끈 조이는 것과 같지. 확인 완료!'],
+      ['comet', 'cast', '물결이: 꼬리 속 얼음 구름에 캐스팅~'],
+      ['comet', 'fish', '별이: 「꼬리별 학꽁치」! 길쭉하고 빛나네.']] },
+    { t: '9화 · 소행성대 징검다리', p: [
+      ['asteroid', 'rocket', '물결이: 바위들이 둥둥 떠 있어. 부딪히면 큰일이야!'],
+      ['asteroid', 'duo', '별이: 그래서 다른 우주선과는 거리를 넉넉히. 바다에서 옆 배와 간격 두는 것처럼.'],
+      ['asteroid', 'cast', '물결이: 옆 사람과 채비가 엉키지 않게 던지는 방향도 맞추자.'],
+      ['asteroid', 'fish', '별이: 바위틈에서 「돌무늬 쏨뱅이」! 가시 조심, 장갑 끼고 잡아.'],
+      ['asteroid', 'duo', '물결이: 다음은 토성의 달 타이탄. 비가 내린대!']] },
+    { t: '10화 · 타이탄의 메탄 비', p: [
+      ['titan', 'rocket', '별이: 주황색 안개 속 착륙. 하늘에서 메탄 비가 와.'],
+      ['titan', 'storm', '물결이: 비바람이 세져! 오늘 예보 다시 보자.'],
+      ['titan', 'duo', '별이: 점심 전에 돌아가자. 한 마리도 못 잡아도 안전하게 돌아오는 게 최고의 조과야.'],
+      ['titan', 'duo', '물결이: 맞아. 지구 선장님들도 날씨가 나쁘면 일찍 귀항하셔. 그게 프로야!'],
+      ['titan', 'sunset', '별이: 다음 주에 날 좋을 때 다시 오자. 오늘 기록은 「0마리·안전 귀항」!']] },
+    { t: '11화 · 우주 정거장 낚시 교실', p: [
+      ['station', 'rocket', '물결이: 정거장 도착! 오늘은 초보 친구들 낚시 교실 날.'],
+      ['station', 'duo', '별이: 첫째, 바늘 끝은 늘 바깥쪽으로. 둘째, 던질 땐 뒤를 꼭 보기.'],
+      ['station', 'cast', '물결이: 매듭은 천천히 여러 번 감고, 침 묻혀서 꽉! 그래야 안 풀려.'],
+      ['station', 'fish', '별이: 첫 물고기 축하해요! 사진 찍고 크기 재 보기.'],
+      ['station', 'duo', '물결이: 다 같이 쓰레기 줍고 정리하면 교실 끝~']] },
+    { t: '12화 · 금성의 뜨거운 구름', p: [
+      ['venus', 'rocket', '별이: 으, 덥다! 금성은 태양계에서 제일 뜨거운 행성이래.'],
+      ['venus', 'duo', '물결이: 물 자주 마시고, 그늘에서 쉬어 가며 하자.'],
+      ['venus', 'duo', '별이: 여름 바다도 똑같아. 모자·물·자외선 차단은 기본!'],
+      ['venus', 'cast', '물결이: 구름 위 떠 있는 기지에서 살짝 캐스팅.'],
+      ['venus', 'fish', '별이: 「구름 노을 도미」! 붉은빛이 금성 하늘 같아.']] },
+    { t: '13화 · 수성의 새벽', p: [
+      ['mercury', 'rocket', '물결이: 해가 엄청 크게 보여! 여긴 해에서 제일 가까운 행성.'],
+      ['mercury', 'duo', '별이: 해 뜨기 직전이 제일 좋은 시간. 지구 바다도 새벽 물때에 입질이 많지.'],
+      ['mercury', 'cast', '물결이: 어둑할 땐 머리 전등 켜고, 발밑 조심!'],
+      ['mercury', 'fish', '별이: 「새벽빛 볼락」! 눈이 커서 어두운 데서도 잘 본대.'],
+      ['mercury', 'sunset', '물결이: 해가 떴다… 너무 뜨거워지기 전에 철수!']] },
+    { t: '14화 · 태양 가까이, 돌아갈 시간', p: [
+      ['sun', 'rocket', '별이: 태양 관측 기지. 여기서 더 가까이 가면 위험해.'],
+      ['sun', 'duo', '물결이: 욕심내지 않고 돌아설 줄 아는 것도 실력이야.'],
+      ['sun', 'duo', '별이: 바다에서도 「조금만 더」가 사고를 부르지. 정해 둔 시간에 철수!'],
+      ['sun', 'cast', '물결이: 마지막으로 기념 캐스팅 한 번만~'],
+      ['earth', 'duo', '별이: 이제 집으로! 파란 지구가 점점 커진다.']] },
+    { t: '15화 · 고향 바다로 귀환', p: [
+      ['harbor', 'rocket', '물결이: 지구다! 우리 고향 항구에 내렸어.'],
+      ['harbor', 'duo', '별이: 우주에서 배운 것 정리해 볼까? 바람·물때·금어기·쓰레기·안전 거리.'],
+      ['harbor', 'cast', '물결이: 오늘은 방파제에서 가볍게. 구명조끼 입고!'],
+      ['harbor', 'fish', '별이: 고향 바다 「우럭」! 역시 집이 최고야.'],
+      ['harbor', 'sunset', '물결이: 다음 이야기는… 바다 밑 도시? 기대해 줘!']] },
+    { t: '16화 · 항구 대청소 날', p: [
+      ['harbor', 'duo', '별이: 오늘은 낚시 대신 항구 대청소! 마을 사람들이 다 모였어.'],
+      ['harbor', 'cast', '물결이: 엉킨 낚싯줄, 버려진 봉돌, 미끼 봉지… 하나씩 주워 담자.'],
+      ['harbor', 'duo', '별이: 바다새가 낚싯줄에 걸리지 않게 끊어진 줄은 꼭 챙기기.'],
+      ['harbor', 'fish', '물결이: 와, 맑아진 물에 작은 물고기 떼가 돌아왔어!'],
+      ['harbor', 'sunset', '별이: 1부 끝! 2부 「바다 밑 도시」 편도 매일 한 화씩 이어질 거야.']] }
   ];
   function toonPanel(bg, act) {
-    const BG = { moon: ['#05060F', '#1B1E33', '#9A9CA6'], earth: ['#02061A', '#0B1E4A', '#3E6E9E'], mars: ['#2A0E08', '#6A2A14', '#C8643A'], ice: ['#020814', '#0F2A44', '#CFE6F2'], jupiter: ['#0A0610', '#2A1A12', '#B07A4A'], saturn: ['#1A1206', '#4A3416', '#C89A52'] }[bg] || ['#000', '#112', '#888'];
+    const BG = { moon: ['#05060F', '#1B1E33', '#9A9CA6'], earth: ['#02061A', '#0B1E4A', '#3E6E9E'], mars: ['#2A0E08', '#6A2A14', '#C8643A'], ice: ['#020814', '#0F2A44', '#CFE6F2'], jupiter: ['#0A0610', '#2A1A12', '#B07A4A'], saturn: ['#1A1206', '#4A3416', '#C89A52'], neptune: ['#020A2A', '#0B2A6A', '#3A6AC8'], uranus: ['#04141A', '#0E3A44', '#7FD6D8'], pluto: ['#0A0A12', '#2A2430', '#D8C2A8'], comet: ['#01030C', '#0A1430', '#5A6A88'], asteroid: ['#06060A', '#1E1C22', '#6A625A'], titan: ['#2A1606', '#6A3A12', '#B8823A'], station: ['#02040E', '#0A1838', '#8A96AA'], venus: ['#2A1A04', '#6A4A14', '#E0B060'], mercury: ['#0A0806', '#2A2420', '#9A8E80'], sun: ['#1A0602', '#5A1A06', '#C86A2A'], harbor: ['#123A5A', '#5AA0C8', '#C8B48A'] }[bg] || ['#000', '#112', '#888'];
     const r = rng(bg + act); let stars = ''; for (let i = 0; i < 40; i++) stars += `<circle cx="${(r() * 400).toFixed(0)}" cy="${(r() * 150).toFixed(0)}" r="${(r() * 1.4 + .3).toFixed(1)}" fill="#fff" opacity="${(r() * .7 + .3).toFixed(2)}"/>`;
     const sky = bg === 'moon' ? '<circle cx="320" cy="55" r="26" fill="#3E7AC8"/><path d="M305 48 q8 -10 18 -2 q6 8 -4 14 q-10 4 -14 -12z" fill="#5FAA5A"/>'
       : bg === 'earth' ? '<circle cx="200" cy="300" r="190" fill="#2E6AAE"/><path d="M90 200 q40 -30 80 -6 q30 18 -10 40 q-50 10 -70 -34z M250 170 q40 -10 60 20 q-20 30 -60 10z" fill="#5FAA5A"/><circle cx="200" cy="300" r="196" fill="none" stroke="#8CD0FF" stroke-width="6" opacity=".5"/>'
       : bg === 'jupiter' ? '<circle cx="300" cy="80" r="70" fill="#C9955E"/><path d="M232 60h136M230 80h140M234 100h132" stroke="#8A5A32" stroke-width="7" opacity=".6"/><ellipse cx="320" cy="96" rx="14" ry="8" fill="#A0442A"/>'
       : bg === 'saturn' ? '<ellipse cx="300" cy="60" rx="80" ry="16" fill="none" stroke="#F2D9A0" stroke-width="5" transform="rotate(-12 300 60)"/><circle cx="300" cy="60" r="32" fill="#E0B870"/>'
-      : bg === 'mars' ? '<circle cx="330" cy="40" r="10" fill="#FFE6C0" opacity=".8"/>' : bg === 'ice' ? '<circle cx="330" cy="50" r="40" fill="#D9A070" opacity=".9"/>' : '';
+      : bg === 'mars' ? '<circle cx="330" cy="40" r="10" fill="#FFE6C0" opacity=".8"/>' : bg === 'ice' ? '<circle cx="330" cy="50" r="40" fill="#D9A070" opacity=".9"/>'
+      : bg === 'neptune' ? '<circle cx="310" cy="62" r="40" fill="#3A6AE0"/><path d="M276 54h68M274 70h72" stroke="#8AB0FF" stroke-width="5" opacity=".5"/><ellipse cx="296" cy="62" rx="10" ry="6" fill="#1A2A7A"/>'
+      : bg === 'uranus' ? '<circle cx="310" cy="62" r="32" fill="#8FE0E0"/><ellipse cx="310" cy="62" rx="10" ry="56" fill="none" stroke="#D8FFFF" stroke-width="3" opacity=".7"/>'
+      : bg === 'pluto' ? '<circle cx="320" cy="40" r="6" fill="#FFF6D8"/><path d="M160 200 q-30 -26 0 -40 q16 -6 20 10 q4 -16 20 -10 q30 14 0 40 l-20 14z" fill="#F2E2C8" opacity=".9"/>'
+      : bg === 'comet' ? '<path d="M330 40 L120 110 L330 56z" fill="#BFE8FF" opacity=".35"/><path d="M330 44 L160 120" stroke="#E8F8FF" stroke-width="2" opacity=".6"/><circle cx="334" cy="46" r="10" fill="#F2FAFF"/>'
+      : bg === 'asteroid' ? '<g fill="#7A7068"><ellipse cx="60" cy="50" rx="22" ry="14"/><ellipse cx="200" cy="34" rx="14" ry="9"/><ellipse cx="320" cy="70" rx="30" ry="18"/><ellipse cx="260" cy="120" rx="10" ry="7"/></g>'
+      : bg === 'titan' ? '<rect width="400" height="150" fill="#E8A050" opacity=".25"/><g stroke="#FFD8A0" stroke-width="1.5" opacity=".6">' + [20, 70, 120, 170, 220, 270, 320, 370].map(x => `<path d="M${x} 10 l-8 30 M${x + 20} 60 l-8 30"/>`).join('') + '</g><ellipse cx="320" cy="40" rx="50" ry="10" fill="none" stroke="#F2D9A0" stroke-width="3" opacity=".5"/>'
+      : bg === 'station' ? '<g fill="#B8C4D8"><rect x="230" y="40" width="40" height="22" rx="4"/><rect x="290" y="46" width="70" height="10" fill="#2A5AA8"/><rect x="140" y="46" width="70" height="10" fill="#2A5AA8"/><rect x="210" y="49" width="100" height="4"/></g>'
+      : bg === 'venus' ? '<rect width="400" height="150" fill="#F2C060" opacity=".25"/><circle cx="330" cy="46" r="26" fill="#FFF0B0" opacity=".85"/><path d="M0 120 q60 -20 120 0 t120 0 t160 0" stroke="#FFE0A0" stroke-width="10" fill="none" opacity=".35"/>'
+      : bg === 'mercury' ? '<circle cx="350" cy="120" r="70" fill="#FFD27A" opacity=".9"/><circle cx="350" cy="120" r="90" fill="#FFB040" opacity=".25"/>'
+      : bg === 'sun' ? '<circle cx="320" cy="80" r="80" fill="#FF9A30"/><circle cx="320" cy="80" r="104" fill="#FF7A20" opacity=".3"/><circle cx="296" cy="64" r="8" fill="#D85A10"/>'
+      : bg === 'harbor' ? '<circle cx="320" cy="60" r="22" fill="#FFE6A0"/><path d="M0 150 h400 v40 H0z" fill="#2A6A9A"/><path d="M30 150 l60 0 -10 14 h-40z" fill="#F2F4F8"/><rect x="58" y="128" width="3" height="22" fill="#8A6A3A"/><path d="M61 128 l16 16 h-16z" fill="#E74C3C"/><rect x="350" y="110" width="12" height="40" fill="#F2F4F8"/><rect x="350" y="118" width="12" height="6" fill="#E74C3C"/>' : '';
     const ground = bg === 'earth' ? '' : `<path d="M0 190 Q100 170 200 186 T400 180 V260 H0Z" fill="${BG[2]}"/><path d="M0 214 Q120 200 260 214 T400 210 V260 H0Z" fill="#000" opacity=".18"/>`
       + (bg === 'moon' ? '<ellipse cx="90" cy="222" rx="30" ry="7" fill="#000" opacity=".25"/><ellipse cx="300" cy="232" rx="44" ry="9" fill="#2A4A7A" opacity=".8"/>' : '')
       + (bg === 'ice' ? '<path d="M40 210l60 10 40-14 70 18M220 200l50 20 90-8" stroke="#8A4A3A" stroke-width="2" fill="none" opacity=".6"/><ellipse cx="290" cy="226" rx="30" ry="7" fill="#123A5A"/>' : '')
@@ -239,7 +322,7 @@
         cv = $('f-short').querySelector('canvas'); g = cv.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0);
         $('f-short').querySelector('[data-play]').onclick = () => play();
         $('f-short').querySelector('[data-rec]').onclick = record;
-        prep(); frame(0);
+        prep(); frame(0); loadFont().then(() => { if (!playing) frame(0); });
       }
       function mermaid(x, y, s, tt) {
         g.save(); g.translate(x, y); g.scale(s, s); g.rotate(Math.sin(tt * 2) * .05);
@@ -253,7 +336,20 @@
         g.strokeStyle = '#F2C9A8'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(14, -10); g.lineTo(32, -26 + Math.sin(tt * 6) * 8); g.stroke();
         g.restore();
       }
-      function text(s, y, size, col, bold) { g.fillStyle = col || '#fff'; g.font = `${bold ? 800 : 600} ${size}px 'Malgun Gothic','Apple SD Gothic Neo',sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; const words = String(s).split(' '); let line = '', lines = []; words.forEach(w => { const tl = line ? line + ' ' + w : w; if (g.measureText(tl).width > W - 40 && line) { lines.push(line); line = w; } else line = tl; }); lines.push(line); lines.forEach((l, i) => { g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 5; g.strokeText(l, W / 2, y + i * size * 1.25); g.fillText(l, W / 2, y + i * size * 1.25); }); }
+      const FONT = "'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif";
+      function loadFont() {   // 휴대폰에도 또렷한 무료 글꼴(구글 폰트 Noto Sans KR) — 못 받으면 기기 기본 글꼴
+        if (!document.getElementById('short-font')) { const l = document.createElement('link'); l.id = 'short-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700;900&display=swap'; document.head.appendChild(l); }
+        if (!document.fonts || !document.fonts.load) return Promise.resolve();
+        return Promise.race([Promise.all([document.fonts.load("900 24px 'Noto Sans KR'", '물결이 바다 날씨 수온'), document.fonts.load("700 18px 'Noto Sans KR'", '물결이 바다 날씨 수온')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
+      }
+      function dark(col) { const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(col || ''); if (!m) return false; let h = m[1]; if (h.length === 3) h = h.replace(/./g, c => c + c); const n = parseInt(h, 16); return (((n >> 16) * 299) + (((n >> 8) & 255) * 587) + ((n & 255) * 114)) / 1000 < 140; }
+      // 밝은 글자(어두운 바다 위)는 진한 테두리+그림자, 어두운 글자(흰 말풍선 위)는 테두리 없이 — 번짐 없이 또렷하게
+      function text(s, y, size, col, bold) {
+        col = col || '#fff'; g.font = `${bold ? 900 : 700} ${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.miterLimit = 2;
+        const words = String(s).split(' '); let line = '', lines = []; words.forEach(w => { const tl = line ? line + ' ' + w : w; if (g.measureText(tl).width > W - 52 && line) { lines.push(line); line = w; } else line = tl; }); lines.push(line);
+        const onLight = dark(col);
+        lines.forEach((l, i) => { const yy = y + i * size * 1.3; if (!onLight) { g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 6; g.shadowOffsetY = 2; g.strokeStyle = 'rgba(4,20,32,.92)'; g.lineWidth = Math.max(4, size * .24); g.strokeText(l, W / 2, yy); g.restore(); } g.fillStyle = col; g.fillText(l, W / 2, yy); });
+      }
       function bubble(y, h) { g.fillStyle = 'rgba(255,255,255,.93)'; const x = 22, w = W - 44, r = 18; g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.fill(); }
       function frame(tt) {
         if (!data) return; const D = data;
@@ -263,16 +359,16 @@
         g.fillStyle = '#E8D3A0'; g.beginPath(); g.moveTo(0, 600); g.quadraticCurveTo(W / 2, 580, W, 604); g.lineTo(W, H); g.lineTo(0, H); g.fill();
         const sc = tt < 2.5 ? 0 : tt < 5 ? 1 : tt < 8.5 ? 2 : tt < 12.5 ? 3 : 4, enter = Math.min(1, tt / .8);
         mermaid(W / 2 + (sc === 3 ? -100 : 0), 420 + (1 - enter) * 200 + Math.sin(tt * 2) * 6, sc === 3 ? .9 : 1.25, tt);
-        g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, 0, W, 54); text(`🌊 ${D.region} · ${D.date}`, 27, 17, '#fff', true);
-        if (sc === 0) { text('안녕! 바다지기 물결이야', 120, 26, '#FFE27A', true); text('오늘의 바다를 15초로 알려 줄게', 170, 18); }
-        if (sc === 1) { bubble(90, 150); text(D.moon, 130, 26, '#123', true); text(D.tide || '', 180, 19, '#1F4E79', true); text('달 모양으로 보는 오늘 물때', 214, 14, '#466'); }
-        if (sc === 2) { bubble(80, 190); const w = D.wx || {}; text('오늘 바다 날씨', 112, 20, '#123', true); text(w.sst != null ? `수온 ${w.sst.toFixed(1)}℃` : '수온 정보 없음', 150, 22, '#0B6E8A', true); text(w.wind != null ? `바람 ${w.wind.toFixed(0)}m/s${w.wind >= 10 ? ' ⚠' : ''}` : '바람 정보 없음', 186, 19, w.wind >= 10 ? '#B8322A' : '#1F4E79', true); text(w.wave != null ? `파고 ${w.wave.toFixed(1)}m` : '', 220, 18, '#1F4E79', true); }
-        if (sc === 3) { text('입질 예보 TOP 3', 100, 24, '#FFE27A', true); D.top.forEach((x, i) => { const yy = 160 + i * 70, k = Math.min(1, Math.max(0, (tt - 8.5 - i * .5) / .5)); g.globalAlpha = k; g.fillStyle = 'rgba(255,255,255,.92)'; g.fillRect(150, yy - 26, 190, 54); g.globalAlpha = 1; if (k > 0) { g.fillStyle = '#123'; g.font = "800 20px 'Malgun Gothic',sans-serif"; g.textAlign = 'left'; g.fillText(`${i + 1}. ${x.sp}`, 162, yy - 4); g.fillStyle = '#D9A21A'; g.font = '16px sans-serif'; g.fillText(stars(x.s), 162, yy + 16); } }); }
-        if (sc === 4) { bubble(100, 120); text('물결이의 안전 한마디', 132, 16, '#466', true); text(D.safe, 172, 20, '#B8322A', true); text('출조 관제 우주 프로', 300, 15, '#BFE8FF'); text('※ 예보는 계산값이에요', 326, 12, '#BFE8FF'); }
+        g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, 0, W, 60); text(`🌊 ${D.region} · ${D.date}`, 30, 20, '#fff', true);
+        if (sc === 0) { text('안녕! 바다지기 물결이야', 125, 30, '#FFE27A', true); text('오늘의 바다를 15초로 알려 줄게', 185, 21, '#FFFFFF', true); }
+        if (sc === 1) { bubble(88, 172); text(D.moon, 130, 30, '#0A1C2A', true); text(D.tide || '', 184, 24, '#0B3A5E', true); text('달 모양으로 보는 오늘 물때', 228, 17, '#24484F', true); }
+        if (sc === 2) { bubble(78, 216); const w = D.wx || {}; text('오늘 바다 날씨', 112, 23, '#0A1C2A', true); text(w.sst != null ? `수온 ${w.sst.toFixed(1)}℃` : '수온 정보 없음', 154, 26, '#075A72', true); text(w.wind != null ? `바람 ${w.wind.toFixed(0)}m/s${w.wind >= 10 ? ' ⚠' : ''}` : '바람 정보 없음', 196, 23, w.wind >= 10 ? '#A8231B' : '#0B3A5E', true); text(w.wave != null ? `파고 ${w.wave.toFixed(1)}m` : '', 236, 22, '#0B3A5E', true); }
+        if (sc === 3) { text('입질 예보 TOP 3', 100, 28, '#FFE27A', true); D.top.forEach((x, i) => { const yy = 160 + i * 70, k = Math.min(1, Math.max(0, (tt - 8.5 - i * .5) / .5)); g.globalAlpha = k; g.fillStyle = 'rgba(255,255,255,.97)'; g.fillRect(146, yy - 28, 198, 58); g.globalAlpha = 1; if (k > 0) { g.fillStyle = '#0A1C2A'; g.font = `900 22px ${FONT}`; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(`${i + 1}. ${x.sp}`, 158, yy - 9); g.fillStyle = '#C98A00'; g.font = `700 18px ${FONT}`; g.fillText(stars(x.s), 158, yy + 15); } }); }
+        if (sc === 4) { bubble(96, 150); text('물결이의 안전 한마디', 130, 19, '#24484F', true); text(D.safe, 180, 23, '#A8231B', true); text('출조 관제 우주 프로', 300, 19, '#FFFFFF', true); text('※ 예보는 계산값이에요', 332, 16, '#DDF2FF'); }
         g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, H - 4, W, 4); g.fillStyle = '#FFE27A'; g.fillRect(0, H - 4, W * Math.min(1, tt / DUR), 4);
       }
-      function play(onEnd) {
-        cancelAnimationFrame(raf); playing = true; t0 = performance.now();
+      async function play(onEnd) {
+        await loadFont(); cancelAnimationFrame(raf); playing = true; t0 = performance.now();
         const loop = now => { const tt = (now - t0) / 1000; if (tt >= DUR || !root.isConnected) { playing = false; frame(DUR - .01); if (onEnd) onEnd(); return; } frame(tt); raf = requestAnimationFrame(loop); };
         raf = requestAnimationFrame(loop);
       }
@@ -321,11 +417,14 @@
 
     /* ⑧ 우주 낚시 연재 웹툰 */
     function toon() {
-      const weeks = Math.floor((Date.now() - new Date(TOON_START + 'T00:00:00').getTime()) / (7 * 864e5)), open = Math.max(1, Math.min(TOON.length, weeks + 1));
+      // 2026-11-23(4화)부터 매일 한 화씩 공개 — 다음 화들은 매일 업데이트에서 미리 준비해 둠
+      const now = new Date(), d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), days = Math.round((d0 - new Date(TOON_DAILY + 'T00:00:00').getTime()) / 864e5);
+      const open = Math.max(1, Math.min(TOON.length, 4 + days));
+      if ((S.toonOpen || 0) < open) { S.toon = open - 1; S.toonOpen = open; save(); }   // 새 화가 열리면 바로 새 화부터
       if (S.toon >= open) S.toon = open - 1;
       const ep = TOON[S.toon];
-      $('f-toon').innerHTML = `<h3>🚀 별빛 낚시단 <span>우주 낚시 연재 웹툰 · 매주 월요일</span></h3>
-        <div class="row">${TOON.slice(0, open).map((e, i) => `<button class="btn ${i === S.toon ? 'pri' : ''}" data-ep="${i}">${i + 1}화</button>`).join('')}${open < TOON.length ? `<span class="small muted">${open + 1}화는 다음 주 월요일 공개</span>` : ''}</div>
+      $('f-toon').innerHTML = `<h3>🚀 별빛 낚시단 <span>우주 낚시 연재 웹툰 · 매일 한 화</span></h3>
+        <div class="row">${TOON.slice(0, open).map((e, i) => `<button class="btn ${i === S.toon ? 'pri' : ''}" data-ep="${i}">${i + 1}화${i === open - 1 ? ' 🆕' : ''}</button>`).join('')}${open < TOON.length ? `<span class="small muted">${open + 1}화는 내일 공개</span>` : ''}</div>
         <b>${esc(ep.t)}</b>
         <div class="toon" tabindex="0" aria-label="웹툰 ${esc(ep.t)}">${ep.p.map(([bg, act, line]) => { const i = line.indexOf(':'); return `<figure>${toonPanel(bg, act)}<figcaption>${i > 0 ? `<b>${esc(line.slice(0, i))}</b>${esc(line.slice(i))}` : esc(line)}</figcaption></figure>`; }).join('')}
           <figure><figcaption style="text-align:center;padding:18px"><b>— ${S.toon + 1}화 끝 —</b><br><span class="small">🚶 「섬 · 바다 속 → 섬길·우주 원정」에서 걸은 만큼 같은 행성 둘레길을 갈 수 있어요.</span></figcaption></figure></div>`;

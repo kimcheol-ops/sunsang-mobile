@@ -42,6 +42,9 @@
   .msCard .th .ph { display: grid; place-items: center; height: 100%; font-size: 22px; }
   .msCard b { font-size: 11.5px; } .msCard small { font-size: 10px; color: #93A8B0; line-height: 1.3; }
   .msRain { grid-column: 1 / -1; display: grid; gap: 1px; text-align: left; padding: 7px 9px; border-radius: 8px; border: 2px solid transparent; background: #212C37; color: inherit; font: 700 12px inherit; cursor: pointer; } .msRain small { font-weight: 400; font-size: 10px; color: #93A8B0; } .msRain[aria-pressed="true"] { border-color: #6FA8FF; background: #1E3350; }
+  .msHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 1200; max-width: 80%; padding: 10px 14px; border-radius: 12px; background: rgba(8,16,24,.86); color: #fff; font: 700 14px/1.45 'Malgun Gothic','Noto Sans KR',sans-serif; text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s; }
+  .msHint.on { opacity: 1; }
+  .msFree { width: 34px; height: 34px; font-size: 18px; margin-top: 6px !important; } .msFree[aria-pressed="true"] { background: #FFE27A; }
   .msPop .msFoot { grid-column: 1 / -1; font-size: 10.5px; color: #93A8B0; }
   `;
   function css() { if (document.getElementById('mapstyle-css')) return; const s = document.createElement('style'); s.id = 'mapstyle-css'; s.textContent = CSS; document.head.appendChild(s); }
@@ -95,7 +98,27 @@
     for (const m of maps.slice()) { if (!m._container || !m._container.isConnected) { maps.splice(maps.indexOf(m), 1); continue; } await apply(m, id); }
     document.querySelectorAll('.msCard').forEach(b => b.setAttribute('aria-pressed', b.dataset.ms === id));
   }
-  function base(map) { css(); maps.push(map); if (rainOn()) applyRain(map, true); apply(map, get()).then(ok => { if (!ok) apply(map, 'dark'); }); return map; }
+  /* 휴대폰: 한 손가락은 화면 내리기, 두 손가락으로 지도 이동·확대 (지도가 화면을 잡아 아래 내용을 못 누르는 문제) */
+  const COOP_KEY = 'mapstyle.onefinger';
+  function coop(map) {
+    if (map._msCoop || !map.dragging || !window.matchMedia || !matchMedia('(pointer: coarse)').matches) return; map._msCoop = 1;
+    const el = map.getContainer(); let free = false; try { free = localStorage.getItem(COOP_KEY) === '1'; } catch (e) {}
+    const hint = L.DomUtil.create('div', 'msHint', el); hint.textContent = '지도는 두 손가락으로 움직여요 · 한 손가락은 화면 내리기';
+    const Btn = L.Control.extend({ options: { position: 'topleft' }, onAdd() { const b = L.DomUtil.create('button', 'leaflet-control msBtn msFree'); b.type = 'button'; L.DomEvent.disableClickPropagation(b); b.onclick = () => set(!free, true); return b; } });
+    const ctl = new Btn(); map.addControl(ctl);
+    function set(on, save) {
+      free = on; on ? map.dragging.enable() : map.dragging.disable();
+      const b = ctl.getContainer(); b.textContent = on ? '✋' : '☝'; b.setAttribute('aria-pressed', on);
+      b.title = b.ariaLabel = on ? '한 손가락으로 지도 이동 중 — 누르면 화면 내리기로' : '한 손가락은 화면 내리기 — 누르면 한 손가락으로 지도 이동';
+      if (save) { try { localStorage.setItem(COOP_KEY, on ? '1' : '0'); } catch (e) {} showHint(on ? '한 손가락으로 지도를 움직여요' : '한 손가락은 화면 내리기, 지도는 두 손가락'); }
+    }
+    let ht = 0, sx = 0, sy = 0;
+    function showHint(txt) { if (txt) hint.textContent = txt; hint.classList.add('on'); clearTimeout(ht); ht = setTimeout(() => hint.classList.remove('on'), 1600); }
+    el.addEventListener('touchstart', e => { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } else hint.classList.remove('on'); }, { passive: true });
+    el.addEventListener('touchmove', e => { if (free || e.touches.length !== 1) return; const t = e.touches[0]; if (Math.hypot(t.clientX - sx, t.clientY - sy) > 24) showHint('지도는 두 손가락으로 움직여요 · 한 손가락은 화면 내리기'); }, { passive: true });
+    set(free, false);
+  }
+  function base(map) { css(); maps.push(map); coop(map); if (rainOn()) applyRain(map, true); apply(map, get()).then(ok => { if (!ok) apply(map, 'dark'); }); return map; }
   function attach(map) {
     base(map);
     const Ctl = L.Control.extend({
