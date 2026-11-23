@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '8.4-mobile';
+const VERSION = '8.5-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -189,6 +189,7 @@ function initGames() {
     ...(window.MethodGames ? MethodGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎓 낚시법 도장 깨기
     ...(window.PlayGames ? PlayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎮 놀이 4종
     ...(window.DayGames ? DayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🚢 선상 하루 4종
+    ...(window.HotGames ? HotGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🐟 물고기 합치기 · 🧱 바다 블록 퍼즐
     ...(window.TripGames ? TripGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🗺 출조+나들이 계획 · ⚓ 안전 점검
   ];
   hub = GameHub.mount($('hubBox'), { entries, store, wallet, start: 'story', onBonus: n => addCoins(n),
@@ -625,6 +626,16 @@ function renderYT() {
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-ytf]'); if (b) { ls.set('m.ytf', b.dataset.ytf); renderYT(); } });
 renderYT();
+
+// 🛒 신제품·이벤트(제조사·수입사 공식 페이지로 확인된 것만) + 조황 글 목록(링크만) — today-data.js의 gear·reportLinks
+(function renderGear() {
+  const T = window.TODAY_DATA || {}, G = T.gear || [], L = T.reportLinks || [], card = $('gearCard'); if (!card || (!G.length && !L.length)) return;
+  card.hidden = false; $('gearSub').textContent = T.gearAt || T.date || '';
+  const ico = { 신제품: '🆕', 이벤트: '🎁', 기획전: '🏷' };
+  $('gearList').innerHTML = G.map(g => `<a class="yt" href="${esc(g.url)}" target="_blank" rel="noopener"><div class="d" style="color:#8CC8F2">${ico[g.kind] || '🛒'}<small>${esc(g.kind)}</small></div><div><b>${esc(g.title)}</b><span class="m">${esc(g.who)} · ${esc(g.when)} · ${esc(g.note)}</span></div></a>`).join('')
+    + L.map(r => `<a class="yt" href="${esc(r.url)}" target="_blank" rel="noopener"><div class="d">📋<small>조황 글</small></div><div><b>${esc(r.title)}</b><span class="m">${esc(r.region)} · 마릿수는 글을 열어 확인(내용 복사 안 함)</span></div></a>`).join('');
+  $('gearNote').textContent = (T.gearNote || '') + ' 광고비를 받지 않고, 확인된 공식 글만 올려요.';
+})();
 
 // ── 🎡 오늘의 바다 놀이터(관제 화면 하단): 입질 예보·제철 달력·공개 조황·쇼츠·운세·만화·우주 웹툰 (fun.js, PC·조황 수첩과 같은 화면) ──
 var funApi = null;   // var: go()가 이 줄보다 먼저 불릴 수 있음
