@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '8.2-mobile';
+const VERSION = '8.3-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -199,7 +199,7 @@ function initGames() {
 function renderMore() {
   $('watch').innerHTML = REGIONS.map(r => `<button class="chip" data-w="${esc(r.name)}" aria-pressed="${watched.includes(r.name)}">${esc(r.name)}</button>`).join('');
   document.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { const n = b.dataset.w;
-    watched = watched.includes(n) ? watched.filter(x => x !== n) : watched.concat(n); ls.set('m.watch', watched); b.setAttribute('aria-pressed', watched.includes(n)); results = null; renderEvents(); });
+    watched = watched.includes(n) ? watched.filter(x => x !== n) : watched.concat(n); ls.set('m.watch', watched); b.setAttribute('aria-pressed', watched.includes(n)); results = null; renderEvents(); renderYT(); });
   $('about').innerHTML = `출조 관제 우주 프로 모바일 ${VERSION}<br>예보: Open-Meteo(풍속·강수·파고·수온) · 지도: OpenStreetMap, OpenSeaMap, GEBCO, NASA GIBS<br>물때: 한국 음력 표(PC 프로그램과 같은 표) · 게임 기록은 이 기기에만 저장`;
 }
 
@@ -605,6 +605,25 @@ function renderEvents() {
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-evf]'); if (b) { ls.set('m.evf', b.dataset.evf); renderEvents(); } });
 renderEvents();
+
+// 📺 영상 제목으로 본 조황 — PC가 매일 유튜브 채널 공개 RSS에서 제목·날짜·링크만 모은 yt-data.js (실제 조과 확인 안 됨)
+function renderYT() {
+  const Y = window.YT_DATA, card = $('ytCard'); if (!card) return;
+  const items = (Y && Y.items) || []; card.hidden = !items.length; if (!items.length) return;
+  const regs = [...new Set(items.map(x => x.region).filter(Boolean))], wset = new Set(watched);
+  let mode = ls.get('m.ytf', 'all'); if (mode !== 'all' && mode !== 'watch' && !regs.includes(mode)) mode = 'all';
+  const nW = items.filter(x => wset.has(x.region)).length;
+  $('ytFilter').innerHTML = [['all', `전체 ${items.length}`], ...(nW ? [['watch', `⭐ 감시 지역 ${nW}`]] : []), ...regs.map(r => [r, `${r} ${items.filter(x => x.region === r).length}`])]
+    .map(([k, n]) => `<button class="chip" data-ytf="${esc(k)}" aria-pressed="${k === mode}">${esc(n)}</button>`).join('');
+  const list = items.filter(x => mode === 'all' ? true : mode === 'watch' ? wset.has(x.region) : x.region === mode).slice(0, 12);
+  const today = new Date(), ago = d => { const n = Math.round((new Date(today.toDateString()) - new Date(d + 'T00:00:00')) / 864e5); return n <= 0 ? '오늘' : n === 1 ? '어제' : `${n}일 전`; };
+  $('ytSub').textContent = `${Y.at} 모음 · 최근 ${Y.days}일`;
+  $('ytList').innerHTML = list.map(x => `<a class="yt" href="${esc(x.url)}" target="_blank" rel="noopener"><div class="d">▶<small>${esc(ago(x.day))}</small></div><div><b>${esc(x.title)}</b><span class="m">${esc(x.ch)}${x.region ? ' · 📍 ' + esc(x.region) : ''}${(x.sp || []).length ? ' · ' + x.sp.map(s => '#' + esc(s)).join(' ') : ''} · ${esc(x.day.slice(5).replace('-', '/'))}</span>${x.zero ? ' <span class="m z">꽝·철수 언급</span>' : ''}</div></a>`).join('')
+    || '<div class="small muted">이 지역 영상 제목이 아직 없어요.</div>';
+  $('ytNote').innerHTML = `⚠ ${esc(Y.note)} 잘 잡힌 날 위주로 올라올 수 있으니, 내 기록·선장님 공지와 함께 보세요.<br>채널: ${(Y.channels || []).map(c => `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>`).join(' · ')} — 영상은 유튜브에서 열려요.`;
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-ytf]'); if (b) { ls.set('m.ytf', b.dataset.ytf); renderYT(); } });
+renderYT();
 
 // ── 🎡 오늘의 바다 놀이터(관제 화면 하단): 입질 예보·제철 달력·공개 조황·쇼츠·운세·만화·우주 웹툰 (fun.js, PC·조황 수첩과 같은 화면) ──
 var funApi = null;   // var: go()가 이 줄보다 먼저 불릴 수 있음

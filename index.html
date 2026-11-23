@@ -26,6 +26,8 @@
   nav.tabbar button b { font-size: 21px; font-weight: 400; line-height: 1.1; }
   nav.tabbar button[aria-current="page"] { color: var(--fg); background: var(--panel2); }
   section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+  .ytlist { display: grid; gap: 6px; margin: 6px 0; } .yt { display: grid; grid-template-columns: 44px 1fr; gap: 8px; align-items: start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--chart); color: inherit; text-decoration: none; }
+  .yt .d { font: 800 12px/1.2 inherit; text-align: center; color: #FFB4B4; } .yt .d small { display: block; font-weight: 400; color: var(--muted); } .yt b { font-size: 14px; line-height: 1.35; display: block; overflow-wrap: anywhere; } .yt .m { font-size: 11.5px; color: var(--muted); } .yt .z { color: #FFD27A; font-weight: 700; }
   .evrow { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
   .ev { flex: 0 0 74%; max-width: 270px; scroll-snap-align: start; background: var(--chart); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; color: inherit; text-decoration: none; display: block; }
   .ev .im { position: relative; height: 112px; background: #0E1216; } .ev img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -117,6 +119,10 @@
       <div id="evCourse" class="rgrid" hidden></div>
       <div class="chips"><button class="chip" data-goto="news" style="flex:1">📰 오늘의 바다 소식 — 추천 코스·행사 모두 보기</button></div>
       <div class="small muted">행사 정보·사진: 한국관광공사 TourAPI(공공누리). 일정은 주최 측 사정으로 바뀔 수 있으니 가기 전에 확인하세요.</div></section>
+    <section class="card" id="ytCard" hidden><h2>📺 영상 제목으로 본 조황 <small id="ytSub"></small></h2>
+      <div class="chips" id="ytFilter"></div>
+      <div id="ytList" class="ytlist"></div>
+      <div class="small muted" id="ytNote"></div></section>
     <section class="card" id="sstCard"><h2>🌡 내 위치 바다 수온 <small>GPS → 해양 예보 모델 · 키 불필요</small></h2>
       <div class="chips"><button class="chip" id="sstBtn">🌡 지금 내 위치 수온 확인</button><select class="sel" id="sstSp" aria-label="노리는 어종" style="width:auto"></select></div>
       <div id="sstBox" class="small muted">버튼을 누르면 지금 있는 자리(바다 위 또는 가까운 바다)의 표층 수온과 그 수온에 잘 무는 어종을 알려 드립니다.</div></section>
@@ -223,6 +229,7 @@
 <script src="games7.js"></script>
 <script src="phone.js"></script>
 <script src="today-data.js"></script>
+<script src="yt-data.js" onerror="window.YT_DATA=null"></script>
 <script src="places-data.js"></script>
 <script src="games8.js"></script>
 <script src="games9.js"></script>
