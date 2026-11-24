@@ -201,7 +201,7 @@
   /* ═════════════════════════ 화면 ═════════════════════════ */
   function view(el, ctx) {
     if (!document.getElementById('stu-css')) { const st = document.createElement('style'); st.id = 'stu-css'; st.textContent = CSS; document.head.appendChild(st); }
-    const ui = Object.assign({ mode: 'kid', tool: 'canvas', brush: 'crayon', color: '#3FB4E0', size: 14, mirror: false, sticker: '🐟', lesson: 'body', step: 0, cr: 'dom' }, lsGet('stu.ui', {}));
+    const ui = Object.assign({ mode: 'kid', tool: 'canvas', brush: 'crayon', color: '#3FB4E0', size: 14, mirror: false, sticker: '🐟', lesson: 'body', step: 0, cr: 'dom' }, lsGet('stu.ui', {}), ctx.tool ? { tool: ctx.tool } : {});
     let stopNow = () => {};
     const stopAll = () => { try { stopNow(); } catch (e) {} stopNow = () => {}; };
     ctx.setStop(stopAll);
@@ -368,6 +368,7 @@
           <div class="row"><label class="bt pri">🖼 사진 고르기<input type="file" accept="image/*" id="ph-file" hidden></label><button class="bt" data-cam>📷 카메라 켜기</button></div>
           <div class="row" id="ph-camrow" style="display:none"><button class="bt pri" data-shot>⚪ 찰칵</button><button class="bt" data-flip>🔄 앞·뒤</button><button class="bt" data-torch>🔦 손전등</button><button class="bt" data-camoff>끄기</button></div>
           <div><b style="font-size:13px">바꾸기</b><div class="row">${Object.entries(FILTERS).map(([k, v]) => `<button class="bt" data-f="${k}">${v[0]}</button>`).join('')}</div></div>
+          ${window.ArtApp ? `<div><b style="font-size:13px">🐟 바다 친구 붙이기</b><div class="row"><select id="ph-stk" aria-label="붙일 바다 친구"><option value="">안 붙임</option>${ArtApp.CR.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select><label class="row" style="font-size:12px">크기 <input type="range" id="ph-stks" min="8" max="60" value="24"></label><button class="bt" data-stkundo>↶ 떼기</button></div><div class="tip">고른 뒤 사진을 누르면 그 자리에 붙어요.</div></div>` : ''}
           <label class="row">밑그림 진하기 <input type="range" id="ph-op" min="10" max="100" value="${Math.round(doc.layers[0].op * 100)}"></label>
           <div class="row"><button class="bt pri" data-use>🖌 밑그림으로 쓰고 그리기</button></div>
           <div class="row"><button class="bt" data-keep>🖼 전시관에 걸기</button><button class="bt" data-dl>⬇ 내려받기</button></div>
@@ -392,6 +393,16 @@
       q('[data-shot]').onclick = () => { if (!vid.videoWidth) return; const c = mk(vid.videoWidth, vid.videoHeight); c.getContext('2d').drawImage(vid, 0, 0); src = fitSquare(c, c.width, c.height); out = null; buzz(30); camOff(); paint(); say('찰칵! 「바꾸기」나 「밑그림으로 쓰고 그리기」를 눌러 보세요.'); };
       body.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { if (!src) { say('먼저 사진을 고르거나 찍어 주세요.'); return; } say('바꾸는 중…'); setTimeout(() => { const small = mk(512), sg = small.getContext('2d'); sg.drawImage(src, 0, 0, 512, 512); const r = FILTERS[b.dataset.f][1](small), big = mk(S); big.getContext('2d').drawImage(r, 0, 0, S, S); out = b.dataset.f === 'none' ? null : big; paint(); say(FILTERS[b.dataset.f][0] + ' 완료'); }, 30); });
       q('#ph-op').oninput = e => { doc.layers[0].op = e.target.value / 100; };
+      // 🐟 바다 친구 스티커(이 기기 안에서만 그림)
+      let stk = null; const stkUndo = [];
+      if (q('#ph-stk')) {
+        q('#ph-stk').onchange = e => { const c = ArtApp.CR.find(x => x.id === e.target.value); stk = null; if (!c) return; const im = new Image(); im.onload = () => { stk = im; say(`「${esc(c.name)}」 — 사진을 누르면 붙어요.`); }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(ArtApp.svgOf(c, null, { sw: 3 })); };
+        q('[data-stkundo]').onclick = () => { const u = stkUndo.pop(); if (u) { out = u; paint(); } };
+        cv.addEventListener('pointerdown', e => { if (!stk) return; const base = out || src; if (!base) { say('먼저 사진을 고르거나 찍어 주세요.'); return; }
+          const t = mk(base.width, base.height); t.getContext('2d').drawImage(base, 0, 0); stkUndo.push(out); if (stkUndo.length > 10) stkUndo.shift();
+          const r0 = cv.getBoundingClientRect(), x = (e.clientX - r0.left) / r0.width * t.width, y = (e.clientY - r0.top) / r0.height * t.height, s = t.width * (+q('#ph-stks').value / 100);
+          t.getContext('2d').drawImage(stk, x - s / 2, y - s / 2, s, s); out = t; paint(); buzz(15); });
+      }
       q('[data-use]').onclick = () => { const c = out || src; if (!c) { say('먼저 사진을 고르거나 찍어 주세요.'); return; } const bg = doc.layers[0].cv.getContext('2d'); bg.fillStyle = '#fff'; bg.fillRect(0, 0, S, S); bg.drawImage(c, 0, 0, S, S); doc.bgLog = doc.layers[0].cv.toDataURL('image/jpeg', 0.7); if (doc.layers[0].op > 0.7) doc.layers[0].op = 0.6; ui.tool = 'canvas'; render(); };
       q('[data-keep]').onclick = () => { const c = out || src; if (c) keep(c, '사진 그림', 'photo'); };
       q('[data-dl]').onclick = async () => { const c = out || src; if (!c) return; const b = await new Promise(r => c.toBlob(r, 'image/png')); dl(b, `photo-art-${day()}.png`); };

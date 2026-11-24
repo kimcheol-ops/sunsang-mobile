@@ -26,14 +26,29 @@
   .art .modal > div { width: min(560px, 100%); max-height: 100%; overflow: auto; background: #1A1F26; border: 1px solid #3A4450; border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
   .art .modal img { width: 100%; border-radius: 6px; }
   .art .stars { font-size: 26px; letter-spacing: 3px; }
-  .art .tools { display: flex; flex-wrap: wrap; gap: 5px; }`;
+  .art .tools { display: flex; flex-wrap: wrap; gap: 5px; }
+  .art .picks { max-height: 300px; overflow: auto; padding: 2px; overscroll-behavior: contain; }
+  .art .pick .ok { font-size: 10px; color: #2E8A5A; min-height: 12px; }
+  .art .cats { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 6px; }
+  .art .chip { min-height: 32px; padding: 0 11px; border-radius: 16px; border: 1px solid #3A4A56; background: #1E2C36; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+  .art .chip[aria-pressed="true"] { background: #3FB4E0; color: #08131C; font-weight: 700; border-color: transparent; }
+  .art .find { flex: 1 1 140px; min-height: 32px; border-radius: 16px; border: 1px solid #3A4A56; background: #0F1A22; color: inherit; padding: 0 12px; font: inherit; font-size: 13px; }
+  .art .hero { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; padding: 10px 12px; margin-bottom: 8px; border-radius: 14px; background: linear-gradient(120deg, #123A4E, #1D5A64 55%, #2C6E5E); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+  .art .hero .pic { width: 64px; height: 64px; border-radius: 12px; background: #F6F0E2; }
+  .art .hero b { font-size: 16px; }
+  .art .hero .meta { font-size: 12.5px; opacity: .9; line-height: 1.55; }
+  .art .hero .acts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .art .coll { display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 4px; }
+  .art .coll button { background: #F6F0E2; border: 0; border-radius: 8px; padding: 2px; cursor: pointer; }
+  .art .coll button.no svg { filter: grayscale(1) brightness(1.25); opacity: .35; }
+  .art .coll svg { width: 100%; height: auto; display: block; }`;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
   const coal = e => { const a = e.getCoalescedEvents ? e.getCoalescedEvents() : []; return a.length ? a : [e]; };
 
   /* ── 바다 생물 밑그림(200×200). parts: [이름, 모양, 실제에 가까운 색] — 색칠 칸이자 따라 그리기 단계, lines: 무늬 선 ── */
-  const CR = [
+  const CR0 = [
     { id: 'dom', name: '감성돔', dex: '감성돔', parts: [
       ['꼬리', 'M150 97 L188 64 C179 86 179 112 188 134 Z', '#5E6873'],
       ['등지느러미', 'M66 68 C84 38 122 42 138 72 Z', '#4A535C'],
@@ -139,6 +154,27 @@
       ['오른눈', 'M104 84 a7 7 0 1 0 14 0 a7 7 0 1 0 -14 0 Z', '#FFFFFF']],
       lines: ['M91 84 a2 2 0 1 0 0.1 0', 'M111 84 a2 2 0 1 0 0.1 0', 'M92 96 C98 100 104 100 110 96', 'M60 150 a2.5 2.5 0 1 0 0.1 0', 'M88 160 a2.5 2.5 0 1 0 0.1 0', 'M118 160 a2.5 2.5 0 1 0 0.1 0', 'M146 148 a2.5 2.5 0 1 0 0.1 0'] }
   ];
+  /* 2026-11-24: art-lib.js 84종을 더해 100가지 — 분류(cat)·오늘의 친구 */
+  const CR = CR0.concat((window.ArtLib && ArtLib.items) || []);
+  CR.forEach(c => { if (!c.cat) c.cat = window.ArtLib ? ArtLib.catOf(c.id) : 'sea'; });
+  const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayCR = () => { const d = new Date(); return CR[Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5) % CR.length]; };
+  /* 모은 바다 친구(따라 그리기 t · 색칠 c · 도트 p) + 마음 쉼 기록(날짜별) */
+  function markDone(id, k) { const d = lsGet('art.done', {}); d[id] = Object.assign(d[id] || {}, { [k]: 1 }); lsSet('art.done', d); markDay(); }
+  function markDay(step) { const m = lsGet('art.mind', { days: {} }), t = dayKey(); m.days[t] = Object.assign(m.days[t] || {}, step ? { [step]: 1 } : { any: 1 }); lsSet('art.mind', m); }
+  function streak() { const m = lsGet('art.mind', { days: {} }); let n = 0; const d = new Date(); if (!m.days[dayKey(d)]) d.setDate(d.getDate() - 1); while (m.days[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); } return n; }
+  const doneCount = () => Object.keys(lsGet('art.done', {})).filter(id => CR.some(c => c.id === id)).length;
+  /* 🌊 파도 소리 — 이 기기에서 직접 만든 소리(녹음 파일·외부 서비스 없음) */
+  let sea = null;
+  function seaSound(on) {
+    if (!on) { if (sea) { try { sea.ctx.close(); } catch (e) {} sea = null; } return false; }
+    if (sea) return true;
+    try { const A = window.AudioContext || window.webkitAudioContext, ac = new A(), len = ac.sampleRate * 4, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); let last = 0;
+      for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.2; }
+      const src = ac.createBufferSource(); src.buffer = buf; src.loop = true; const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; const gain = ac.createGain(); gain.gain.value = 0.25;
+      const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 0.12; lg.gain.value = 0.2; lfo.connect(lg); lg.connect(gain.gain);
+      src.connect(lp); lp.connect(gain); gain.connect(ac.destination); src.start(); lfo.start(); sea = { ctx: ac }; return true; } catch (e) { return false; }
+  }
   const svgOf = (c, fills, opts = {}) => `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${opts.bg || ''}${c.parts.map((p, i) => `<path d="${p[1]}" fill="${fills ? fills[i] || '#FFFFFF' : p[2]}" stroke="#2A2A2A" stroke-width="${opts.sw || 2.2}" stroke-linejoin="round" data-part="${i}"${opts.click ? ' style="cursor:pointer"' : ''}/>`).join('')}${c.lines.map(d => `<path d="${d}" fill="none" stroke="#2A2A2A" stroke-width="${(opts.sw || 2.2) * 0.8}" stroke-linecap="round" pointer-events="none"/>`).join('')}</svg>`;
   const BGS = {
     paper: ['🧻 종이', '<rect width="200" height="200" fill="#F6F0E2"/>'],
@@ -197,7 +233,7 @@
     el.classList.add('art');
     const ui = Object.assign({ mode: 'trace', cr: 'dom', bg: 'paper', brush: 'water', color: '#1F6C8A', size: 18, guide: '' }, lsGet('art.ui', {}));
     let cleanup = () => {};
-    ctx.setStop(() => cleanup());
+    ctx.setStop(() => { cleanup(); seaSound(false); });
     const saveUi = () => lsSet('art.ui', ui);
     const say = t => { const n = el.querySelector('#art-say'); if (n) n.innerHTML = t; };
     async function download(blob, name) {
@@ -206,26 +242,43 @@
     }
     async function keep(cv, title, kind) {
       const blob = await toBlob(cv); if (!blob) { say('그림을 저장하지 못했어요.'); return; }
-      const ok = await galPut({ id: 'w' + Date.now(), at: Date.now(), title, kind, blob });
+      const ok = await galPut({ id: 'w' + Date.now(), at: Date.now(), title, kind, blob }); markDay();
       say(ok ? `🖼 「${esc(title)}」을 내 그림 전시관에 걸었어요.` : '🖼 전시관에 걸었어요(이 기기는 저장소를 쓸 수 없어 화면을 닫으면 사라져요 — 내려받기를 권해요).');
     }
 
     function render() {
       cleanup(); cleanup = () => {}; saveUi();
       const plus = (window.ArtPlus && ArtPlus.MODES) || [];   // art2.js: 🌀 대칭 무늬 · 👾 도트 그림 · 🎯 오늘의 미션
-      if (!['trace', 'color', 'paint', 'studio', 'gal'].includes(ui.mode) && !plus.some(m => m[0] === ui.mode)) ui.mode = 'trace';
-      el.innerHTML = `<div class="tabs" role="tablist">${[['trace', '✏ 따라 그리기'], ['color', '🖍 색칠 놀이'], ['paint', '🖌 예술 붓'], ...plus, ['studio', '🎬 그림 스튜디오'], ['gal', '🖼 내 그림 전시관']].map(([k, l]) => `<button class="tab" role="tab" data-m="${k}" aria-selected="${ui.mode === k}">${l}</button>`).join('')}</div><div id="art-body"></div>`;
+      if (!['trace', 'color', 'paint', 'studio', 'photo', 'gal'].includes(ui.mode) && !plus.some(m => m[0] === ui.mode)) ui.mode = 'trace';
+      const tc = todayCR(), st = streak();
+      el.innerHTML = `<div class="hero"><div class="pic">${svgOf(tc, null, { sw: 2.6 })}</div><div><b>🌿 마음 쉼 바다 화실</b>
+          <div class="meta">하루 10분, 바다 친구 <b>${CR.length}가지</b>를 그리며 마음을 고르고 집중·기억하는 나만의 시간.<br>오늘의 친구 <b>${esc(tc.name)}</b> · 모은 친구 <b>${doneCount()}/${CR.length}</b>${st ? ` · 🔥 ${st}일째 이어 그리기` : ''}</div>
+          <div class="acts"><button class="chip" data-today>⭐ 오늘의 친구 그리기</button><button class="chip" data-sea aria-pressed="${!!sea}">🌊 파도 소리</button></div></div></div>
+        <div class="tabs" role="tablist">${[['trace', '✏ 따라 그리기'], ['color', '🖍 색칠 놀이'], ['paint', '🖌 예술 붓'], ...plus, ['studio', '🎬 그림 스튜디오'], ['photo', '📷 사진 스튜디오'], ['gal', '🖼 내 그림 전시관']].map(([k, l]) => `<button class="tab" role="tab" data-m="${k}" aria-selected="${ui.mode === k}">${l}</button>`).join('')}</div><div id="art-body"></div>`;
       el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { ui.mode = b.dataset.m; render(); });
+      el.querySelector('[data-today]').onclick = () => { ui.cr = tc.id; ui.cat = 'all'; ui.q = ''; if (!['trace', 'color'].includes(ui.mode)) ui.mode = 'trace'; render(); };
+      el.querySelector('[data-sea]').onclick = e => { const on = seaSound(!sea); e.currentTarget.setAttribute('aria-pressed', on); };
       const body = el.querySelector('#art-body');
-      if (ui.mode === 'studio') { if (window.ArtStudio) ArtStudio.view(body, { setStop: f => { cleanup = f; }, download, keep }); else body.innerHTML = '<div class="box muted">스튜디오 파일(studio.js)을 불러오지 못했습니다.</div>'; return; }
-      if (plus.some(m => m[0] === ui.mode)) { ArtPlus.view(body, ui.mode, { setStop: f => { cleanup = f; }, download, keep }); return; }
+      const go = (m, id) => { ui.mode = m; if (id) ui.cr = id; render(); window.scrollTo && el.scrollIntoView && el.scrollIntoView({ block: 'start' }); };
+      if (ui.mode === 'studio' || ui.mode === 'photo') { if (window.ArtStudio) ArtStudio.view(body, { setStop: f => { cleanup = f; }, download, keep, tool: ui.mode === 'photo' ? 'photo' : null, CR, svgOf }); else body.innerHTML = '<div class="box muted">스튜디오 파일(studio.js)을 불러오지 못했습니다.</div>'; return; }
+      if (plus.some(m => m[0] === ui.mode)) { ArtPlus.view(body, ui.mode, { setStop: f => { cleanup = f; }, download, keep, go, CR, svgOf, todayCR, markDone, markDay, streak, dayKey, seaSound, cat: () => ui.cat }); return; }
       ({ trace: traceView, color: colorView, paint: paintView, gal: galView })[ui.mode](body);
     }
-    function picker(cb) {
-      const best = lsGet('art.trace', {});
-      return `<div class="picks">${CR.map(c => `<button class="pick" data-cr="${c.id}" aria-pressed="${c.id === ui.cr}">${svgOf(c, null, { sw: 3 })}<span>${esc(c.name)}</span><span class="st">${best[c.id] ? '★'.repeat(best[c.id].stars) : ''}</span></button>`).join('')}</div>`;
+    function pickList() { const q = (ui.q || '').trim(), cat = ui.cat || 'all', t = todayCR();
+      return CR.filter(c => cat === 'today' ? c === t : (cat === 'all' || c.cat === cat) && (!q || c.name.includes(q) || (c.dex || '').includes(q))); }
+    function picksHtml() { const best = lsGet('art.trace', {}), done = lsGet('art.done', {}), list = pickList();
+      return list.length ? list.map(c => `<button class="pick" data-cr="${c.id}" aria-pressed="${c.id === ui.cr}">${svgOf(c, null, { sw: 3 })}<span>${esc(c.name)}</span><span class="st">${best[c.id] ? '★'.repeat(best[c.id].stars) : ''}</span><span class="ok">${done[c.id] ? (done[c.id].t ? '✏' : '') + (done[c.id].c ? '🖍' : '') + (done[c.id].p ? '👾' : '') : ''}</span></button>`).join('') : '<div class="small muted">찾는 그림이 없어요. 다른 이름으로 찾아보세요.</div>'; }
+    function picker() {
+      const cats = window.ArtLib ? ArtLib.CATS : { all: '🌊 전체' };
+      return `<div class="cats">${Object.entries(cats).map(([k, l]) => `<button class="chip" data-cat="${k}" aria-pressed="${(ui.cat || 'all') === k}">${l}</button>`).join('')}<input type="search" class="find" data-find placeholder="이름 찾기 (예: 참돔·전복)" value="${esc(ui.q || '')}" aria-label="그림 이름 찾기"></div><div class="picks" data-picks>${picksHtml()}</div>`;
     }
-    function bindPicker(body, cb) { body.querySelectorAll('[data-cr]').forEach(b => b.onclick = () => { ui.cr = b.dataset.cr; saveUi(); cb(); }); }
+    function bindPicker(body, cb) {
+      const box = body.querySelector('[data-picks]'), items = () => box.querySelectorAll('[data-cr]').forEach(b => b.onclick = () => { ui.cr = b.dataset.cr; saveUi(); cb(); });
+      items();
+      body.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { ui.cat = b.dataset.cat; saveUi(); body.querySelectorAll('[data-cat]').forEach(x => x.setAttribute('aria-pressed', x === b)); box.innerHTML = picksHtml(); items(); });
+      const f = body.querySelector('[data-find]'); if (f) f.oninput = () => { ui.q = f.value; saveUi(); box.innerHTML = picksHtml(); items(); };
+      const cur = box.querySelector('[aria-pressed="true"]'); if (cur) box.scrollTop = Math.max(0, cur.offsetTop - box.offsetTop - 60);
+    }
 
     /* ✏ 따라 그리기 */
     function traceView(body) {
@@ -275,6 +328,7 @@
       };
       function finish() {
         const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length), stars = avg >= 85 ? 3 : avg >= 65 ? 2 : avg >= 40 ? 1 : 0;
+        markDone(c.id, 't');
         const best = lsGet('art.trace', {}); if (!best[c.id] || best[c.id].score < avg) { best[c.id] = { score: avg, stars, at: Date.now() }; lsSet('art.trace', best); }
         let stamp = '';
         if (stars && c.dex) { const d = lsGet('sea.dex', {}); if (!d[c.dex]) { d[c.dex] = Date.now(); lsSet('sea.dex', d); stamp = ` · 📗 도감에 「${esc(c.dex)}」 도장!`; } }
@@ -304,7 +358,7 @@
           <div class="say" id="art-say" aria-live="polite"></div></div></div>`;
       bindPicker(body, () => render());
       const stage = body.querySelector('#co-stage');
-      const draw = () => { stage.innerHTML = svgOf(c, fills, { click: 1, bg: BGS[ui.bg][1] }); stage.querySelectorAll('[data-part]').forEach(p => p.onclick = () => { fills[+p.dataset.part] = ui.color; lsSet(key, fills); draw(); if (fills.every(f => f !== '#FFFFFF')) say('🎉 다 칠했어요! 전시관에 걸어 볼까요?'); }); };
+      const draw = () => { stage.innerHTML = svgOf(c, fills, { click: 1, bg: BGS[ui.bg][1] }); stage.querySelectorAll('[data-part]').forEach(p => p.onclick = () => { fills[+p.dataset.part] = ui.color; lsSet(key, fills); draw(); if (fills.every(f => f !== '#FFFFFF')) { markDone(c.id, 'c'); say('🎉 다 칠했어요! 전시관에 걸어 볼까요?'); } }); };
       const pick = col => { ui.color = col; saveUi(); body.querySelectorAll('[data-c]').forEach(b => b.setAttribute('aria-pressed', b.dataset.c === col)); };
       body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => pick(b.dataset.c));
       body.querySelector('#co-any').oninput = e => pick(e.target.value);
@@ -326,7 +380,7 @@
           <div class="pal" role="group" aria-label="색">${PAL.map(p => `<button class="sw" style="background:${p}" data-c="${p}" aria-label="${p}" aria-pressed="${p === ui.color}"></button>`).join('')}<input type="color" id="pa-any" value="${ui.color}" aria-label="다른 색"></div>
           <label class="small">붓 크기 <input type="range" id="pa-size" min="2" max="70" value="${ui.size}" style="width:100%"></label>
           <div class="bar"><label class="small">바탕 <select id="pa-bgsel"><option value="paper">🧻 한지</option><option value="white">⬜ 흰 종이</option><option value="sea">🌊 바다</option><option value="night">🌙 밤바다</option></select></label>
-            <label class="small">밑그림 <select id="pa-gsel"><option value="">없음</option>${CR.map(c => `<option value="${c.id}" ${c.id === ui.guide ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label></div>
+            <label class="small">밑그림 <select id="pa-gsel"><option value="">없음</option>${Object.entries(window.ArtLib ? ArtLib.CATS : { sea: '바다' }).filter(([k]) => !['all', 'today'].includes(k)).map(([k, l]) => `<optgroup label="${esc(l)}">${CR.filter(c => c.cat === k).map(c => `<option value="${c.id}" ${c.id === ui.guide ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</optgroup>`).join('')}</select></label></div>
           <div class="bar"><button class="btn" data-undo>↶ 되돌리기</button><button class="btn" data-clear>🗑 새 종이</button><button class="btn primary" data-keep>🖼 전시관에 걸기</button></div>
           <b class="small">🎨 화풍 바꾸기 <span class="muted">(그림을 명화 느낌으로)</span></b>
           <div class="tools">${Object.entries(STYLES).map(([k, v]) => `<button class="btn" data-sty="${k}">${v[0]}</button>`).join('')}</div>
@@ -407,7 +461,13 @@
 
     /* 🖼 내 그림 전시관 */
     async function galView(body) {
-      body.innerHTML = `<div class="box"><b>🖼 내 그림 전시관</b><div class="small muted">완성한 그림은 <b>이 기기에만</b> 걸려요. 휴대폰을 바꾸거나 저장 공간을 비우면 사라지니, 아끼는 그림은 내려받아 두세요.</div><div class="say" id="art-say" aria-live="polite"></div></div><div class="gal" id="gal"></div>`;
+      const done = lsGet('art.done', {}), m = lsGet('art.mind', { days: {} }), days = [];
+      for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push([d, !!m.days[dayKey(d)]]); }
+      body.innerHTML = `<div class="box"><b>🏅 바다 친구 ${CR.length} 모음 — ${doneCount()}/${CR.length}</b> <span class="small muted">따라 그리기·색칠·도트 그림을 끝내면 색이 살아나요. 눌러서 바로 그려요.</span>
+          <div class="small" style="margin:6px 0">🗓 최근 14일 마음 쉼 ${days.map(([d, on]) => `<span title="${d.getMonth() + 1}/${d.getDate()}" style="display:inline-block;width:14px;height:14px;border-radius:4px;margin:0 1px;vertical-align:middle;background:${on ? '#6FD3A4' : 'rgba(255,255,255,.12)'}"></span>`).join('')} ${streak() ? `· 🔥 ${streak()}일째` : ''}</div>
+          <div class="coll">${CR.map(c => `<button class="${done[c.id] ? '' : 'no'}" data-go="${c.id}" title="${esc(c.name)}" aria-label="${esc(c.name)} ${done[c.id] ? '완성' : '아직'}">${svgOf(c, null, { sw: 2.4 })}</button>`).join('')}</div></div>
+        <div class="box"><b>🖼 내 그림 전시관</b><div class="small muted">완성한 그림은 <b>이 기기에만</b> 걸려요. 휴대폰을 바꾸거나 저장 공간을 비우면 사라지니, 아끼는 그림은 내려받아 두세요.</div><div class="say" id="art-say" aria-live="polite"></div></div><div class="gal" id="gal"></div>`;
+      body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { ui.cr = b.dataset.go; ui.mode = done[ui.cr] && done[ui.cr].t ? 'color' : 'trace'; render(); });
       const list = await galList(), gal = body.querySelector('#gal'), urls = [];
       cleanup = () => urls.forEach(u => URL.revokeObjectURL(u));
       if (!list.length) { gal.innerHTML = '<div class="box small muted">아직 걸린 그림이 없어요. 따라 그리기·색칠 놀이·예술 붓에서 「전시관에 걸기」를 눌러 보세요.</div>'; return; }
@@ -426,5 +486,5 @@
     render();
   }
 
-  window.ArtApp = { view, CR, svgOf, galPut, galList, toBlob };
+  window.ArtApp = { view, CR, svgOf, galPut, galList, toBlob, todayCR, markDone };
 })();

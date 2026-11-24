@@ -378,6 +378,13 @@
     }
     function comicView(el) {
       const C = D.COMIC, i = ((st.comic % C.length) + C.length) % C.length, c = C[i];
+      if (window.Comic3D) {   // 2026-11-24: 입체 만화(2D 웹툰 · 3D 입체 · 4D 움직임 · 5D 감각)
+        const shareTxt = () => `🧜 바다지기 물결이 「${c[0]}」\n` + c[1].map((p, j) => `${j + 1}. ${p[1]}`).join('\n') + `\n💡 ${c[2]}\n— 출조 관제 우주 프로 https://kimcheol-ops.github.io/sunsang-mobile/`;
+        el.innerHTML = '<div class="box" id="c3box"></div>';
+        stop = Comic3D.view(el.querySelector('#c3box'), { comic: c, idx: i, total: C.length, onNav: d => { st.comic = i + d; render(); },
+          share: async b => { try { await navigator.clipboard.writeText(shareTxt()); b.textContent = '✔ 복사했어요'; } catch (e) { prompt('아래 글을 복사하세요', shareTxt()); } } });
+        return;
+      }
       el.innerHTML = `<div class="box"><div class="bar"><b style="font-size:16px">🧜 바다지기 물결이 #${i + 1} 「${esc(c[0])}」</b></div>
           <div class="comic">${c[1].map(([k, t], j) => `<figure>${panel(k)}<figcaption><b>${j + 1}</b> ${esc(t)}</figcaption></figure>`).join('')}</div>
           <div class="notice small">💡 ${esc(c[2])}</div>

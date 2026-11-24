@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '8.5-mobile';
+const VERSION = '8.6-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -189,6 +189,7 @@ function initGames() {
     ...(window.MethodGames ? MethodGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎓 낚시법 도장 깨기
     ...(window.PlayGames ? PlayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🎮 놀이 4종
     ...(window.DayGames ? DayGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🚢 선상 하루 4종
+    ...(window.SpaceGames ? SpaceGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🧬 우주 종족 · 🙂 얼굴 우주인 · 🏁 우주 경주 · 🏅 우주 올림픽
     ...(window.HotGames ? HotGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🐟 물고기 합치기 · 🧱 바다 블록 퍼즐
     ...(window.TripGames ? TripGames.extra(r => { addCoins(r.coins); hub.record(r); }) : []),   // 🗺 출조+나들이 계획 · ⚓ 안전 점검
   ];
