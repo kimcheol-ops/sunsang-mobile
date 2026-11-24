@@ -383,7 +383,7 @@
     if (!document.getElementById('pl-css')) { const s = document.createElement('style'); s.id = 'pl-css'; s.textContent = CSS; document.head.appendChild(s); }
     root.classList.add('pl');
     root.innerHTML = `<div class="tabs" role="tablist">
-        <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button><button class="tab" role="tab" data-tab="spot">🎣 낚시터·좌대</button>
+        <button class="tab" role="tab" data-tab="shop">🏪 낚시점</button><button class="tab" role="tab" data-tab="boat">🚤 선상 정보</button><button class="tab" role="tab" data-tab="spot">🎣 낚시터·좌대</button><button class="tab" role="tab" data-tab="near">🗺 지도로 찾기·횟집·숙소</button>
         <button class="tab" role="tab" data-tab="tackle">🪝 오늘의 채비</button><button class="tab" role="tab" data-tab="edu">📚 채비 교육</button><button class="tab" role="tab" data-tab="find">🧭 내 배 찾기(초보)</button><button class="tab" role="tab" data-tab="catch">🎣 실제 조과</button>
         <button class="tab" role="tab" data-tab="mate">🤝 함께 낚시</button><button class="tab" role="tab" data-tab="group">👪 우리 모임</button><button class="tab" role="tab" data-tab="seat">⛴ 주간 출조표</button><button class="tab" role="tab" data-tab="clean">🧹 깨끗한 바다</button><button class="tab" role="tab" data-tab="qa">❓ 묻고 답하기</button><button class="tab" role="tab" data-tab="rank">🏆 랭킹 · 이벤트</button><button class="tab" role="tab" data-tab="add">＋ 등록</button></div>
       <div data-r="filters" class="bar"></div><div class="status" data-r="status" role="status"></div><div data-r="view"></div><div class="dim small" data-r="foot"></div>`;
@@ -392,7 +392,7 @@
     let V = store.view(), editOpen = null, pick = null, aiAnswer = {};
     const st = { tab: 'shop', q: '', region: '전체', sea: '전체', sp: '전체', channel: '전체', sel: null, period: 'week', addKind: 'shop', need: false };
     try { Object.assign(st, JSON.parse(localStorage.getItem('places.ui') || '{}'), { sel: null, q: '' }); } catch (e) {}
-    if (!['shop', 'boat', 'spot', 'tackle', 'edu', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
+    if (!['shop', 'boat', 'spot', 'near', 'tackle', 'edu', 'find', 'catch', 'mate', 'group', 'seat', 'clean', 'qa', 'rank', 'add'].includes(st.tab)) st.tab = 'shop';
     const saveUi = () => { try { localStorage.setItem('places.ui', JSON.stringify({ tab: st.tab, region: st.region, sea: st.sea, period: st.period })); } catch (e) {} };
     const say = msg => { R('status').textContent = msg || store.status || ''; };
     const run = (p, okMsg) => Promise.resolve(p).then(() => say(store.status || okMsg || ''), e => say(e && e.message === 'no-assets' ? '이 화면에서는 사진을 올릴 수 없습니다(권한 없음).' : '처리하지 못했습니다. 다시 해 주세요.'));
@@ -793,6 +793,56 @@
       $('twater').onchange = e => { st.twater = e.target.value; body(); }; $('tsky').onchange = e => { st.tsky = e.target.value; body(); };
       root.querySelectorAll('[data-tday]').forEach(b => b.onclick = () => { st.tday = +b.dataset.tday; body(); });
       root.querySelectorAll('[data-tsp]').forEach(a => a.onclick = e => { e.preventDefault(); st.tsp = a.dataset.tsp; body(); scrollTo(0, 0); });
+    }
+    /* 🗺 지도로 찾기 — 지역 + 종류(낚시점·선상·낚시터·횟집·수산시장·숙소)를 골라 한 지도·목록에 (2026-11-24)
+     *  낚시 자료: 카카오맵 좌표(정확) · 선박 수첩 배는 항구 기준 대략 위치 / 횟집·수산시장·숙소: 카카오맵 공개 정보(상호·주소·사업장 전화), 대표 항구 반경 3km */
+    let nearMap = null;
+    function nearView() {
+      const K = [['shop', '🏪 낚시점', '#8CC8F2'], ['boat', '🚤 선상', '#F5C46B'], ['spot', '🎣 낚시터·좌대', '#6FD3A4'], ['food', '🍣 횟집·해물', '#FF8A8D'], ['market', '🐟 수산시장', '#C7A6EE'], ['stay', '🏨 숙소', '#FFFFFF']];
+      const color = k => (K.find(x => x[0] === k) || [0, 0, '#999'])[2], label = k => (K.find(x => x[0] === k) || [0, k])[1];
+      const fishing = [...all('shop'), ...all('boat'), ...all('spot')].filter(x => !x.sample && x.lat), sea = D.seaside || [];
+      const items = [...fishing, ...sea];
+      const regs = Object.keys(D.regions).filter(r => items.some(x => x.region === r));
+      if (!st.nkinds) st.nkinds = ['shop', 'boat', 'spot', 'food', 'stay'];
+      const reg = regs.includes(st.region) ? st.region : (regs.includes('군산') ? '군산' : regs[0]);
+      const q = (st.q || '').trim(), lim = st.nlim || 40, ri = regionInfo(reg);
+      const dist = x => { const t = v => v * Math.PI / 180, a = Math.sin(t(x.lat - ri[2]) / 2) ** 2 + Math.cos(t(ri[2])) * Math.cos(t(x.lat)) * Math.sin(t(x.lon - ri[3]) / 2) ** 2; return Math.round(12742 * Math.asin(Math.sqrt(a)) * 10) / 10; };
+      const inReg = items.filter(x => x.region === reg);
+      const rows = inReg.filter(x => st.nkinds.includes(x.kind) && (!q || [x.name, x.addr, x.type || '', x.port || '', x.kcat || ''].join(' ').includes(q)))
+        .map(x => ({ x, d: x.km != null ? x.km : dist(x) })).sort((a, b) => a.d - b.d);
+      R('filters').innerHTML = `<select id="pl-nreg" aria-label="지역">${regs.map(r => `<option ${r === reg ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+        <input type="search" id="pl-nq" placeholder="상호·주소·종류 (예: 물회, 펜션, 좌대)" value="${esc(q)}" style="flex:1;min-width:140px">
+        <div class="bar" style="width:100%">${K.map(([k, l, c]) => `<button class="chip" data-nkind="${k}" aria-pressed="${st.nkinds.includes(k)}"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:4px;border:1px solid #0B1A1F"></span>${l} <span class="dim">${inReg.filter(x => x.kind === k).length}</span></button>`).join('')}
+          <button class="chip" data-nall>모두</button><button class="chip" data-nnone>지우기</button></div>`;
+      const card = ({ x, d }) => `<div class="box" data-nid="${esc(x.id)}" style="border-left:4px solid ${color(x.kind)}"><b>${esc(x.name)}</b> <span class="small dim">${label(x.kind)}${x.type ? ' · ' + esc(x.type) : ''}</span>
+          <div class="small">${esc(reg)}${x.port ? ' · ' + esc(x.port) : ''} · ${d}km · ${esc(x.addr || '')}${x.approx ? ' <span class="dim">(대략 위치)</span>' : ''}</div>
+          <div class="bar">${x.phone ? `<a class="btn" href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a>` : '<span class="small dim">전화 미공개</span>'}${x.kakao ? link(x.kakao, '📍 카카오맵') : ''}${link(`https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}`, '🚗 길찾기')}
+            ${['shop', 'boat', 'spot'].includes(x.kind) ? `<button class="btn" data-ndetail="${esc(x.id)}">자세히</button>` : ''}<button class="btn" data-nfly="${esc(x.id)}">🗺 지도에서</button></div></div>`;
+      R('view').innerHTML = `${useMap ? '<div id="pl-nmap" class="mapbox" style="height:min(56vh,460px)"></div>' : ''}
+        <div class="box small muted">🗺 <b>${esc(reg)}</b>에서 ${st.nkinds.map(label).join(' · ') || '종류를 골라 주세요'} — ${rows.length}곳 (가까운 순). 점을 누르면 이름·전화·길찾기가 나와요.</div>
+        <div class="list">${rows.slice(0, lim).map(card).join('') || '<div class="box muted">조건에 맞는 곳이 없습니다. 종류를 더 켜거나 지역을 바꿔 보세요.</div>'}</div>
+        ${rows.length > lim ? `<div class="bar"><button class="btn" id="pl-nmore">목록 더 보기 (${rows.length - lim}곳 더)</button></div>` : ''}`;
+      R('foot').textContent = `자료: 카카오맵 공개 정보(상호·주소·사업장 전화) — 낚시 ${D.kakaoAt || ''} · 횟집·수산시장·숙소 ${D.seasideAt || ''}(항구 반경 3km) · 선박 수첩 배는 항구 기준 대략 위치 · 지도: OpenStreetMap. 개인 이름·개인 연락처는 싣지 않습니다.`;
+      // 지도: 조건에 맞는 모든 점(목록 개수 제한 없음)
+      if (nearMap) { try { nearMap.remove(); } catch (e) {} nearMap = null; }
+      const byId = {};
+      if (useMap && $('nmap')) {
+        const map = nearMap = L.map($('nmap'), { preferCanvas: true }).setView([ri[2], ri[3]], 11);
+        if (window.MapStyle) MapStyle.attach(map); else L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
+        const pts = rows.map(({ x, d }) => { const m = L.circleMarker([x.lat, x.lon], { radius: x.approx ? 4 : 6, color: '#0B1A1F', weight: 1.2, fillColor: color(x.kind), fillOpacity: x.approx ? .55 : .95 })
+          .bindPopup(`<b>${esc(x.name)}</b><br><span style="opacity:.8">${label(x.kind)}${x.type ? ' · ' + esc(x.type) : ''} · ${d}km</span><br>${esc(x.addr || '')}<br>${x.phone ? `<a href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a> · ` : ''}<a href="https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}" target="_blank" rel="noopener">길찾기</a>${x.kakao ? ` · <a href="${esc(x.kakao)}" target="_blank" rel="noopener">카카오맵</a>` : ''}`).addTo(map);
+          byId[x.id] = m; return m; });
+        if (pts.length) try { map.fitBounds(L.featureGroup(pts).getBounds().pad(0.08), { maxZoom: 14 }); } catch (e) {}
+        L.circleMarker([ri[2], ri[3]], { radius: 7, color: '#fff', weight: 2, fillColor: '#3D8BFF', fillOpacity: 1 }).bindTooltip(`⚓ ${esc(ri[4] || reg)}`).addTo(map);
+      }
+      root.querySelector('#pl-nreg').onchange = e => { st.region = e.target.value; st.nlim = 40; saveUi(); nearView(); };
+      const nq = root.querySelector('#pl-nq'); let tmr = 0; nq.oninput = () => { clearTimeout(tmr); tmr = setTimeout(() => { st.q = nq.value; st.nlim = 40; const p = nq.selectionStart; nearView(); const n2 = root.querySelector('#pl-nq'); n2.focus(); n2.setSelectionRange(p, p); }, 250); };
+      root.querySelectorAll('[data-nkind]').forEach(b => b.onclick = () => { const k = b.dataset.nkind; st.nkinds = st.nkinds.includes(k) ? st.nkinds.filter(x => x !== k) : [...st.nkinds, k]; st.nlim = 40; nearView(); });
+      root.querySelector('[data-nall]').onclick = () => { st.nkinds = K.map(k => k[0]); nearView(); };
+      root.querySelector('[data-nnone]').onclick = () => { st.nkinds = []; nearView(); };
+      root.querySelectorAll('[data-nfly]').forEach(b => b.onclick = () => { const m = byId[b.dataset.nfly]; if (m && nearMap) { nearMap.setView(m.getLatLng(), 16); m.openPopup(); $('nmap').scrollIntoView({ block: 'center', behavior: 'smooth' }); } });
+      root.querySelectorAll('[data-ndetail]').forEach(b => b.onclick = () => { const p = findPlace(b.dataset.ndetail); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); });
+      const more = root.querySelector('#pl-nmore'); if (more) more.onclick = () => { st.nlim = lim + 40; nearView(); };
     }
     function catchView() {
       const days = st.cdays || 7, rows = V.catches.filter(c => c.d >= daysAgo(days)).map(c => ({ c, b: findPlace(c.p) })).filter(o => o.b && (st.region === '전체' || o.b.region === st.region) && (st.sp === '전체' || o.c.sp === st.sp));
@@ -1316,7 +1366,7 @@
         if (!o.name) return; run(store.add(o), '등록했습니다').then(() => { if (k !== 'event') { st.tab = k; st.sel = o.id; render(); } }); };
     }
     function body() { if (st.tab !== 'find') stopFinder();
-      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'edu') eduView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'group') groupView(); else if (st.tab === 'seat') seatView(); else if (st.tab === 'clean') cleanView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
+      if (st.tab === 'shop' || st.tab === 'boat' || st.tab === 'spot') listView(st.tab); else if (st.tab === 'near') nearView(); else if (st.tab === 'find') findView(); else if (st.tab === 'tackle') tackleView(); else if (st.tab === 'edu') eduView(); else if (st.tab === 'catch') catchView(); else if (st.tab === 'mate') mateView(); else if (st.tab === 'group') groupView(); else if (st.tab === 'seat') seatView(); else if (st.tab === 'clean') cleanView(); else if (st.tab === 'qa') qaView(); else if (st.tab === 'rank') rankView(); else addView(); bindChips();
       root.querySelectorAll('[data-near]').forEach(a => a.onclick = e => { e.preventDefault(); const p = findPlace(a.dataset.near); if (!p) return; st.tab = p.kind; st.sel = p.id; st.region = '전체'; st.sea = '전체'; st.sp = '전체'; st.need = false; render(); }); }
     function bindChips() {
       root.querySelectorAll('[data-sea]').forEach(b => b.onclick = () => { st.sea = b.dataset.sea; saveUi(); render(); });
