@@ -4,7 +4,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const VERSION = '8.8-mobile';
+const VERSION = '8.9-mobile';
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -253,7 +253,19 @@ function renderSolunar() {
   const focus = ls.get('m.focus', watched[0]), r = REGIONS.find(x => x.name === focus) || REGIONS.find(x => x.name === watched[0]) || REGIONS[0];
   const sp = ls.get('m.sp', '우럭'), dayOff = ls.get('m.solDay', 0);
   const d = new Date(); d.setDate(d.getDate() + dayOff); d.setHours(12, 0, 0, 0);
-  $('solRegion').innerHTML = watched.map(n => `<option ${n === r.name ? 'selected' : ''}>${esc(n)}</option>`).join('');
+  const others = REGIONS.map(x => x.name).filter(n => !watched.includes(n));
+  $('solRegion').innerHTML = `<option value="__all" ${focus === '__all' ? 'selected' : ''}>🌐 전체 지역 한눈에</option><optgroup label="감시 지역">${watched.map(n => `<option ${n === r.name && focus !== '__all' ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`
+    + (others.length ? `<optgroup label="다른 지역">${others.map(n => `<option ${n === r.name && focus !== '__all' ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>` : '');
+  if (focus === '__all') {   // 🌐 전체 지역: 오늘(또는 고른 날) 솔루나 별점 · 다음 메이저 피딩 타임을 지역마다 한 줄씩
+    const rowsAll = REGIONS.map(g => ({ g, s: K.solunar(d, g.lat, g.lon) })).sort((a, b) => b.s.rating - a.s.rating || a.g.name.localeCompare(b.g.name));
+    $('solSp').innerHTML = SPECIES.map(s => `<option ${s === sp ? 'selected' : ''}>${s}</option>`).join('');
+    document.querySelectorAll('[data-solday]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.solday === dayOff));
+    $('solBox').innerHTML = `<h2>🌐 전체 지역 솔루나 <small>${d.getMonth() + 1}/${d.getDate()} · 별점 높은 순 · 누르면 그 지역 자세히</small></h2>
+      <div class="rgrid">${rowsAll.map(({ g, s }) => { const mj = s.periods.find(p => p.kind === 'major');
+        return `<div class="rrow" data-solpick="${esc(g.name)}"><div><b>${esc(g.name)}</b><small>${s.moon.icon} ${s.moon.name} · 일출 ${hm(s.sunrise)} · 일몰 ${hm(s.sunset)}</small></div><div style="text-align:right"><b style="color:var(--warn)">${'★'.repeat(s.rating)}</b><small>${mj ? '메이저 ' + hm(mj.from) : ''}</small></div></div>`; }).join('')}</div>`;
+    document.querySelectorAll('[data-solpick]').forEach(el => el.onclick = () => { ls.set('m.focus', el.dataset.solpick); renderSolunar(); });
+    return;
+  }
   $('solSp').innerHTML = SPECIES.map(s => `<option ${s === sp ? 'selected' : ''}>${s}</option>`).join('');
   document.querySelectorAll('[data-solday]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.solday === dayOff));
   const sol = K.solunar(d, r.lat, r.lon), ld = lunarDay(d), x = regionResult(r.name), day = iso(d);

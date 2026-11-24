@@ -798,42 +798,64 @@
      *  낚시 자료: 카카오맵 좌표(정확) · 선박 수첩 배는 항구 기준 대략 위치 / 횟집·수산시장·숙소: 카카오맵 공개 정보(상호·주소·사업장 전화), 대표 항구 반경 3km */
     let nearMap = null;
     function nearView() {
-      const K = [['shop', '🏪 낚시점', '#8CC8F2'], ['boat', '🚤 선상', '#F5C46B'], ['spot', '🎣 낚시터·좌대', '#6FD3A4'], ['food', '🍣 횟집·해물', '#FF8A8D'], ['market', '🐟 수산시장', '#C7A6EE'], ['stay', '🏨 숙소', '#FFFFFF']];
+      const K = [['shop', '🏪 낚시점', '#8CC8F2'], ['boat', '🚤 선상', '#F5C46B'], ['spot', '🎣 낚시터·좌대', '#6FD3A4'], ['food', '🍣 횟집·해물', '#FF8A8D'], ['market', '🐟 수산시장', '#C7A6EE'], ['stay', '🏨 숙소', '#FFFFFF'], ['safety', '🚨 안전·신고', '#FF3B3B'], ['photo', '📷 현장 사진', '#FFD54F']];
       const color = k => (K.find(x => x[0] === k) || [0, 0, '#999'])[2], label = k => (K.find(x => x[0] === k) || [0, k])[1];
       const fishing = [...all('shop'), ...all('boat'), ...all('spot')].filter(x => !x.sample && x.lat), sea = D.seaside || [];
-      const items = [...fishing, ...sea];
+      const km2 = (a, b, c, d) => { const t = v => v * Math.PI / 180, h = Math.sin(t(c - a) / 2) ** 2 + Math.cos(t(a)) * Math.cos(t(c)) * Math.sin(t(d - b) / 2) ** 2; return Math.round(12742 * Math.asin(Math.sqrt(h)) * 10) / 10; };
+      // 📷 현장 사진: 한국관광공사 TourAPI(공공누리) + 위키미디어 공용(CC) — 가장 가까운 지역에 붙임(사진 파일은 복사하지 않고 원래 주소로 표시)
+      const nearestReg = (lat, lon) => { let best = '', bd = 1e9; Object.keys(D.regions).forEach(r => { const g = D.regions[r], dd = km2(lat, lon, g[2], g[3]); if (dd < bd) { bd = dd; best = r; } }); return bd <= 25 ? best : ''; };
+      if (!nearView.photos) nearView.photos = [...((window.SEAMAP_PHOTOS && SEAMAP_PHOTOS.list) || []).map(p => ({ img: p.img, t: p.t, d: p.addr || '', lat: p.lat, lon: p.lon, lic: p.lic, by: '한국관광공사', page: 'https://korean.visitkorea.or.kr', src: '한국관광공사 TourAPI' })),
+          ...((window.COAST_PHOTOS && COAST_PHOTOS.list) || [])]
+        .filter(p => p.img && p.lat).map((p, i) => ({ id: 'photo-' + i, kind: 'photo', name: p.t, addr: p.d, lat: p.lat, lon: p.lon, img: p.img, lic: p.lic, by: p.by, page: p.page, src: p.src, type: p.src, region: nearestReg(p.lat, p.lon) })).filter(p => p.region);
+      const photos = nearView.photos;
+      const items = [...fishing, ...sea, ...photos];
       const regs = Object.keys(D.regions).filter(r => items.some(x => x.region === r));
-      if (!st.nkinds) st.nkinds = ['shop', 'boat', 'spot', 'food', 'stay'];
-      const reg = regs.includes(st.region) ? st.region : (regs.includes('군산') ? '군산' : regs[0]);
-      const q = (st.q || '').trim(), lim = st.nlim || 40, ri = regionInfo(reg);
-      const dist = x => { const t = v => v * Math.PI / 180, a = Math.sin(t(x.lat - ri[2]) / 2) ** 2 + Math.cos(t(ri[2])) * Math.cos(t(x.lat)) * Math.sin(t(x.lon - ri[3]) / 2) ** 2; return Math.round(12742 * Math.asin(Math.sqrt(a)) * 10) / 10; };
-      const inReg = items.filter(x => x.region === reg);
-      const rows = inReg.filter(x => st.nkinds.includes(x.kind) && (!q || [x.name, x.addr, x.type || '', x.port || '', x.kcat || ''].join(' ').includes(q)))
-        .map(x => ({ x, d: x.km != null ? x.km : dist(x) })).sort((a, b) => a.d - b.d);
-      R('filters').innerHTML = `<select id="pl-nreg" aria-label="지역">${regs.map(r => `<option ${r === reg ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+      if (!st.nkinds) st.nkinds = ['shop', 'boat', 'spot', 'food', 'stay', 'safety', 'photo'];
+      const reg = st.region === '전체' ? '전체' : regs.includes(st.region) ? st.region : (regs.includes('군산') ? '군산' : regs[0]);
+      const q = (st.q || '').trim(), lim = st.nlim || 40, ri = reg === '전체' ? ['', '', 36.2, 127.8, '전국'] : regionInfo(reg);
+      const dist = x => km2(ri[2], ri[3], x.lat, x.lon);
+      const inReg = reg === '전체' ? items : items.filter(x => x.region === reg);
+      const rows = inReg.filter(x => st.nkinds.includes(x.kind) && (!q || [x.name, x.addr, x.type || '', x.port || '', x.kcat || '', x.region].join(' ').includes(q)))
+        .map(x => ({ x, d: x.km != null ? x.km : dist(x) })).sort((a, b) => reg === '전체' ? (a.x.region.localeCompare(b.x.region) || a.d - b.d) : a.d - b.d);
+      // 근처 사진(500m 안): 업체 점에 마우스를 올리거나 누르면 함께 보여 줌
+      const nearPhoto = x => { if (x.kind === 'photo') return x; let best = null, bd = 0.5; photos.forEach(p => { if (Math.abs(p.lat - x.lat) > 0.01 || Math.abs(p.lon - x.lon) > 0.012) return; const dd = km2(x.lat, x.lon, p.lat, p.lon); if (dd < bd) { bd = dd; best = p; } }); return best; };
+      const credit = p => `<div style="font-size:11px;opacity:.75">📷 ${esc(p.by || '')} · ${esc(p.lic || '')} · <a href="${esc(p.page || '#')}" target="_blank" rel="noopener">출처</a></div>`;
+      const photoHtml = (p, w, near) => p ? `<div style="margin-top:4px"><img src="${esc(p.img)}" alt="${esc(p.name)}" loading="lazy" style="width:${w}px;max-width:100%;border-radius:6px;display:block">${near ? `<div style="font-size:11px">근처 사진 · ${esc(p.name)}</div>` : ''}${credit(p)}</div>` : '';
+      R('filters').innerHTML = `<select id="pl-nreg" aria-label="지역"><option ${reg === '전체' ? 'selected' : ''}>전체</option>${regs.map(r => `<option ${r === reg ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
         <input type="search" id="pl-nq" placeholder="상호·주소·종류 (예: 물회, 펜션, 좌대)" value="${esc(q)}" style="flex:1;min-width:140px">
         <div class="bar" style="width:100%">${K.map(([k, l, c]) => `<button class="chip" data-nkind="${k}" aria-pressed="${st.nkinds.includes(k)}"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:4px;border:1px solid #0B1A1F"></span>${l} <span class="dim">${inReg.filter(x => x.kind === k).length}</span></button>`).join('')}
           <button class="chip" data-nall>모두</button><button class="chip" data-nnone>지우기</button></div>`;
       const card = ({ x, d }) => `<div class="box" data-nid="${esc(x.id)}" style="border-left:4px solid ${color(x.kind)}"><b>${esc(x.name)}</b> <span class="small dim">${label(x.kind)}${x.type ? ' · ' + esc(x.type) : ''}</span>
-          <div class="small">${esc(reg)}${x.port ? ' · ' + esc(x.port) : ''} · ${d}km · ${esc(x.addr || '')}${x.approx ? ' <span class="dim">(대략 위치)</span>' : ''}</div>
-          <div class="bar">${x.phone ? `<a class="btn" href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a>` : '<span class="small dim">전화 미공개</span>'}${x.kakao ? link(x.kakao, '📍 카카오맵') : ''}${link(`https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}`, '🚗 길찾기')}
+          <div class="small">${esc(x.region)}${x.port ? ' · ' + esc(x.port) : ''} · ${d}km · ${esc(x.addr || '')}${x.approx ? ' <span class="dim">(대략 위치)</span>' : ''}</div>
+          ${x.kind === 'photo' ? photoHtml(x, 240) : ''}
+          <div class="bar">${x.kind === 'photo' ? '' : x.phone ? `<a class="btn" href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a>` : '<span class="small dim">전화 미공개</span>'}${x.kakao ? link(x.kakao, '📍 카카오맵') : ''}${link(`https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}`, '🚗 길찾기')}
             ${['shop', 'boat', 'spot'].includes(x.kind) ? `<button class="btn" data-ndetail="${esc(x.id)}">자세히</button>` : ''}<button class="btn" data-nfly="${esc(x.id)}">🗺 지도에서</button></div></div>`;
-      R('view').innerHTML = `${useMap ? '<div id="pl-nmap" class="mapbox" style="height:min(56vh,460px)"></div>' : ''}
+      const sos = st.nkinds.includes('safety') ? (() => { const near = reg === '전체' ? [] : inReg.filter(x => x.kind === 'safety').sort((a, b) => a.km - b.km), pick = t => near.find(x => x.type.includes(t));
+        const one = (t, lb) => { const x = pick(t); return x ? `<div class="small">${lb} <b>${esc(x.name)}</b> ${x.km}km ${x.phone ? `<a href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a>` : ''}</div>` : ''; };
+        return `<div class="box" style="border:2px solid #FF3B3B;background:rgba(255,59,59,.08)"><b>🚨 사고가 나면 먼저 전화</b>
+          <div class="bar"><a class="btn" href="tel:119" style="background:#C62828;color:#fff">📞 119 화재·구조·구급 (바다 사고 포함)</a><a class="btn" href="tel:112" style="background:#1F4E9E;color:#fff">📞 112 경찰</a><a class="btn" href="tel:131">📞 131 기상 안내</a>${link('https://www.safetyreport.go.kr', '📱 안전신문고(위험 신고)')}</div>
+          <div class="small muted">위치를 말할 때: 항구 이름·방파제 번호·배 이름. 휴대폰 위치(GPS)를 켜 두세요.</div>
+          ${one('해양경찰', '🚢 가까운 해경')}${one('소방', '🚒 가까운 소방')}${one('경찰', '👮 가까운 경찰')}${one('응급', '🏥 가까운 응급실')}</div>`; })() : '';
+      R('view').innerHTML = `${sos}${useMap ? '<div id="pl-nmap" class="mapbox" style="height:min(56vh,460px)"></div>' : ''}
         <div class="box small muted">🗺 <b>${esc(reg)}</b>에서 ${st.nkinds.map(label).join(' · ') || '종류를 골라 주세요'} — ${rows.length}곳 (가까운 순). 점을 누르면 이름·전화·길찾기가 나와요.</div>
         <div class="list">${rows.slice(0, lim).map(card).join('') || '<div class="box muted">조건에 맞는 곳이 없습니다. 종류를 더 켜거나 지역을 바꿔 보세요.</div>'}</div>
         ${rows.length > lim ? `<div class="bar"><button class="btn" id="pl-nmore">목록 더 보기 (${rows.length - lim}곳 더)</button></div>` : ''}`;
-      R('foot').textContent = `자료: 카카오맵 공개 정보(상호·주소·사업장 전화) — 낚시 ${D.kakaoAt || ''} · 횟집·수산시장·숙소 ${D.seasideAt || ''}(항구 반경 3km) · 선박 수첩 배는 항구 기준 대략 위치 · 지도: OpenStreetMap. 개인 이름·개인 연락처는 싣지 않습니다.`;
+      R('foot').textContent = `자료: 카카오맵 공개 정보(상호·주소·사업장 전화) — 낚시 ${D.kakaoAt || ''} · 횟집·수산시장·숙소 ${D.seasideAt || ''}(항구 반경 3km) · 선박 수첩 배는 항구 기준 대략 위치 · 📷 사진: 한국관광공사 TourAPI(공공누리)·위키미디어 공용(CC, 촬영자·라이선스 표시) · 지도: OpenStreetMap. 개인 이름·개인 연락처는 싣지 않습니다.`;
       // 지도: 조건에 맞는 모든 점(목록 개수 제한 없음)
       if (nearMap) { try { nearMap.remove(); } catch (e) {} nearMap = null; }
       const byId = {};
       if (useMap && $('nmap')) {
         const map = nearMap = L.map($('nmap'), { preferCanvas: true }).setView([ri[2], ri[3]], 11);
         if (window.MapStyle) MapStyle.attach(map); else L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'darkTiles', attribution: '© OpenStreetMap' }).addTo(map);
-        const pts = rows.map(({ x, d }) => { const m = L.circleMarker([x.lat, x.lon], { radius: x.approx ? 4 : 6, color: '#0B1A1F', weight: 1.2, fillColor: color(x.kind), fillOpacity: x.approx ? .55 : .95 })
-          .bindPopup(`<b>${esc(x.name)}</b><br><span style="opacity:.8">${label(x.kind)}${x.type ? ' · ' + esc(x.type) : ''} · ${d}km</span><br>${esc(x.addr || '')}<br>${x.phone ? `<a href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a> · ` : ''}<a href="https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}" target="_blank" rel="noopener">길찾기</a>${x.kakao ? ` · <a href="${esc(x.kakao)}" target="_blank" rel="noopener">카카오맵</a>` : ''}`).addTo(map);
+        const pts = rows.map(({ x, d }) => { const ph = x.kind === 'photo', m = L.circleMarker([x.lat, x.lon], { radius: x.kind === 'safety' ? 8 : ph ? 5 : x.approx ? 4 : 6, color: x.kind === 'safety' || ph ? '#FFFFFF' : '#0B1A1F', weight: x.kind === 'safety' || ph ? 2 : 1.2, fillColor: color(x.kind), fillOpacity: x.approx ? .55 : .95 })
+          // 마우스를 올리면: 이름 + (사진 점이면 사진 · 업체면 500m 안 근처 사진) — 내용은 올릴 때 만듦
+          .bindTooltip(() => `<b>${esc(x.name)}</b> <span style="opacity:.75">${label(x.kind)}</span>${photoHtml(nearPhoto(x), 200, !ph)}`, { direction: 'top', offset: [0, -6], opacity: 1 })
+          .bindPopup(() => `<b>${esc(x.name)}</b><br><span style="opacity:.8">${label(x.kind)}${x.type && !ph ? ' · ' + esc(x.type) : ''} · ${d}km</span><br>${esc(x.addr || '')}${photoHtml(nearPhoto(x), 260, !ph)}
+            ${ph ? '' : `<br>${x.phone ? `<a href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a> · ` : ''}<a href="https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}" target="_blank" rel="noopener">길찾기</a>${x.kakao ? ` · <a href="${esc(x.kakao)}" target="_blank" rel="noopener">카카오맵</a>` : ''}`}`, { maxWidth: 300 }).addTo(map);
+          m.on('popupopen', () => m.closeTooltip());
           byId[x.id] = m; return m; });
         if (pts.length) try { map.fitBounds(L.featureGroup(pts).getBounds().pad(0.08), { maxZoom: 14 }); } catch (e) {}
-        L.circleMarker([ri[2], ri[3]], { radius: 7, color: '#fff', weight: 2, fillColor: '#3D8BFF', fillOpacity: 1 }).bindTooltip(`⚓ ${esc(ri[4] || reg)}`).addTo(map);
+        if (reg !== '전체') L.circleMarker([ri[2], ri[3]], { radius: 7, color: '#fff', weight: 2, fillColor: '#3D8BFF', fillOpacity: 1 }).bindTooltip(`⚓ ${esc(ri[4] || reg)}`).addTo(map);
       }
       root.querySelector('#pl-nreg').onchange = e => { st.region = e.target.value; st.nlim = 40; saveUi(); nearView(); };
       const nq = root.querySelector('#pl-nq'); let tmr = 0; nq.oninput = () => { clearTimeout(tmr); tmr = setTimeout(() => { st.q = nq.value; st.nlim = 40; const p = nq.selectionStart; nearView(); const n2 = root.querySelector('#pl-nq'); n2.focus(); n2.setSelectionRange(p, p); }, 250); };
