@@ -1,4 +1,4 @@
-/* 🧜 물결이 모험 시즌 1 「꺼진 등대」 — 만화 한 화를 보고 → 그 화 게임을 깨면 → 다음 화가 열리는 연재 (2026-11-26)
+/* 🧜 물결이 모험 (시즌 1 「꺼진 등대」 1~5화 · 시즌 2 「첫 출조 대작전」 6화~ 매일 한 화) — 만화 한 화를 보고 → 그 화 게임을 깨면 → 다음 화가 열리는 연재 (2026-11-26)
  * PC 「섬 · 바다 속」 탭 · 휴대폰 앱 · 바다 조황 수첩 공용. 그림은 comic3d.js(이 앱 고유 캐릭터), 게임은 코드로 그림.
  * 기록(진행·별)은 이 기기 브라우저에만 저장. 외부 서비스·결제 없음.
  * 쓰는 법: Saga.view(el) → 멈춤 함수 반환
@@ -42,7 +42,20 @@
       ['sun', '(등대가 다시 반짝! 고깃배들이 줄지어 항구로 돌아온다)'],
       ['ok', '물결이: 해냈다! 바다에서 위급할 땐 해양경찰 122. 시즌 1 끝, 또 만나!']],
       '바다에서 위급하면 해양경찰 122, 육지는 119.', 'lamp', '💡 등대 불빛 기억하기', '등대 불빛이 켜지는 순서를 기억해서 똑같이 눌러요. 6개까지 맞히면 등대가 켜져요.'],
+    // ── 시즌 2 「첫 출조 대작전」 (2026-11-27~, 매일 한 화) ──
+    ['출조 전날 밤', [
+      ['angler', '새봄: 바로 형! 나 내일 처음으로 배낚시 가! 뭘 챙겨야 해?'],
+      ['mermaid', '물결이: 먼저 바다 날씨랑 주의보부터 확인! 주의보가 뜨면 배가 못 나가거나 미뤄져.'],
+      ['boat', '바로: 구명조끼, 신분증, 물, 모자, 미끄럽지 않은 신발! 배에 탈 때 승선 명부를 쓰고 신분증을 확인하거든.'],
+      ['ok', '물결이: 쓰레기봉투도 꼭! 바닷바람은 차가우니 겉옷도 하나 더 챙기자.']],
+      '출조 전날엔 바다 날씨·주의보 확인, 구명조끼·신분증·물·쓰레기봉투 챙기기.', 'pack', '🎒 출조 가방 싸기', '30초 안에 바다에 꼭 필요한 물건 8개를 눌러 가방에 넣어요. 위험하거나 바다에 맞지 않는 물건은 넣지 마세요! 마지막엔 날씨 문제가 나와요.'],
   ];
+  // 시즌 표: [시즌 이름, 시작 화(0부터), 끝(미포함), 배지 그림, 배지 이름, 완주 문구]
+  const SEASONS = [
+    ['꺼진 등대', 0, 5, '🏅⚓', '등대 지킴이', '밤바다 부표 · 쓰레기 되가져가기 · 구명조끼 · 물때 · 122 신고 — 다섯 가지 바다 약속을 모두 배웠어요.'],
+    ['첫 출조 대작전', 5, 10, '🎒⭐', '첫 출조 박사', '초보 새봄이와 함께 첫 배낚시를 준비부터 귀항까지 무사히 마쳤어요.'],
+  ];
+  const seasonOf = i => Math.max(0, SEASONS.findIndex(s => i >= s[1] && i < s[2]));
 
   /* ---------- 공용: 소리 ---------- */
   let AC = null;
@@ -84,6 +97,17 @@
     .saga input[type=range]{width:100%}
     .saga .toast{background:#3A2E12;border:1px solid #F5C46B;color:#FFE7B0;border-radius:9px;padding:8px 10px;font-weight:700}
     .saga .badge{font-size:44px;text-align:center}
+    .saga .stabs{display:flex;gap:6px;flex-wrap:wrap}
+    .saga .stabs button{border:1px solid #3A4652;background:#11151A;color:#9AA5B1;border-radius:999px;padding:6px 12px;font:800 13px inherit;cursor:pointer}
+    .saga .stabs button[aria-pressed=true]{border-color:#F5C46B;color:#FFE7B0;background:#3A2E12}
+    .saga .node[data-st=soon]{border-style:dashed;opacity:.45;cursor:default}
+    .saga .pack{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px 4px}
+    .saga .pack button{border:2px solid #3A4652;background:#11151A;color:#E6EAEE;border-radius:12px;padding:8px 2px;cursor:pointer;display:grid;gap:2px;justify-items:center;min-height:74px}
+    .saga .pack button span{font-size:30px;line-height:1}
+    .saga .pack button small{font-size:11px;line-height:1.2;word-break:keep-all}
+    .saga .pack button[data-in=true]{border-color:#6FD3A4;background:#173428;opacity:.55}
+    .saga .pack button[data-no=true]{border-color:#FF8A8D;background:#3A1416}
+    @media (max-width:420px){.saga .pack{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:420px){.saga .node{min-width:38px;height:38px}.saga .line{flex-basis:8px}}`;
     document.head.appendChild(s);
   }
@@ -266,7 +290,35 @@
     return () => { on = false; timers.forEach(clearTimeout); };
   }
 
-  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp };
+  /* 6) 출조 가방 싸기 + 날씨 문제 (시즌 2 · 6화) */
+  function gPack(el, done) {
+    const NEED = [['🦺', '구명조끼'], ['🪪', '신분증'], ['💧', '마실 물'], ['🧢', '모자'], ['👟', '미끄럽지 않은 신발'], ['🛍️', '쓰레기봉투'], ['🧥', '여벌 겉옷'], ['🧤', '장갑']];
+    const NO = [['🩴', '슬리퍼', '젖은 갑판에서 미끄러져요!'], ['🍾', '유리병', '깨지면 다쳐요. 바다에 떨어지면 쓰레기가 돼요.'], ['🎈', '풍선', '바람에 날아가 바다 쓰레기가 돼요.'], ['👠', '굽 높은 신발', '흔들리는 배에서 넘어지기 쉬워요.']];
+    const cards = NEED.map(x => ({ e: x[0], n: x[1], ok: true })).concat(NO.map(x => ({ e: x[0], n: x[1], ok: false, why: x[2] })));
+    for (let i = cards.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [cards[i], cards[j]] = [cards[j], cards[i]]; }
+    let on = true, left = 30, got = 0, miss = 0, over = false, timers = [];
+    el.innerHTML = `<div class="hud" data-hud></div><div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>바다에 꼭 필요한 물건만 눌러 가방에 넣어요!</div>
+      <div class="pack">${cards.map((c, k) => `<button type="button" data-c="${k}" aria-label="${esc(c.n)}"><span>${c.e}</span><small>${esc(c.n)}</small></button>`).join('')}</div>
+      <div style="text-align:center;font-size:28px" data-bag aria-label="가방">🎒</div></div>`;
+    const hud = () => { const h = el.querySelector('[data-hud]'); if (h) h.innerHTML = `<span>🎒 챙긴 물건 ${got} / ${NEED.length}</span><span>⏱ ${Math.max(0, Math.ceil(left))}초</span><span>❌ 실수 ${miss}</span>`; };
+    const say = s => { const d = el.querySelector('[data-say]'); if (d) d.textContent = s; };
+    hud();
+    el.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (over || !on || b.disabled) return; const c = cards[+b.dataset.c];
+      if (c.ok) { b.disabled = true; b.dataset.in = 'true'; got++; good(); el.querySelector('[data-bag]').textContent = '🎒 ' + cards.filter((x, k) => x.ok && el.querySelector(`[data-c="${k}"]`).dataset.in).map(x => x.e).join(''); say(`좋아요! ${c.n} 챙겼어요.`);
+        if (got === NEED.length) { over = true; clearInterval(iv); timers.push(setTimeout(quiz, 600)); } }
+      else { miss++; left = Math.max(0, left - 3); bad(); b.dataset.no = 'true'; say(`앗! ${c.n}: ${c.why} (-3초)`); }
+      hud(); });
+    const iv = setInterval(() => { if (!on || over) return; left -= 1; hud(); if (left <= 0) { over = true; clearInterval(iv); done(0, `시간이 끝났어요. ${got}개 챙김 — 꼭 필요한 물건 8개를 모두 넣어야 해요.`); } }, 1000);
+    timers.push(() => clearInterval(iv));
+    function quiz() { if (!on) return;
+      el.innerHTML = `<div class="sbox" style="text-align:center"><div class="badge">🎒✨</div><b>가방 완성! 마지막 문제</b><div>출조 전날 밤, 바다에 풍랑주의보가 떴어요. 어떻게 할까요?</div>
+        <div class="quiz">${[['a', '그래도 새벽에 몰래 나간다'], ['b', '선장님 안내를 듣고 출조를 미룬다'], ['c', '구명조끼만 입으면 괜찮다']].map(([k, t]) => `<button type="button" class="sbtn ghost" data-q="${k}">${t}</button>`).join('')}</div><div class="muted" data-qm></div></div>`;
+      el.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { if (b.dataset.q === 'b') { good(); done(miss === 0 ? 3 : miss <= 1 ? 2 : 1, `정답! 주의보가 뜨면 바다는 쉬어 가요. 가방 ${NEED.length}개 완벽 · 실수 ${miss}번.`); }
+        else { bad(); el.querySelector('[data-qm]').textContent = b.dataset.q === 'c' ? '구명조끼는 꼭 입지만, 큰 바람·높은 파도 날엔 그것만으로 안전하지 않아요. 다시 골라 보세요.' : '주의보 날 몰래 나가는 건 아주 위험해요. 다시 골라 보세요.'; } }); }
+    return () => { on = false; timers.forEach(t => typeof t === 'function' ? t() : clearTimeout(t)); };
+  }
+
+  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp, pack: gPack };
 
   /* ---------- 화면 ---------- */
   function view(el, opts) {
@@ -278,23 +330,33 @@
     const stopAll = () => { stops.forEach(f => { try { f(); } catch (e) {} }); stops = []; };
     function render(scrollGame) {
       stopAll();
-      const i = Math.max(0, Math.min(EP.length - 1, P.at)), e = EP[i], total = Object.values(P.stars).reduce((a, b) => a + b, 0), allDone = EP.every((_, k) => (P.stars[k] || 0) > 0);
+      const i = Math.max(0, Math.min(EP.length - 1, P.at)), e = EP[i], si = seasonOf(i), S = SEASONS[si];
+      const sDone = s => { for (let k = s[1]; k < s[2]; k++) if (k >= EP.length || !((P.stars[k] || 0) > 0)) return false; return true; };
+      const sStars = s => { let n = 0; for (let k = s[1]; k < s[2]; k++) n += P.stars[k] || 0; return n; };
+      const allDone = sDone(S), total = sStars(S), maxStars = (S[2] - S[1]) * 3;
+      const slots = []; for (let k = S[1]; k < S[2]; k++) slots.push(k);
       el.innerHTML = `<div class="saga">
-        <div class="sbox"><div class="sttl">🗺 물결이 모험 시즌 1 「꺼진 등대」</div>
-          <div class="muted">만화 한 화를 보고 → 그 화 게임을 깨면 → 다음 화가 열려요. 모은 별 ⭐ ${total} / 15${allDone ? ' · 🏅 등대 지킴이' : ''}</div>
-          <div class="smap">${EP.map((x, k) => `${k ? '<span class="line"></span>' : ''}<button type="button" class="node" data-ep="${k}" data-st="${(P.stars[k] || 0) > 0 ? 'done' : unlocked(k) ? 'open' : 'lock'}" aria-current="${k === i}" ${unlocked(k) ? '' : 'disabled'} title="${esc(x[0])}">${unlocked(k) ? (k + 1) + ((P.stars[k] || 0) ? ' ' + '★'.repeat(P.stars[k]) : '') : '🔒'}</button>`).join('')}</div></div>
+        <div class="sbox">${SEASONS.length > 1 ? `<div class="stabs">${SEASONS.map((s, k) => `<button type="button" data-season="${k}" aria-pressed="${k === si}">시즌 ${k + 1}${sDone(s) ? ' ' + s[3] : ''}</button>`).join('')}</div>` : ''}
+          <div class="sttl">🗺 물결이 모험 시즌 ${si + 1} 「${esc(S[0])}」</div>
+          <div class="muted">만화 한 화를 보고 → 그 화 게임을 깨면 → 다음 화가 열려요. 모은 별 ⭐ ${total} / ${maxStars}${allDone ? ` · ${S[3]} ${esc(S[4])}` : ''}${S[2] > EP.length ? ` · ${EP.length - S[1]}화 공개 — 매일 한 화씩 이어져요` : ''}</div>
+          <div class="smap">${slots.map((k, n) => { const x = EP[k]; const line = n ? '<span class="line"></span>' : '';
+            if (!x) return `${line}<button type="button" class="node" data-st="soon" disabled title="곧 공개 — 매일 한 화씩">📅</button>`;
+            return `${line}<button type="button" class="node" data-ep="${k}" data-st="${(P.stars[k] || 0) > 0 ? 'done' : unlocked(k) ? 'open' : 'lock'}" aria-current="${k === i}" ${unlocked(k) ? '' : 'disabled'} title="${esc(x[0])}">${unlocked(k) ? (k + 1) + ((P.stars[k] || 0) ? ' ' + '★'.repeat(P.stars[k]) : '') : '🔒'}</button>`; }).join('')}</div></div>
         <div data-comic></div>
         <div class="sbox" data-gamebox><div class="sttl">${e[4]} <span class="muted">— ${i + 1}화 게임</span></div><div class="muted">${esc(e[5])}</div>
           ${(P.stars[i] || 0) ? `<div>지난 기록 <span class="stars" style="font-size:18px">${starTxt(P.stars[i])}</span></div>` : ''}
           <div data-game><button type="button" class="sbtn" data-start>▶ 게임 시작</button></div></div>
-        ${allDone ? `<div class="sbox" style="text-align:center"><div class="badge">🏅⚓</div><b>시즌 1 완주! 「등대 지킴이」 배지</b><div class="muted">밤바다 부표 · 쓰레기 되가져가기 · 구명조끼 · 물때 · 122 신고 — 다섯 가지 바다 약속을 모두 배웠어요. 시즌 2는 매일 업데이트에서 이어집니다.</div></div>` : ''}
+        ${allDone ? `<div class="sbox" style="text-align:center"><div class="badge">${S[3]}</div><b>시즌 ${si + 1} 완주! 「${esc(S[4])}」 배지</b><div class="muted">${esc(S[5])} ${si + 1 < SEASONS.length ? `위의 「시즌 ${si + 2}」 버튼으로 다음 이야기를 이어 보세요.` : '다음 시즌은 매일 업데이트에서 이어집니다.'}</div></div>` : ''}
         <div class="muted">그림·이야기·게임은 이 앱이 직접 만든 고유 캐릭터예요. 기록은 이 기기에만 저장돼요. 물때 퍼즐의 그래프는 연습용 모형이에요 — 실제 바닷길은 「물때」 탭과 현지 안내를 확인하세요.</div>
       </div>`;
       el.querySelectorAll('[data-ep]').forEach(b => b.onclick = () => { const k = +b.dataset.ep; if (!unlocked(k)) return; P.at = k; save(); render(); });
+      el.querySelectorAll('[data-season]').forEach(b => b.onclick = () => { const s = SEASONS[+b.dataset.season]; if (s[1] >= EP.length) return;
+        if (!unlocked(s[1])) { toast(`시즌 ${+b.dataset.season + 1} 「${s[0]}」 — 앞 시즌 마지막 화 게임을 깨면 열려요.`); return; }
+        let k = s[1]; while (k + 1 < Math.min(s[2], EP.length) && (P.stars[k] || 0) > 0) k++; P.at = k; save(); render(); });
       const cbox = el.querySelector('[data-comic]');
       const comic = [e[0], e[1], e[2]];
       if (window.Comic3D) {
-        const shareTxt = () => `🧜 물결이 모험 시즌1 ${i + 1}화 「${e[0]}」\n` + e[1].map((p, j) => `${j + 1}. ${p[1]}`).join('\n') + `\n💡 ${e[2]}\n— 출조 관제 우주 프로 https://kimcheol-ops.github.io/sunsang-mobile/`;
+        const shareTxt = () => `🧜 물결이 모험 시즌${si + 1} ${i + 1}화 「${e[0]}」\n` + e[1].map((p, j) => `${j + 1}. ${p[1]}`).join('\n') + `\n💡 ${e[2]}\n— 출조 관제 우주 프로 https://kimcheol-ops.github.io/sunsang-mobile/`;
         stops.push(Comic3D.view(cbox, { comic, idx: i, total: EP.length, onNav: d => { const k = i + d; if (k < 0 || k >= EP.length) return; if (!unlocked(k)) { toast('이 화 게임을 깨면 다음 화가 열려요! 아래 「게임 시작」을 눌러 보세요.'); el.querySelector('[data-gamebox]').scrollIntoView({ block: 'center', behavior: 'smooth' }); return; } P.at = k; save(); render(); },
           share: async b => { try { await navigator.clipboard.writeText(shareTxt()); b.textContent = '✔ 복사했어요'; } catch (x) { prompt('아래 글을 복사하세요', shareTxt()); } } }) || (() => {}));
       } else cbox.innerHTML = `<div class="sbox"><b>${i + 1}화 「${esc(e[0])}」</b>${e[1].map((p, j) => `<div>${j + 1}. ${esc(p[1])}</div>`).join('')}<div>💡 ${esc(e[2])}</div></div>`;
@@ -306,7 +368,7 @@
           const nextOpen = stars > 0 && i + 1 < EP.length;
           const ov = document.createElement('div'); ov.className = 'sbox'; ov.style.textAlign = 'center';
           ov.innerHTML = `<b style="font-size:18px">${stars > 0 ? '🎉 성공!' : '😅 아쉬워요'}</b><div class="stars">${starTxt(stars)}</div><div>${esc(msg)}</div>
-            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button type="button" class="sbtn ghost" data-again>↻ 다시 하기</button>${nextOpen ? `<button type="button" class="sbtn" data-next>📖 ${i + 2}화 보러 가기 ▶</button>` : ''}${stars > 0 && i + 1 === EP.length ? '<button type="button" class="sbtn" data-fin>🏅 완주 배지 보기</button>' : ''}</div>`;
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button type="button" class="sbtn ghost" data-again>↻ 다시 하기</button>${nextOpen ? `<button type="button" class="sbtn" data-next>📖 ${i + 2}화 보러 가기 ▶</button>` : ''}${stars > 0 && i + 1 === S[2] ? `<button type="button" class="sbtn" data-fin>${S[3]} 완주 배지 보기</button>` : ''}</div>${stars > 0 && i + 1 === EP.length && i + 1 < S[2] ? '<div class="muted">🆕 다음 화는 매일 업데이트에서 하루에 한 화씩 공개돼요. 내일 또 만나요!</div>' : ''}`;
           gbox.innerHTML = ''; gbox.appendChild(ov); stopAll2();
           ov.querySelector('[data-again]').onclick = start;
           const n = ov.querySelector('[data-next]'); if (n) n.onclick = () => { P.at = i + 1; save(); render(); el.scrollIntoView({ block: 'start' }); };
@@ -323,5 +385,5 @@
     return stopAll;
   }
 
-  window.Saga = { view, EP, GAMES: Object.keys(GAMES) };
+  window.Saga = { view, EP, SEASONS, GAMES: Object.keys(GAMES) };
 })();
