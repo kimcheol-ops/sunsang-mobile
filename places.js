@@ -49,6 +49,8 @@
   .pl .ck select { margin-left: auto; min-height: 26px; padding: 0 4px; font-size: 12px; }
   .pl .mapbox { height: 220px; border-radius: 8px; background: var(--p-well); }
   .pl .mapbox.pick { outline: 2px dashed var(--p-warn); cursor: crosshair; }
+  .pl .chip.prem { cursor: default; background: transparent; border-color: var(--p-accent); color: var(--p-accent); padding: 1px 8px; font-size: 11.5px; }
+  .pl .box.prem { border-color: var(--p-accent); }
   .pl .sample { background: var(--p-warn); color: #2A2412; border-radius: 4px; padding: 0 6px; font: 700 11px inherit; }
   .pl .notice { background: var(--p-well); border: 1px solid var(--p-line); border-radius: 6px; padding: 7px 10px; font-size: 12px; }
   .pl .box { background: var(--p-well); border-radius: 8px; padding: 10px; display: grid; gap: 6px; }
@@ -380,6 +382,11 @@
 
   function mount(root, opts) {
     const D = opts.data, store = opts.store, useMap = opts.map !== false && !!window.L, inPC = !!opts.inPC, askAi = opts.ai || null;
+    // 추천 업체(광고): places-premium.js — 기간 안에 있는 것만, 화면에는 늘 「추천(광고)」 표시
+    const PREM = (opts.premium || window.PLACES_PREMIUM || {}).list || {};
+    const premOf = x => { const p = PREM[x.id]; if (!p || typeof p !== 'object') return null; const t = new Date().toISOString().slice(0, 10);
+      return (!p.from || p.from <= t) && (!p.to || p.to >= t) ? p : null; };
+    const premTag = x => { const p = premOf(x); return p ? ` <span class="chip prem" title="사장님이 등록한 추천 업체(광고)${p.trial ? ' · 무료 시범 기간' : ''}">추천(광고)${p.trial ? ' · 시범' : ''}</span>${p.verified ? ' <span class="chip s" title="사장님과 정보를 직접 확인한 날 ' + esc(p.verified) + '">✔ 확인된 업체</span>' : ''}` : ''; };
     if (!document.getElementById('pl-css')) { const s = document.createElement('style'); s.id = 'pl-css'; s.textContent = CSS; document.head.appendChild(s); }
     root.classList.add('pl');
     root.innerHTML = `<div class="tabs" role="tablist">
@@ -469,12 +476,12 @@
       return all(kind).filter(x => (st.region === '전체' || x.region === st.region) && (st.sea === '전체' || x.sea === st.sea)
         && (st.sp === '전체' || (x.species || []).includes(st.sp)) && (kind !== 'shop' || st.channel === '전체' || (x.channel || '오프라인') === st.channel)
         && (kind !== 'spot' || !st.stype || st.stype === '전체' || x.type === st.stype) && (!st.need || missing(x).length) && (!q || [x.name, x.addr, x.port, x.region, x.type || '', (x.species || []).join(' '), x.note, kind === 'shop' ? RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1]).join(' ') : ''].join(' ').toLowerCase().includes(q)))
-        .map(x => ({ x, s: score(x) })).sort((a, b) => (a.x.sample ? 1 : 0) - (b.x.sample ? 1 : 0) || (a.x.reg && a.x.reg.biz ? 1 : 0) - (b.x.reg && b.x.reg.biz ? 1 : 0) || b.s.total - a.s.total || a.x.region.localeCompare(b.x.region));
+        .map(x => ({ x, s: score(x) })).sort((a, b) => (a.x.sample ? 1 : 0) - (b.x.sample ? 1 : 0) || (st.region !== '전체' ? (premOf(b.x) ? 1 : 0) - (premOf(a.x) ? 1 : 0) : 0) || (a.x.reg && a.x.reg.biz ? 1 : 0) - (b.x.reg && b.x.reg.biz ? 1 : 0) || b.s.total - a.s.total || a.x.region.localeCompare(b.x.region));
     }
     function itemHtml(x, s) {
       const ph = mainPhoto(x), miss = missing(x), rv = s.n ? ` · ★${s.avg.toFixed(1)}(${s.n})` : '';
       const th = ph ? `<img class="th" src="${esc(ph.u)}" alt="" loading="lazy">` : `<span class="th" aria-hidden="true">📷</span>`;
-      const tags = (x.sample ? ' <span class="sample">예시</span>' : '') + (x.reg && x.reg.biz ? ' <span class="chip need">어업 허가 선박</span>' : '') + (x.channel === '온라인' ? ' <span class="chip s">온라인</span>' : '') + (x.src === '이용자 등록' ? ' <span class="chip s">이용자 등록</span>' : '');
+      const tags = premTag(x) + (x.sample ? ' <span class="sample">예시</span>' : '') + (x.reg && x.reg.biz ? ' <span class="chip need">어업 허가 선박</span>' : '') + (x.channel === '온라인' ? ' <span class="chip s">온라인</span>' : '') + (x.src === '이용자 등록' ? ' <span class="chip s">이용자 등록</span>' : '');
       const needs = miss.length ? `<span class="icons">${miss.map(m => `<span class="chip need">${m} 필요</span>`).join('')}</span>` : '';
       if (x.kind === 'shop') { const yes = RENT.filter(r => isYes(val(x, r[0]))).map(r => r[1].split(' ')[0]);
         return `<button class="item${st.sel === x.id ? ' sel' : ''}" data-id="${esc(x.id)}">${th}<span><b>${esc(x.name)}</b>${tags}</span><span class="score ${scoreCls(s.total)}">${s.total}</span>
@@ -576,6 +583,7 @@
           return `<div class="a${ok ? ' ok' : ''}${a.ai ? ' ai' : ''}"><span>${a.ai ? '<b>🤖 AI 검색 답변</b> ' : ''}${ok ? '<b style="color:var(--p-ok)">✔ 확인됨</b> ' : ''}${esc(a.t)}</span>
             ${a.src && a.src.length ? `<span class="small">${a.src.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">출처 ${i + 1}</a>`).join(' · ')}</span>` : ''}
             <span class="bar small"><span class="dim">${day(a.ts)}</span>${store.canWrite ? `<button class="vote" data-vote="${esc(a.aid)}" data-n="1" aria-pressed="${V.myVotes[a.aid] === 1}">👍 맞아요 ${a.up}</button><button class="vote" data-vote="${esc(a.aid)}" data-n="-1" aria-pressed="${V.myVotes[a.aid] === -1}">👎 달라요 ${a.down}</button>` : `<span class="dim">👍${a.up} 👎${a.down}</span>`}</span></div>`; }).join('') || '<div class="small dim">아직 답이 없습니다. 아시는 분이 답해 주세요. 매일 AI가 검색해 답을 달기도 합니다.</div>'}
+        ${(premOf(x) && premOf(x).answers && premOf(x).answers[q.qid]) ? `<div class="a ok"><span><b style="color:var(--p-ok)">🧑‍✈️ 사장님 답변</b> ${esc(String(premOf(x).answers[q.qid]).slice(0, 300))}</span></div>` : ''}
         ${aiAnswer[q.qid] ? `<div class="a ai"><span><b>🤖 AI 정리</b> <span class="dim small">(등록된 정보 기준 · 검증 필요)</span><br>${esc(aiAnswer[q.qid])}</span></div>` : ''}
         ${store.canWrite ? `<div class="bar"><input data-ans="${esc(q.qid)}" placeholder="답하기" maxlength="240" style="flex:1"><button class="btn" data-ansgo="${esc(q.qid)}">답 달기</button>${askAi ? `<button class="btn" data-ai="${esc(q.qid)}">🤖 AI에게</button>` : ''}</div>` : ''}</div>`;
       return `<h3>❓ 묻고 답하기 <span class="small dim">— 답에 👍가 2개 이상이면 ✔ 확인됨</span></h3>
@@ -597,7 +605,10 @@
       const links = `<div class="bar"><button class="btn heart" id="pl-heart" aria-pressed="${!!V.mine[x.id]}" ${ro ? 'disabled' : ''}>❤ 하트 ${s.hearts}</button>
         ${x.kakao ? link(x.kakao, '카카오맵 · 전화번호') : ''}${link(`https://map.kakao.com/link/to/${encodeURIComponent(x.name)},${x.lat.toFixed(5)},${x.lon.toFixed(5)}`, '길찾기')}
         ${link(`https://search.naver.com/search.naver?query=${encodeURIComponent(x.name + ' ' + x.region)}`, '후기 검색')}${x.web ? link(x.web, '홈페이지') : ''}</div>`;
-      const head = `<h2>${esc(x.name)} ${x.sample ? '<span class="sample">예시</span>' : ''}</h2>
+      const pm = premOf(x);
+      const head = `<h2>${esc(x.name)} ${x.sample ? '<span class="sample">예시</span>' : ''}${premTag(x)}</h2>
+        ${pm && pm.intro ? `<div class="box prem"><b>📣 사장님 소개</b>${pm.verified ? ` <span class="small dim">정보 확인 ${esc(pm.verified)}</span>` : ''}<div>${esc(String(pm.intro).slice(0, 240))}</div></div>` : ''}
+        ${pm ? `<div class="small dim">「추천(광고)」는 사장님이 등록한 표시입니다${pm.trial ? '(지금은 무료 시범 기간)' : ''}. 후기·별점은 손님이 남긴 그대로 보여 줍니다.</div>` : ''}
         <div class="bar"><span class="score ${scoreCls(s.total)}">우수 점수 ${s.total}</span><span class="small muted">정보 ${s.info}/40 · 별점 ${s.n ? s.avg.toFixed(1) : '—'} · 조회 ${s.hits}${x.edited ? ` · 최근 고침 ${day(x.edited)}` : ''}</span></div>
         ${miss.length ? `<div class="icons">${miss.map(m => `<span class="chip need">${m} 필요</span>`).join('')}</div>` : ''}`;
       const rv = (V.reviews[x.id] || []).slice().sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 6);
