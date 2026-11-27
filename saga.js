@@ -73,11 +73,43 @@
       ['mermaid', '물결이: 바늘은 다치지 않게 통에 담아 가져가. 집에 갈 때 졸리면 꼭 쉬었다 가기!'],
       ['ok', '새봄: 첫 출조 대성공! 다음엔 내가 친구한테 알려 줄래! (시즌 2 끝)']],
       '돌아갈 땐 쓰레기·줄·바늘 되가져가기, 졸리면 쉬었다 운전해요.', 'sort', '♻️ 항구 분리수거', '배에서 모은 물건이 하나씩 나와요. 알맞은 통을 눌러요. 바늘처럼 날카로운 건 「바늘 통」에! (분리 기준은 사는 곳 안내를 따라요)'],
+    // ── 시즌 3 「바닷가 안전 탐험대」 (2026-11-27) ──
+    ['갯벌의 물때', [
+      ['flat', '새봄: 물이 쫙 빠졌어! 저 멀리까지 조개 캐러 가자!'],
+      ['tide', '물결이: 잠깐! 갯벌은 물때부터 봐야 해. 밀물은 생각보다 훨씬 빨리, 옆과 뒤에서도 차올라.'],
+      ['mermaid', '물결이: 물이 빠진 갯고랑은 물이 들면 제일 먼저 깊어져. 너무 멀리 가지 말고, 물이 들기 전에 넉넉히 나오자.'],
+      ['ok', '바로: 정해진 체험장 안에서, 알람 맞추고, 시간 되면 바로 나오기! 약속!']],
+      '갯벌은 물때 확인, 멀리 가지 않기, 물이 들기 전에 넉넉히 나오기.', 'mud', '🐚 밀물 전에 돌아오기', '갯벌에서 조개를 눌러 모아요. 물이 차오르기 전에 「돌아가기」를 눌러야 해요! 조개 5개 이상 모으고 일찍 나올수록 별이 많아요.'],
+    ['테트라포드는 위험해', [
+      ['wave', '새봄: 방파제 끝 큰 콘크리트 블록 위에 올라가면 물고기가 더 많대!'],
+      ['mermaid', '물결이: 그건 테트라포드야. 둥글고 미끄러워서 틈 사이로 떨어지면 혼자서는 못 나와.'],
+      ['angler', '바로: 출입 금지 표지가 있으면 절대 들어가지 않기. 난간 있는 정해진 자리에서 구명조끼 입고 낚시하자.'],
+      ['ok', '물결이: 그리고 혼자 말고 꼭 둘 이상 함께!']],
+      '테트라포드·출입 금지 구역엔 올라가지 않고, 정해진 자리에서 둘 이상 함께.', 'zone', '🚧 여기서 낚시해도 될까?', '장소 카드를 보고 「괜찮아요」 또는 「위험해요」를 골라요. 카드마다 6초 안에 골라야 해요.'],
+    ['갯바위의 너울', [
+      ['wave', '(갯바위에 갑자기 큰 너울이 철썩 올라온다!)'],
+      ['mermaid', '물결이: 갯바위는 젖은 곳·초록 이끼가 아주 미끄러워. 마른 바위만 골라 디뎌.'],
+      ['angler', '바로: 바다를 등지지 말고, 미끄럼 막는 신발과 구명조끼! 파도가 바위를 넘으면 바로 높은 곳으로.'],
+      ['ok', '새봄: 마른 바위만 밟고 무사히 올라왔어!']],
+      '갯바위에선 마른 바위만 딛고, 바다를 등지지 말고, 너울이 넘치면 바로 물러나요.', 'rock', '🪨 마른 바위 디디기', '아래에서 위로 한 칸씩 올라가요. 지금 칸 바로 위나 옆 대각선 칸만 갈 수 있어요. 회색 마른 바위만 밟고, 젖은 바위·초록 이끼는 피해요.'],
+    ['겨울 바다와 구명환', [
+      ['night', '새봄: 으, 겨울 바다는 바람이 너무 차가워…'],
+      ['mermaid', '물결이: 겨울엔 옷을 여러 겹, 젖으면 바로 갈아입기. 손발이 떨리면 따뜻한 곳에서 쉬자.'],
+      ['boat', '바로: 누가 물에 빠지면 직접 뛰어들지 말고, 크게 알리고 122 신고! 구명환이나 물에 뜨는 걸 던져 줘.'],
+      ['ok', '물결이: 구조는 「알리고·신고하고·던지기」. 뛰어들면 두 사람 다 위험해져.']],
+      '물에 빠진 사람을 보면 뛰어들지 말고 알리고, 122 신고, 뜨는 것을 던져요.', 'rescue', '🛟 구명환 던지기', '먼저 문제를 풀고, 움직이는 표시가 친구 위에 올 때 「던지기」를 눌러요(스페이스 키도 돼요). 5번 중 3번 이상 맞히면 성공!'],
+    ['바다 친구 지키기', [
+      ['fish', '새봄: 어, 바닷가에 바다거북이 다친 채로 있어!'],
+      ['mermaid', '물결이: 만지거나 데려가지 말고, 그대로 두고 122에 알리자. 다친 바다 동물은 전문가가 돌봐야 해.'],
+      ['clean', '바로: 버려진 그물·낚싯줄이 바다 친구들을 다치게 해. 우리가 쓰레기를 되가져가는 이유야.'],
+      ['ok', '물결이: 바닷가 안전 탐험대, 시즌 3 끝! 모두 무사히, 바다 친구들도 무사히!']],
+      '다친 바다 동물은 만지지 말고 122에 알리고, 그물·줄은 꼭 되가져가요.', 'friends', '🐢 바다 친구 짝 맞추기', '카드를 두 장씩 뒤집어 같은 바다 친구를 찾아요. 적게 뒤집을수록 별이 많아요. 마지막에 문제가 하나 나와요.'],
   ];
   // 시즌 표: [시즌 이름, 시작 화(0부터), 끝(미포함), 배지 그림, 배지 이름, 완주 문구]
   const SEASONS = [
     ['꺼진 등대', 0, 5, '🏅⚓', '등대 지킴이', '밤바다 부표 · 쓰레기 되가져가기 · 구명조끼 · 물때 · 122 신고 — 다섯 가지 바다 약속을 모두 배웠어요.'],
     ['첫 출조 대작전', 5, 10, '🎒⭐', '첫 출조 박사', '초보 새봄이와 함께 첫 배낚시를 준비부터 귀항까지 무사히 마쳤어요.'],
+    ['바닷가 안전 탐험대', 10, 15, '🦀🛟', '바닷가 안전 대장', '갯벌 물때 · 테트라포드 · 갯바위 너울 · 구조는 알리고·신고하고·던지기 · 바다 친구 지키기를 모두 배웠어요.'],
   ];
   const seasonOf = i => Math.max(0, SEASONS.findIndex(s => i >= s[1] && i < s[2]));
 
@@ -160,6 +192,22 @@
     .saga .bins button[data-ok=true]{border-color:#6FD3A4;background:#173428}
     .saga .bins button[data-no=true]{border-color:#FF8A8D;background:#3A1416}
     @media (max-width:420px){.saga .bins{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    .saga .mud{position:relative;height:220px;border-radius:12px;overflow:hidden;background:linear-gradient(#8A7356,#6B5A44)}
+    .saga .mud .sea{position:absolute;left:0;right:0;top:0;height:0;background:linear-gradient(#2C86B8,#4FA6D2cc);transition:height .1s linear}
+    .saga .mud .shore{position:absolute;left:0;right:0;bottom:0;height:34px;background:#C9B488;color:#3A2E12;font:800 13px/34px inherit;text-align:center}
+    .saga .mud .shell{position:absolute;font-size:28px;background:none;border:0;cursor:pointer;padding:4px;transform:translate(-50%,-50%)}
+    .saga .rocks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;max-width:320px;margin:8px auto}
+    .saga .rk{height:48px;border-radius:12px;border:2px solid #2A3440;font-size:24px;cursor:default;background:#566270}
+    .saga .rk[data-can=true]{cursor:pointer;border-color:#F5C46B;box-shadow:0 0 0 2px #F5C46B55}
+    .saga .rk[data-t=wet]{background:#2B4E6E}.saga .rk[data-t=moss]{background:#2F6B3E}
+    .saga .lane{position:relative;height:150px;border-radius:12px;overflow:hidden;background:linear-gradient(#1F5E86,#0D2C47);margin-bottom:8px}
+    .saga .lane .who{position:absolute;top:40px;font-size:34px;transform:translateX(-50%)}
+    .saga .lane .aim{position:absolute;top:0;bottom:0;width:4px;margin-left:-2px;background:#F5C46B;box-shadow:0 0 10px #F5C46B}
+    .saga .lane .ring2{position:absolute;top:44px;font-size:30px;transform:translateX(-50%);opacity:0;transition:opacity .2s}
+    .saga .mem{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:360px;margin:8px auto}
+    .saga .mem button{height:64px;border-radius:12px;border:2px solid #3A4652;background:#1A4A6E;font-size:30px;cursor:pointer}
+    .saga .mem button[data-open]{background:#11151A}
+    .saga .mem button[data-done=true]{border-color:#6FD3A4;background:#173428}
     @media (max-width:420px){.saga .pack{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:420px){.saga .node{min-width:38px;height:38px}.saga .line{flex-basis:8px}}`;
     document.head.appendChild(s);
@@ -482,7 +530,132 @@
     return () => { on = false; timers.forEach(clearTimeout); delete el.dataset.busy; };
   }
 
-  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp, pack: gPack, board: gBoard, bite: gBite, measure: gMeasure, sort: gSort };
+  /* 공용: 마지막 문제 상자 — opts [[키, 글]], okKey, 틀렸을 때 {키: 설명} */
+  function quizBox(el, icon, title, q, opts, okKey, why, onOk) {
+    el.innerHTML = `<div class="sbox" style="text-align:center"><div class="badge">${icon}</div><b>${esc(title)}</b><div>${esc(q)}</div>
+      <div class="quiz">${opts.map(([k, t]) => `<button type="button" class="sbtn ghost" data-q="${k}">${esc(t)}</button>`).join('')}</div><div class="muted" data-qm></div></div>`;
+    el.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { if (b.dataset.q === okKey) { good(); onOk(); } else { bad(); el.querySelector('[data-qm]').textContent = (why[b.dataset.q] || '') + ' 다시 골라 보세요.'; } });
+  }
+
+  /* 11) 밀물 전에 돌아오기 (시즌 3 · 11화) */
+  function gMud(el, done) {
+    const END = 20, WARN = 10, DANGER = 16;
+    let on = true, t = 0, got = 0, over = false, iv = 0, shells = [];
+    el.innerHTML = `<div class="hud" data-hud></div><div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>조개를 눌러 모아요. 물이 들기 전에 돌아가요!</div>
+      <div class="mud" data-mud data-t="0"><div class="sea" data-sea></div><div class="shore">🏠 바닷가</div></div>
+      <div style="display:flex;justify-content:center"><button type="button" class="sbtn" data-back style="font-size:17px;padding:12px 26px">🏃 돌아가기</button></div></div>`;
+    const mud = el.querySelector('[data-mud]'), sea = el.querySelector('[data-sea]');
+    const say = s => { el.querySelector('[data-say]').textContent = s; };
+    const level = () => Math.min(1, t / END);
+    const hud = () => { el.querySelector('[data-hud]').innerHTML = `<span>🐚 조개 ${got}</span><span>🌊 물 ${Math.round(level() * 100)}%</span>${t >= WARN ? '<span style="color:#FF8A8D">⚠️ 밀물!</span>' : ''}`; };
+    function add() { const b = document.createElement('button'); b.type = 'button'; b.className = 'shell'; b.textContent = Math.random() < .5 ? '🐚' : '🦪'; b.setAttribute('aria-label', '조개');
+      b.style.left = (6 + Math.random() * 82) + '%'; b.style.top = (24 + Math.random() * 46) + '%'; b.dataset.y = parseFloat(b.style.top);
+      b.onclick = () => { if (over) return; got++; good(); b.remove(); shells = shells.filter(x => x !== b); hud(); add(); };
+      mud.appendChild(b); shells.push(b); }
+    for (let k = 0; k < 4; k++) add();
+    function tick() { if (!on || over) return; t += .1; mud.dataset.t = t.toFixed(1); sea.style.height = (level() * 100) + '%';
+      shells.forEach(s => { if (+s.dataset.y < level() * 100) { s.remove(); } }); shells = shells.filter(s => s.isConnected);
+      if (Math.abs(t - WARN) < .05) { say('물이 들어오기 시작했어요! 이제 돌아갈 때예요.'); beep(300, .2, 'square', .05); }
+      if (t >= DANGER) { over = true; clearInterval(iv); bad(); return done(0, '물에 갇힐 뻔했어요! 밀물이 시작되면 바로 나와야 해요.'); }
+      hud(); }
+    iv = setInterval(tick, 100);
+    el.querySelector('[data-back]').onclick = () => { if (over || !on) return;
+      if (got < 5) { say(`아직 조개 ${got}개예요. 5개는 모으고 물이 들기 전에 나와요!`); beep(220, .1); return; }
+      over = true; clearInterval(iv); const s = t <= 12 ? 3 : t <= 14 ? 2 : 1;
+      done(s, `조개 ${got}개를 들고 물이 ${Math.round(level() * 100)}% 찼을 때 돌아왔어요.${s === 3 ? ' 넉넉하게 나왔어요!' : ' 다음엔 조금 더 일찍!'}`); };
+    hud();
+    return () => { on = false; clearInterval(iv); };
+  }
+
+  /* 12) 여기서 낚시해도 될까? (시즌 3 · 12화) */
+  function gZone(el, done) {
+    const CARDS = shuffle([['🚧', '난간이 있는 정해진 낚시 자리', true, '네, 정해진 자리는 안전하게 만들어 둔 곳이에요.'], ['🦺', '구명조끼 입고 둘 이상 함께', true, '맞아요, 혼자보다 둘 이상이 안전해요.'], ['🧱', '바닥이 마르고 평평한 방파제 안쪽', true, '맞아요, 미끄럽지 않은 자리가 좋아요.'], ['🪧', '출입 가능 안내가 있는 낚시 공원', true, '맞아요, 안내를 따르면 돼요.'],
+      ['🔺', '테트라포드 위', false, '둥글고 미끄러워 틈에 빠지면 혼자 못 나와요.'], ['⛔', '출입 금지 표지가 있는 방파제 끝', false, '금지 표지가 있으면 들어가지 않아요.'], ['🌙', '밤에 혼자 테트라포드', false, '밤·혼자·테트라포드는 가장 위험한 조합이에요.'], ['🌊', '파도가 넘치는 방파제 끝', false, '파도가 넘치면 휩쓸릴 수 있어요. 바로 물러나요.']]);
+    let on = true, i = 0, miss = 0, timers = [], iv = 0, left = 6;
+    function show() { clearInterval(iv); if (!on) return; if (i >= CARDS.length) { const s = miss === 0 ? 3 : miss <= 1 ? 2 : miss <= 2 ? 1 : 0; return done(s, s ? `${CARDS.length}곳 중 ${CARDS.length - miss}곳을 맞혔어요! 안전한 자리에서 낚시해요.` : `실수 ${miss}번 — 테트라포드와 금지 구역은 꼭 피해요. 다시 해 봐요!`); }
+      const c = CARDS[i]; left = 6;
+      el.innerHTML = `<div class="hud"><span>🚧 ${i + 1} / ${CARDS.length}</span><span>❌ 실수 ${miss}</span><span data-left>⏱ 6초</span></div>
+        <div class="sbox" style="background:#0E2236;text-align:center"><div style="font-size:56px">${c[0]}</div><div style="font-weight:900;font-size:17px" data-card="${c[2] ? 'ok' : 'no'}">${esc(c[1])}</div><div class="muted" data-say>여기서 낚시해도 될까요?</div>
+        <div style="display:flex;gap:8px;justify-content:center"><button type="button" class="sbtn" data-a="ok">⭕ 괜찮아요</button><button type="button" class="sbtn" style="background:#8A2A2D;border-color:#B5474A" data-a="no">❌ 위험해요</button></div></div>`;
+      const ans = a => { if (!on || el.dataset.busy) return; el.dataset.busy = '1'; clearInterval(iv); const ok = a === (c[2] ? 'ok' : 'no');
+        if (ok) good(); else { miss++; bad(); } el.querySelector('[data-say]').textContent = (a == null ? '시간이 지났어요! ' : ok ? '정답! ' : '앗! ') + c[3];
+        timers.push(setTimeout(() => { delete el.dataset.busy; i++; show(); }, ok ? 900 : 1500)); };
+      el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => ans(b.dataset.a));
+      iv = setInterval(() => { left--; const l = el.querySelector('[data-left]'); if (l) l.textContent = `⏱ ${Math.max(0, left)}초`; if (left <= 0) ans(null); }, 1000); }
+    show();
+    return () => { on = false; clearInterval(iv); timers.forEach(clearTimeout); delete el.dataset.busy; };
+  }
+
+  /* 13) 마른 바위 디디기 (시즌 3 · 13화) */
+  function gRock(el, done) {
+    const C = 4, R = 6; let on = true, lives = 3, row = R, col = -1, timers = [];
+    const path = []; let pc = Math.random() * C | 0; for (let r = R - 1; r >= 0; r--) { path[r] = pc; pc = Math.max(0, Math.min(C - 1, pc + (Math.random() * 3 | 0) - 1)); }
+    const grid = []; for (let r = 0; r < R; r++) { grid[r] = []; for (let c = 0; c < C; c++) grid[r][c] = c === path[r] ? 'dry' : Math.random() < .3 ? 'dry' : Math.random() < .5 ? 'wet' : 'moss'; }
+    const TXT = { dry: ['🪨', '마른 바위'], wet: ['💧', '젖은 바위'], moss: ['🌿', '이끼 바위'] };
+    function draw(msg) {
+      el.innerHTML = `<div class="hud"><span>🪨 ${R - row} / ${R}칸</span><span>❤️ ${'♥'.repeat(Math.max(0, lives))}</span></div>
+        <div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>${esc(msg || '바로 위·대각선 위 칸 중 마른 바위를 골라요!')}</div>
+        <div class="rocks">${grid.map((rw, r) => rw.map((t, c) => { const can = r === row - 1 && (col < 0 || Math.abs(c - col) <= 1); const me = r === row && c === col;
+          return `<button type="button" class="rk" data-r="${r}" data-c="${c}" data-t="${t}" ${can ? 'data-can="true"' : ''} aria-label="${TXT[t][1]}">${me ? '🧒' : TXT[t][0]}</button>`; }).join('')).join('')}</div>
+        <div style="text-align:center" class="muted">${row === R ? '🧒 출발: 아래 해안' : ''} · 꼭대기 = 안전한 높은 곳</div></div>`;
+      el.querySelectorAll('[data-can]').forEach(b => b.onclick = () => { if (!on || lives <= 0) return; const r = +b.dataset.r, c = +b.dataset.c, t = grid[r][c];
+        if (t === 'dry') { row = r; col = c; good(); if (row === 0) { draw('꼭대기 도착!'); return timers.push(setTimeout(() => done(lives === 3 ? 3 : lives === 2 ? 2 : 1, `높은 곳까지 무사히 올라왔어요! 남은 하트 ${lives}개.`), 500)); }
+          // 막다른 길 방지: 다음 줄 이웃 칸에 마른 바위가 하나도 없으면 하나를 마른 바위로
+          const nb = [col - 1, col, col + 1].filter(x => x >= 0 && x < C); if (!nb.some(x => grid[row - 1][x] === 'dry')) grid[row - 1][nb[Math.random() * nb.length | 0]] = 'dry';
+          draw('좋아요! 다음 칸은?'); }
+        else { lives--; bad(); if (lives <= 0) { draw('미끄러졌어요!'); return timers.push(setTimeout(() => done(0, '젖은 바위와 이끼에서 너무 많이 미끄러졌어요. 회색 마른 바위만 밟아요!'), 600)); }
+          draw(t === 'moss' ? '앗! 초록 이끼는 얼음처럼 미끄러워요.' : '앗! 젖은 바위는 미끄러워요.'); } }); }
+    draw();
+    return () => { on = false; timers.forEach(clearTimeout); };
+  }
+
+  /* 14) 구명환 던지기 (시즌 3 · 14화) */
+  function gRescue(el, done) {
+    let on = true, iv = 0, timers = [];
+    quizBox(el, '🆘', '친구가 물에 빠졌어요!', '가장 먼저 어떻게 할까요?', [['a', '바로 뛰어들어 구한다'], ['b', '크게 알리고 122 신고, 뜨는 것 찾기'], ['c', '사진부터 찍는다']], 'b',
+      { a: '뛰어들면 두 사람 모두 위험해져요.', c: '먼저 알리고 신고해야 해요.' }, () => timers.push(setTimeout(throwing, 500)));
+    function throwing() { if (!on) return;
+      const TRIES = 5; let tri = 0, hit = 0, m = 10, dir = 1, px = 30 + Math.random() * 40, pv = (Math.random() < .5 ? -1 : 1) * .25, busy = false;
+      el.innerHTML = `<div class="hud" data-hud></div><div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>노란 표시가 친구 위에 오면 던져요!</div>
+        <div class="lane" data-lane><div class="who" data-who>🙋</div><div class="aim" data-aim></div><div class="ring2" data-ring>🛟</div></div>
+        <div style="display:flex;justify-content:center"><button type="button" class="sbtn" data-throw style="font-size:17px;padding:12px 28px">🛟 던지기! (스페이스)</button></div></div>`;
+      const who = el.querySelector('[data-who]'), aim = el.querySelector('[data-aim]'), ring = el.querySelector('[data-ring]'), lane = el.querySelector('[data-lane]');
+      const hud = () => { el.querySelector('[data-hud]').innerHTML = `<span>🛟 던진 횟수 ${tri} / ${TRIES}</span><span>🙌 구조 ${hit}</span>`; };
+      const say = s => { el.querySelector('[data-say]').textContent = s; };
+      hud();
+      iv = setInterval(() => { if (!on || busy) return; m += dir * 1.6; if (m >= 96) dir = -1; else if (m <= 4) dir = 1; px += pv; if (px >= 85) pv = -Math.abs(pv); else if (px <= 15) pv = Math.abs(pv);
+        aim.style.left = m + '%'; who.style.left = px + '%'; lane.dataset.m = m.toFixed(1); lane.dataset.p = px.toFixed(1); }, 30);
+      function fire() { if (!on || busy || tri >= TRIES) return; busy = true; tri++; const ok = Math.abs(m - px) < 8;
+        ring.style.left = m + '%'; ring.style.opacity = 1; if (ok) { hit++; good(); say('잡았다! 친구가 구명환을 꽉 잡았어요.'); } else { bad(); say(m < px ? '조금 왼쪽에 떨어졌어요.' : '조금 오른쪽에 떨어졌어요.'); } hud();
+        timers.push(setTimeout(() => { ring.style.opacity = 0; busy = false;
+          if (tri >= TRIES) { clearInterval(iv); removeEventListener('keydown', kd); const s = hit >= 4 ? 3 : hit === 3 ? 2 : 0; done(s, s ? `${TRIES}번 중 ${hit}번 구명환을 닿게 던졌어요. 알리고·신고하고·던지기!` : `${hit}번 맞혔어요 — 3번 이상 맞혀 봐요. 표시가 친구와 겹칠 때 던져요.`); } }, 800)); }
+      el.querySelector('[data-throw]').onclick = fire;
+      const kd = e => { if (e.code === 'Space') { e.preventDefault(); fire(); } }; addEventListener('keydown', kd); timers.push(() => removeEventListener('keydown', kd)); }
+    return () => { on = false; clearInterval(iv); timers.forEach(t => typeof t === 'function' ? t() : clearTimeout(t)); };
+  }
+
+  /* 15) 바다 친구 짝 맞추기 (시즌 3 · 15화) */
+  function gFriends(el, done) {
+    const F = [['🐢', '바다거북'], ['🐬', '돌고래'], ['🦭', '물범'], ['🐋', '고래'], ['🪸', '산호'], ['🦀', '게']];
+    const deck = shuffle(F.concat(F).map(([e, n], k) => ({ e, n, k: e })));
+    let on = true, open = [], found = 0, moves = 0, lock = false, timers = [];
+    el.innerHTML = `<div class="hud" data-hud></div><div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>카드를 두 장씩 뒤집어 같은 친구를 찾아요!</div>
+      <div class="mem">${deck.map((c, k) => `<button type="button" data-m="${k}" data-k="${c.k}" aria-label="뒤집힌 카드">🌊</button>`).join('')}</div></div>`;
+    const H = () => { el.querySelector('[data-hud]').innerHTML = `<span>🐢 찾은 짝 ${found} / ${F.length}</span><span>🔄 뒤집기 ${moves}번</span>`; };
+    const say = s => { el.querySelector('[data-say]').textContent = s; };
+    H();
+    el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { if (!on || lock || b.dataset.open) return; const c = deck[+b.dataset.m];
+      b.dataset.open = '1'; b.textContent = c.e; b.setAttribute('aria-label', c.n); open.push(b);
+      if (open.length < 2) return; moves++; const [x, y] = open; open = [];
+      if (x.dataset.k === y.dataset.k) { found++; good(); x.dataset.done = y.dataset.done = 'true'; say(`${c.n} 찾았어요! 다치거나 그물에 걸린 바다 친구는 만지지 말고 122에 알려요.`); H();
+        if (found === F.length) timers.push(setTimeout(() => { const s = moves <= 10 ? 3 : moves <= 14 ? 2 : 1;
+          quizBox(el, '🐢💙', '모두 찾았어요! 마지막 문제', '바닷가에서 다친 바다거북을 발견하면?', [['a', '집에 데려가 돌본다'], ['b', '만지지 말고 122에 알린다'], ['c', '바다로 밀어 넣는다']], 'b',
+            { a: '바다 동물은 전문가가 돌봐야 해요.', c: '다친 동물을 옮기면 더 다칠 수 있어요.' }, () => done(s, `정답! 바다 친구 짝 ${F.length}개를 ${moves}번 만에 찾았어요.`)); }, 600)); }
+      else { lock = true; bad(); H(); timers.push(setTimeout(() => { [x, y].forEach(z => { delete z.dataset.open; z.textContent = '🌊'; z.setAttribute('aria-label', '뒤집힌 카드'); }); lock = false; }, 700)); } });
+    return () => { on = false; timers.forEach(clearTimeout); };
+  }
+
+  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp, pack: gPack, board: gBoard, bite: gBite, measure: gMeasure, sort: gSort, mud: gMud, zone: gZone, rock: gRock, rescue: gRescue, friends: gFriends };
 
   /* ---------- 화면 ---------- */
   function view(el, opts) {
