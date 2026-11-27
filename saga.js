@@ -55,6 +55,24 @@
       ['angler', '바로: 구명조끼를 입고, 선장님 안전 안내를 끝까지 들어. 배 위에서는 뛰지 말고 손잡이를 잡고 걸어.'],
       ['ok', '물결이: 낚싯바늘은 통에 넣어 두고, 뱃전에는 걸터앉지 않기! 이제 출발~']],
       '배에 오를 땐 명부·신분증 → 구명조끼 → 안전 안내 순서, 배 위에선 뛰지 않기.', 'board', '⛴ 승선 순서 맞히기', '배에 오르는 순서대로 카드를 눌러요(틀리면 하트가 줄어요). 다음엔 배 위 그림 카드 중 위험한 행동 4개를 찾아요.'],
+    ['첫 입질!', [
+      ['angler', '새봄: 찌가 흔들려! 지금 당겨?'],
+      ['mermaid', '물결이: 파도에 살랑살랑 흔들리는 거랑 물고기가 무는 건 달라. 찌가 쏙 잠길 때 챔질!'],
+      ['boat', '바로: 던지기 전엔 뒤에 사람이 없는지 꼭 보고, 바늘 뺄 땐 장갑 끼고 집게로 천천히.'],
+      ['fish', '새봄: 잡았다! 내 인생 첫 물고기!']],
+      '찌가 쏙 잠길 때 챔질, 던지기 전 뒤 확인, 바늘은 장갑·집게로.', 'bite', '🎣 찌 보고 챔질', '찌를 잘 보다가 쏙 잠길 때만 「챔질!」을 눌러요(스페이스 키도 돼요). 파도에 살짝 흔들릴 때 누르면 실수예요. 입질 6번 중 4번 이상 걸면 성공!'],
+    ['작은 물고기는 돌려보내요', [
+      ['fish', '새봄: 이번엔 손바닥보다 작은 물고기가 잡혔어!'],
+      ['mermaid', '물결이: 물고기마다 잡으면 안 되는 크기와 시기가 정해져 있어. 작으면 바다로 돌려보내자.'],
+      ['release', '바로: 손에 물을 적시고 살살 잡아서, 물 가까이에서 놓아 줘.'],
+      ['ok', '물결이: 다 자라면 알을 낳아 친구들이 많아져. 진짜 기준 길이는 「도감」에서 꼭 확인해!']],
+      '작은 물고기는 놓아주고, 어종별 기준 길이·금어기는 도감에서 확인해요.', 'measure', '📏 재고 놓아주기', '자에 물고기 길이가 나와요. 기준보다 작으면 「놓아주기」, 크면 「담기」를 눌러요. 게임 속 기준 길이는 연습용이에요.'],
+    ['무사히 집으로', [
+      ['sun', '(해가 기울고, 배가 항구로 돌아온다)'],
+      ['clean', '바로: 앉았던 자리 쓰레기, 끊어진 줄, 쓰던 바늘까지 다 모으자!'],
+      ['mermaid', '물결이: 바늘은 다치지 않게 통에 담아 가져가. 집에 갈 때 졸리면 꼭 쉬었다 가기!'],
+      ['ok', '새봄: 첫 출조 대성공! 다음엔 내가 친구한테 알려 줄래! (시즌 2 끝)']],
+      '돌아갈 땐 쓰레기·줄·바늘 되가져가기, 졸리면 쉬었다 운전해요.', 'sort', '♻️ 항구 분리수거', '배에서 모은 물건이 하나씩 나와요. 알맞은 통을 눌러요. 바늘처럼 날카로운 건 「바늘 통」에! (분리 기준은 사는 곳 안내를 따라요)'],
   ];
   // 시즌 표: [시즌 이름, 시작 화(0부터), 끝(미포함), 배지 그림, 배지 이름, 완주 문구]
   const SEASONS = [
@@ -118,6 +136,30 @@
     .saga .steps button span{font-size:24px}
     .saga .steps button[data-ok=true]{border-color:#6FD3A4;background:#173428;opacity:.5}
     .saga ol.done{margin:0;padding-left:22px;color:#C8F5DE;font-weight:700;font-size:13px}
+    .saga .pond{position:relative;height:170px;border-radius:12px;overflow:hidden;background:linear-gradient(#5C8FB8,#123B5E)}
+    .saga .pond::after{content:'';position:absolute;left:0;right:0;top:78px;height:2px;background:rgba(255,255,255,.35)}
+    .saga .bob{position:absolute;left:50%;top:40px;width:18px;height:60px;margin-left:-9px;transition:transform .12s;animation:sagaBob 2.2s ease-in-out infinite}
+    .saga .bob i{display:block;width:18px;height:60px;border-radius:9px;background:linear-gradient(#FF4D4D 0 40%,#F4F7FA 40% 100%)}
+    .saga .pond[data-state=wave] .bob{animation:sagaWave .35s ease-in-out infinite}
+    .saga .pond[data-state=bite] .bob{animation:none;transform:translateY(46px)}
+    .saga .pond[data-state=hooked] .bob{animation:none;transform:translateY(-30px) rotate(-20deg)}
+    .saga .ring{position:absolute;left:50%;top:78px;width:80px;height:16px;margin:-8px 0 0 -40px;border:2px solid rgba(255,255,255,0);border-radius:50%}
+    .saga .pond[data-state=bite] .ring{border-color:rgba(255,255,255,.7)}
+    @keyframes sagaBob{50%{transform:translateY(4px)}}
+    @keyframes sagaWave{0%,100%{transform:translateY(-6px) rotate(-8deg)}50%{transform:translateY(8px) rotate(8deg)}}
+    .saga .ruler{position:relative;height:96px;margin:8px 6px 4px;background:#F2E6C9;border-radius:8px}
+    .saga .ruler .fishbar{position:absolute;left:0;top:30px;height:34px;background:#3E8FB0;border-radius:0 20px 20px 0;display:flex;align-items:center;justify-content:flex-end}
+    .saga .ruler .fishbar span{font-size:30px;margin-right:-6px}
+    .saga .ruler .limit{position:absolute;top:0;bottom:18px;border-left:3px dashed #E0473F}
+    .saga .ruler .limit span{position:absolute;top:2px;left:4px;font:800 11px sans-serif;color:#B02A23;white-space:nowrap}
+    .saga .ruler .ticks span{position:absolute;bottom:2px;transform:translateX(-50%);font:700 11px sans-serif;color:#5A4A2A}
+    .saga .ruler .ticks span:first-child{transform:none}.saga .ruler .ticks span:last-child{transform:translateX(-100%)}
+    .saga .bins{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding-top:6px}
+    .saga .bins button{border:2px solid #3A4652;background:#11151A;color:#E6EAEE;border-radius:12px;padding:8px 2px;cursor:pointer;display:grid;gap:2px;justify-items:center;font:800 11.5px inherit;word-break:keep-all}
+    .saga .bins button span{font-size:26px}
+    .saga .bins button[data-ok=true]{border-color:#6FD3A4;background:#173428}
+    .saga .bins button[data-no=true]{border-color:#FF8A8D;background:#3A1416}
+    @media (max-width:420px){.saga .bins{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:420px){.saga .pack{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:420px){.saga .node{min-width:38px;height:38px}.saga .line{flex-basis:8px}}`;
     document.head.appendChild(s);
@@ -366,7 +408,81 @@
     return () => { on = false; timers.forEach(clearTimeout); };
   }
 
-  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp, pack: gPack, board: gBoard };
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  /* 8) 찌 보고 챔질 + 바늘 빼기 문제 (시즌 2 · 8화) */
+  function gBite(el, done) {
+    const EV = shuffle(['b', 'b', 'b', 'b', 'b', 'b', 'w', 'w', 'w', 'w']), BITES = 6;
+    let on = true, k = -1, st = 'idle', hooked = 0, early = 0, missed = 0, win = 0, timers = [];
+    el.innerHTML = `<div class="hud" data-hud></div><div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>찌를 잘 보세요… 쏙 잠기면 챔질!</div>
+      <div class="pond" data-pond data-state="idle"><div class="bob"><i></i></div><div class="ring"></div></div>
+      <div style="display:flex;justify-content:center"><button type="button" class="sbtn" data-hook style="font-size:18px;padding:14px 30px">🎣 챔질! (스페이스)</button></div></div>`;
+    const pond = el.querySelector('[data-pond]');
+    const set = s => { st = s; pond.dataset.state = s; };
+    const hud = () => { const h = el.querySelector('[data-hud]'); if (h) h.innerHTML = `<span>🐟 건 물고기 ${hooked} / ${BITES}</span><span>⏳ 남은 찌 ${Math.max(0, EV.length - k - 1)}</span><span>❌ 실수 ${early + missed}</span>`; };
+    const say = s => { const d = el.querySelector('[data-say]'); if (d) d.textContent = s; };
+    const T = (f, ms) => { const id = setTimeout(() => { if (on) f(); }, ms); timers.push(id); return id; };
+    function next() { k++; hud(); if (k >= EV.length) return finish();
+      T(() => { const bite = EV[k] === 'b'; set(bite ? 'bite' : 'wave'); if (bite) beep(330, .08, 'square', .05);
+        win = T(() => { if (st === 'bite') { missed++; bad(); say('놓쳤어요! 쏙 잠기면 바로 눌러요.'); } set('idle'); next(); }, bite ? 1300 : 1100); }, 900 + Math.random() * 900); }
+    function hook() { if (!on || k >= EV.length) return;
+      if (st === 'bite') { clearTimeout(win); hooked++; good(); say('걸었다! 🐟'); set('hooked'); hud(); T(() => { set('idle'); next(); }, 600); }
+      else if (st !== 'hooked') { early++; bad(); say(st === 'wave' ? '파도에 흔들린 거예요. 쏙 잠길 때까지 기다려요!' : '아직 입질이 없어요. 기다려요!'); hud(); } }
+    el.querySelector('[data-hook]').onclick = hook;
+    const kd = e => { if (e.code === 'Space') { e.preventDefault(); hook(); } }; addEventListener('keydown', kd);
+    function finish() { removeEventListener('keydown', kd);
+      const s = hooked >= 6 && early === 0 ? 3 : hooked >= 5 && early <= 1 ? 2 : hooked >= 4 && early <= 3 ? 1 : 0;
+      if (!s) return done(0, `물고기 ${hooked}마리, 실수 ${early + missed}번 — 쏙 잠길 때만 눌러서 4마리 이상 걸어 봐요.`);
+      el.innerHTML = `<div class="sbox" style="text-align:center"><div class="badge">🐟✨</div><b>${hooked}마리 걸었어요! 마지막 문제</b><div>물고기 입에서 바늘을 뺄 때는?</div>
+        <div class="quiz">${[['a', '맨손으로 빨리 잡아 뺀다'], ['b', '장갑 끼고 집게로 천천히 뺀다'], ['c', '낚싯대를 휘둘러 털어 낸다']].map(([q, t]) => `<button type="button" class="sbtn ghost" data-q="${q}">${t}</button>`).join('')}</div><div class="muted" data-qm></div></div>`;
+      el.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { if (b.dataset.q === 'b') { good(); done(s, `정답! 바늘과 지느러미 가시는 장갑·집게로. 건 물고기 ${hooked}마리 · 실수 ${early + missed}번.`); }
+        else { bad(); el.querySelector('[data-qm]').textContent = b.dataset.q === 'a' ? '지느러미 가시와 바늘에 손을 다칠 수 있어요. 다시 골라 보세요.' : '휘두르면 옆 사람이 바늘에 다칠 수 있어요. 다시 골라 보세요.'; } }); }
+    hud(); next();
+    return () => { on = false; timers.forEach(clearTimeout); removeEventListener('keydown', kd); };
+  }
+
+  /* 9) 재고 놓아주기 (시즌 2 · 9화) — 기준 길이는 연습용 */
+  function gMeasure(el, done) {
+    const LIMIT = [18, 20, 23, 25][Math.random() * 4 | 0], N = 8, MAX = 40, FISH = ['🐟', '🐠', '🐡'];
+    const list = []; for (let i = 0; i < N; i++) { let len; do { len = LIMIT - 12 + Math.round(Math.random() * 24); } while (Math.abs(len - LIMIT) < 2); list.push({ len, e: FISH[i % 3] }); }
+    if (!list.some(f => f.len < LIMIT)) list[0].len = LIMIT - 5; if (!list.some(f => f.len > LIMIT)) list[1].len = LIMIT + 5;
+    let on = true, i = 0, miss = 0, timers = [];
+    function show() { if (!on) return; if (i >= N) return done(miss === 0 ? 3 : miss === 1 ? 2 : miss === 2 ? 1 : 0, miss <= 2 ? `물고기 ${N}마리를 잘 재었어요! 실수 ${miss}번. 놓아준 물고기는 자라서 다시 만나요.` : `실수 ${miss}번 — 기준보다 작은 물고기는 꼭 놓아줘요. 다시 해 봐요!`);
+      const f = list[i];
+      el.innerHTML = `<div class="hud"><span>📏 ${i + 1} / ${N}마리</span><span>❌ 실수 ${miss}</span><span class="muted">연습 기준 ${LIMIT}cm</span></div>
+        <div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>이 물고기는 몇 cm? 기준 ${LIMIT}cm보다 작으면 놓아줘요.</div>
+        <div class="ruler" data-len="${f.len}"><div class="limit" style="left:${LIMIT / MAX * 100}%"><span>기준 ${LIMIT}</span></div><div class="fishbar" style="width:${f.len / MAX * 100}%"><span>${f.e}</span></div>
+          <div class="ticks">${[0, 10, 20, 30, 40].map(t => `<span style="left:${t / MAX * 100}%">${t}</span>`).join('')}</div></div>
+        <div style="text-align:center;font-size:20px;font-weight:900">${f.len}cm</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button type="button" class="sbtn" data-act="free">🌊 놓아주기</button><button type="button" class="sbtn ghost" data-act="keep">🪣 담기</button></div></div>`;
+      el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { if (!on || el.dataset.busy) return; el.dataset.busy = '1'; const small = f.len < LIMIT, ok = (b.dataset.act === 'free') === small;
+        if (ok) { good(); el.querySelector('[data-say]').textContent = small ? '좋아요! 손에 물을 적시고 살살 놓아줘요 🌊' : '좋아요! 기준보다 큰 물고기예요.'; }
+        else { miss++; bad(); el.querySelector('[data-say]').textContent = small ? `앗! ${f.len}cm는 기준 ${LIMIT}cm보다 작아요. 놓아줘야 해요.` : `${f.len}cm는 기준보다 커서 담아도 돼요.`; }
+        timers.push(setTimeout(() => { delete el.dataset.busy; i++; show(); }, 900)); }); }
+    show();
+    return () => { on = false; timers.forEach(clearTimeout); delete el.dataset.busy; };
+  }
+
+  /* 10) 항구 분리수거 (시즌 2 · 10화) */
+  function gSort(el, done) {
+    const BINS = [['can', '🥫', '캔'], ['pla', '🧴', '플라스틱'], ['vin', '🛍️', '비닐'], ['gen', '🗑️', '일반 쓰레기'], ['hook', '🧰', '바늘 통']];
+    const ITEMS = shuffle([['🥤', '음료 캔', 'can'], ['🥫', '통조림 캔', 'can'], ['🍼', '플라스틱 물병', 'pla'], ['🧃', '플라스틱 컵', 'pla'], ['🍬', '사탕 비닐 껍질', 'vin'], ['🛍️', '과자 봉지', 'vin'], ['🪢', '끊어진 낚싯줄', 'gen'], ['🧻', '쓴 휴지', 'gen'], ['🪝', '쓰던 낚싯바늘', 'hook'], ['🎣', '바늘 달린 채비', 'hook']]);
+    let on = true, i = 0, miss = 0, timers = [];
+    function show() { if (!on) return; if (i >= ITEMS.length) { const s = miss === 0 ? 3 : miss <= 1 ? 2 : miss <= 3 ? 1 : 0; return done(s, s ? `${ITEMS.length}개를 모두 정리했어요! 실수 ${miss}번. 항구가 깨끗해졌어요.` : `실수 ${miss}번 — 바늘은 바늘 통, 낚싯줄은 일반 쓰레기예요. 다시 해 봐요!`); }
+      const it = ITEMS[i];
+      el.innerHTML = `<div class="hud"><span>♻️ ${i + 1} / ${ITEMS.length}</span><span>❌ 실수 ${miss}</span></div>
+        <div class="sbox" style="background:#0E2236"><div style="text-align:center;font-size:54px" data-item="${it[2]}">${it[0]}</div><div style="text-align:center;font-weight:900">${esc(it[1])}</div>
+        <div style="text-align:center" class="muted" data-say>어느 통에 넣을까요?</div>
+        <div class="bins">${BINS.map(b => `<button type="button" data-bin="${b[0]}"><span>${b[1]}</span>${esc(b[2])}</button>`).join('')}</div></div>`;
+      el.querySelectorAll('[data-bin]').forEach(b => b.onclick = () => { if (!on || el.dataset.busy) return; el.dataset.busy = '1'; const ok = b.dataset.bin === it[2], right = BINS.find(x => x[0] === it[2]);
+        if (ok) { good(); b.dataset.ok = 'true'; el.querySelector('[data-say]').textContent = it[2] === 'hook' ? '좋아요! 날카로운 건 통에 담아 가져가요.' : '좋아요!'; }
+        else { miss++; bad(); b.dataset.no = 'true'; el.querySelector('[data-say]').textContent = `정답: ${right[1]} ${right[2]}.${it[2] === 'hook' ? ' 바늘은 다른 사람이 다치지 않게 따로 담아요.' : ''}`; }
+        timers.push(setTimeout(() => { delete el.dataset.busy; i++; show(); }, ok ? 600 : 1300)); }); }
+    show();
+    return () => { on = false; timers.forEach(clearTimeout); delete el.dataset.busy; };
+  }
+
+  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp, pack: gPack, board: gBoard, bite: gBite, measure: gMeasure, sort: gSort };
 
   /* ---------- 화면 ---------- */
   function view(el, opts) {
