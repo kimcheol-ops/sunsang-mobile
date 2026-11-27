@@ -49,6 +49,12 @@
       ['boat', '바로: 구명조끼, 신분증, 물, 모자, 미끄럽지 않은 신발! 배에 탈 때 승선 명부를 쓰고 신분증을 확인하거든.'],
       ['ok', '물결이: 쓰레기봉투도 꼭! 바닷바람은 차가우니 겉옷도 하나 더 챙기자.']],
       '출조 전날엔 바다 날씨·주의보 확인, 구명조끼·신분증·물·쓰레기봉투 챙기기.', 'pack', '🎒 출조 가방 싸기', '30초 안에 바다에 꼭 필요한 물건 8개를 눌러 가방에 넣어요. 위험하거나 바다에 맞지 않는 물건은 넣지 마세요! 마지막엔 날씨 문제가 나와요.'],
+    ['배에 오르는 순서', [
+      ['boat', '새봄: 와, 배다! 얼른 올라타서 제일 좋은 자리 잡을래!'],
+      ['mermaid', '물결이: 잠깐! 배에 오를 때도 순서가 있어. 먼저 승선 명부를 쓰고 신분증을 보여 드려.'],
+      ['angler', '바로: 구명조끼를 입고, 선장님 안전 안내를 끝까지 들어. 배 위에서는 뛰지 말고 손잡이를 잡고 걸어.'],
+      ['ok', '물결이: 낚싯바늘은 통에 넣어 두고, 뱃전에는 걸터앉지 않기! 이제 출발~']],
+      '배에 오를 땐 명부·신분증 → 구명조끼 → 안전 안내 순서, 배 위에선 뛰지 않기.', 'board', '⛴ 승선 순서 맞히기', '배에 오르는 순서대로 카드를 눌러요(틀리면 하트가 줄어요). 다음엔 배 위 그림 카드 중 위험한 행동 4개를 찾아요.'],
   ];
   // 시즌 표: [시즌 이름, 시작 화(0부터), 끝(미포함), 배지 그림, 배지 이름, 완주 문구]
   const SEASONS = [
@@ -107,6 +113,11 @@
     .saga .pack button small{font-size:11px;line-height:1.2;word-break:keep-all}
     .saga .pack button[data-in=true]{border-color:#6FD3A4;background:#173428;opacity:.55}
     .saga .pack button[data-no=true]{border-color:#FF8A8D;background:#3A1416}
+    .saga .steps{display:grid;gap:8px;padding:10px 4px}
+    .saga .steps button{display:flex;align-items:center;gap:10px;border:2px solid #3A4652;background:#11151A;color:#E6EAEE;border-radius:12px;padding:10px 12px;font:800 14px inherit;cursor:pointer;text-align:left}
+    .saga .steps button span{font-size:24px}
+    .saga .steps button[data-ok=true]{border-color:#6FD3A4;background:#173428;opacity:.5}
+    .saga ol.done{margin:0;padding-left:22px;color:#C8F5DE;font-weight:700;font-size:13px}
     @media (max-width:420px){.saga .pack{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:420px){.saga .node{min-width:38px;height:38px}.saga .line{flex-basis:8px}}`;
     document.head.appendChild(s);
@@ -318,7 +329,44 @@
     return () => { on = false; timers.forEach(t => typeof t === 'function' ? t() : clearTimeout(t)); };
   }
 
-  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp, pack: gPack };
+  /* 7) 승선 순서 맞히기 → 위험한 행동 찾기 (시즌 2 · 7화) */
+  function gBoard(el, done) {
+    const STEPS = [['📝', '승선 명부 쓰기'], ['🪪', '신분증 보여 드리기'], ['🦺', '구명조끼 입기'], ['📢', '선장님 안전 안내 듣기'], ['🪑', '정해진 자리에 앉기']];
+    const ACTS = [['🏃', '갑판에서 뛰어다니기', true, '젖은 갑판에서 미끄러져 넘어지거나 바다에 빠질 수 있어요.'], ['🦵', '뱃전에 걸터앉기', true, '배가 흔들리면 바다로 떨어질 수 있어요.'], ['🎣', '바늘 단 채 낚싯대 휘두르기', true, '옆 사람이 바늘에 다칠 수 있어요.'], ['🦺', '더워서 구명조끼 벗기', true, '구명조끼는 배 위에서 내내 입어요.'],
+      ['✊', '손잡이 잡고 걷기', false], ['🧰', '바늘은 통에 넣어 두기', false], ['🗑️', '쓰레기는 봉투에 모으기', false], ['🙋', '멀미 나면 선장님께 말하기', false]];
+    let on = true, lives = 3, miss = 0, timers = [];
+    const shuf = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    function phase1() {
+      let next = 0; const order = shuf(STEPS.map((s, k) => k));
+      el.innerHTML = `<div class="hud" data-hud></div><div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>배에 오르는 순서대로 눌러요! (1번부터)</div>
+        <div class="steps">${order.map(k => `<button type="button" data-s="${k}"><span>${STEPS[k][0]}</span>${esc(STEPS[k][1])}</button>`).join('')}</div><ol class="done" data-list></ol></div>`;
+      const hud = () => { el.querySelector('[data-hud]').innerHTML = `<span>⛴ 순서 ${next} / ${STEPS.length}</span><span>❤️ ${'♥'.repeat(Math.max(0, lives))}</span>`; };
+      const say = s => { el.querySelector('[data-say]').textContent = s; };
+      hud();
+      el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { if (!on || b.disabled || lives <= 0) return; const k = +b.dataset.s;
+        if (k === next) { b.disabled = true; b.dataset.ok = 'true'; next++; good(); el.querySelector('[data-list]').insertAdjacentHTML('beforeend', `<li>${STEPS[k][0]} ${esc(STEPS[k][1])}</li>`); say(next < STEPS.length ? `좋아요! 다음은?` : '배에 잘 올랐어요!'); hud();
+          if (next === STEPS.length) timers.push(setTimeout(phase2, 700)); }
+        else { lives--; miss++; bad(); hud(); say(`앗, 아직이에요! 「${STEPS[next][1]}」를 먼저 해야 해요.`);
+          if (lives <= 0) timers.push(setTimeout(() => done(0, '순서가 헷갈렸어요. 명부·신분증 → 구명조끼 → 안전 안내 → 자리 순서예요!'), 600)); } });
+    }
+    function phase2() { if (!on) return;
+      const cards = shuf(ACTS); let found = 0; const NEED = ACTS.filter(a => a[2]).length;
+      el.innerHTML = `<div class="hud" data-hud></div><div class="sbox" style="background:#0E2236"><div style="text-align:center;font-weight:800" data-say>배 위에서 위험한 행동 ${NEED}개를 찾아 눌러요!</div>
+        <div class="pack">${cards.map((c, k) => `<button type="button" data-a="${k}" aria-label="${esc(c[1])}"><span>${c[0]}</span><small>${esc(c[1])}</small></button>`).join('')}</div></div>`;
+      const hud = () => { el.querySelector('[data-hud]').innerHTML = `<span>⚠️ 찾은 위험 ${found} / ${NEED}</span><span>❤️ ${'♥'.repeat(Math.max(0, lives))}</span>`; };
+      const say = s => { el.querySelector('[data-say]').textContent = s; };
+      hud();
+      el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { if (!on || b.disabled || lives <= 0) return; const c = cards[+b.dataset.a]; b.disabled = true;
+        if (c[2]) { found++; b.dataset.no = 'true'; good(); say(`맞아요! ${c[3]}`); hud();
+          if (found === NEED) timers.push(setTimeout(() => done(miss === 0 ? 3 : miss <= 1 ? 2 : 1, `안전하게 출발했어요! 순서·위험 찾기 실수 ${miss}번.`), 700)); }
+        else { lives--; miss++; b.dataset.in = 'true'; bad(); hud(); say(`「${c[1]}」는 안전한 행동이에요!`);
+          if (lives <= 0) timers.push(setTimeout(() => done(0, '안전한 행동을 위험하다고 골랐어요. 다시 찾아봐요!'), 600)); } });
+    }
+    phase1();
+    return () => { on = false; timers.forEach(clearTimeout); };
+  }
+
+  const GAMES = { buoy: gBuoy, clean: gClean, swell: gSwell, tide: gTide, lamp: gLamp, pack: gPack, board: gBoard };
 
   /* ---------- 화면 ---------- */
   function view(el, opts) {
